@@ -9,9 +9,10 @@ import type { GovernanceDocument } from '@/types';
 
 export function GovernancePage() {
   const { data, loading } = useCollection<GovernanceDocument>('governance');
-  const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title));
+  const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title, 'ar'));
+
   const grouped = sorted.reduce<Record<string, GovernanceDocument[]>>((acc, doc) => {
-    const key = doc.category || 'General';
+    const key = doc.category || 'عام';
     if (!acc[key]) acc[key] = [];
     acc[key].push(doc);
     return acc;
@@ -19,11 +20,19 @@ export function GovernancePage() {
 
   return (
     <div className="container">
-      <PageHeader eyebrow="Governance" title="Official Documents" description="Policies, procedures, and official bylaws." />
+      <PageHeader
+        eyebrow="الحوكمة"
+        title="الوثائق الرسمية"
+        description="السياسات والإجراءات واللوائح الرسمية للمنظمة."
+      />
+
       {loading ? (
         <SkeletonList count={4} />
       ) : sorted.length === 0 ? (
-        <EmptyState title="No documents" message="No governance documents have been added yet." />
+        <EmptyState
+          title="لا وثائق بعد"
+          message="لم تُضف أي وثائق حوكمة حتى الآن. تُضاف من قِبل الإدارة."
+        />
       ) : (
         Object.entries(grouped).map(([category, docs]) => (
           <section key={category} className="section">
@@ -36,8 +45,10 @@ export function GovernancePage() {
                     <Badge variant="neutral">v{d.version}</Badge>
                   </div>
                   {d.description ? <div className="card__meta">{d.description}</div> : null}
-                  <div className="small muted mt-3">Last updated {formatDate(d.updatedAt)}</div>
-                  <p className="mt-3 small soft" style={{ lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>{d.content}</p>
+                  <div className="small muted mt-3">آخر تحديث {formatDate(d.updatedAt)}</div>
+                  <p className="mt-3 small soft" style={{ lineHeight: 1.85, whiteSpace: 'pre-wrap' }}>
+                    {d.content}
+                  </p>
                 </div>
               ))}
             </div>

@@ -17,12 +17,12 @@ interface SearchResult {
 }
 
 const TYPE_LABEL: Record<string, string> = {
-  member: 'Member',
-  contribution: 'Contribution',
-  achievement: 'Achievement',
-  event: 'Event',
-  team: 'Team',
-  committee: 'Committee',
+  member: 'عضو',
+  contribution: 'مشاركة',
+  achievement: 'إنجاز',
+  event: 'حدث',
+  team: 'فريق',
+  committee: 'لجنة',
 };
 
 export function SearchPage() {
@@ -35,48 +35,70 @@ export function SearchPage() {
   const results = useMemo<SearchResult[]>(() => {
     const q = query.trim().toLowerCase();
     if (!q || q.length < 2) return [];
+
     const out: SearchResult[] = [];
+
     members.forEach((m) => {
       if (m.name.toLowerCase().includes(q)) {
         out.push({ id: m.id, type: 'member', title: m.name, subtitle: m.bio?.slice(0, 80), route: '/members/' + m.id });
       }
     });
+
     contributions.forEach((c) => {
       if (c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)) {
-        out.push({ id: c.id, type: 'contribution', title: c.title, subtitle: c.memberName + ' · ' + c.hours + ' hours', route: '/contributions' });
+        out.push({ id: c.id, type: 'contribution', title: c.title, subtitle: c.memberName + ' · ' + c.hours + ' ساعة', route: '/contributions' });
       }
     });
+
     achievements.forEach((a) => {
       if (a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)) {
         out.push({ id: a.id, type: 'achievement', title: a.title, subtitle: a.description.slice(0, 80), route: '/achievements' });
       }
     });
+
     events.forEach((e) => {
       if (e.title.toLowerCase().includes(q)) {
         out.push({ id: e.id, type: 'event', title: e.title, subtitle: e.date, route: '/calendar' });
       }
     });
+
     teams.forEach((t) => {
       if (t.name.toLowerCase().includes(q)) {
         out.push({ id: t.id, type: 'team', title: t.name, subtitle: t.description, route: '/teams/' + t.id });
       }
     });
+
     committees.forEach((c) => {
-      if (c.nameAr.toLowerCase().includes(q) || c.name.toLowerCase().includes(q)) {
+      if (c.nameAr.includes(query) || c.name.toLowerCase().includes(q)) {
         out.push({ id: c.id, type: 'committee', title: c.nameAr, subtitle: c.description, route: '/committees' });
       }
     });
+
     return out.slice(0, 50);
   }, [query, members, contributions, achievements, events]);
 
   return (
     <div className="container">
-      <PageHeader eyebrow="Search" title="Global Search" description="Search across members, contributions, achievements, events, teams, and committees." />
-      <input className="input" type="search" placeholder="Type at least 2 characters..." value={query} onChange={(e) => setQuery(e.target.value)} autoFocus style={{ marginBottom: 20 }} />
+      <PageHeader
+        eyebrow="بحث"
+        title="بحث شامل"
+        description="ابحث في الأعضاء، المشاركات، الإنجازات، الأحداث، الفرق، واللجان."
+      />
+
+      <input
+        className="input"
+        type="search"
+        placeholder="اكتب حرفين على الأقل..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        autoFocus
+        style={{ marginBottom: 20 }}
+      />
+
       {query.length < 2 ? (
-        <EmptyState title="Start typing" message="Type at least 2 characters to search." />
+        <EmptyState title="ابدأ الكتابة" message="اكتب حرفين على الأقل للبحث." />
       ) : results.length === 0 ? (
-        <EmptyState title="No results" message={'No results for "' + query + '".'} />
+        <EmptyState title="لا نتائج" message={'لم يتم العثور على نتائج لـ "' + query + '".'} />
       ) : (
         <div className="stack">
           {results.map((r) => (

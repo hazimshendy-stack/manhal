@@ -16,89 +16,38 @@ export function MembersPage() {
   const [committeeFilter, setCommitteeFilter] = useState<string>('all');
 
   const filtered = useMemo(() => {
-    const q = query.trim();
+    const q = query.trim().toLowerCase();
     return members.filter((m) => {
-      const matchesQuery = !q || m.name.includes(q);
-      const matchesTeam =
-        teamFilter === 'all' || m.teamIds.includes(teamFilter);
-      const matchesCommittee =
-        committeeFilter === 'all' ||
-        m.committeeIds.includes(committeeFilter);
+      const matchesQuery = !q || m.name.toLowerCase().includes(q);
+      const matchesTeam = teamFilter === 'all' || m.teamIds.includes(teamFilter);
+      const matchesCommittee = committeeFilter === 'all' || m.committeeIds.includes(committeeFilter);
       return matchesQuery && matchesTeam && matchesCommittee;
     });
   }, [members, query, teamFilter, committeeFilter]);
 
   return (
     <div className="container">
-      <PageHeader
-        eyebrow="الأعضاء"
-        title="جميع الأعضاء"
-        description="تصفّح، ابحث، وفلتر بالفريق واللجنة."
-      />
-
+      <PageHeader eyebrow="Members" title="All Members" description="Browse, search, and filter by team or committee." />
       <div className="toolbar">
-        <input
-          className="input"
-          type="search"
-          placeholder="ابحث بالاسم..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+        <input className="input" type="search" placeholder="Search by name..." value={query} onChange={(e) => setQuery(e.target.value)} />
       </div>
-
       <div className="chips mb-4">
-        <button
-          type="button"
-          className={cx('chip', teamFilter === 'all' && 'is-active')}
-          onClick={() => setTeamFilter('all')}
-        >
-          كل الفرق
-        </button>
+        <button type="button" className={cx('chip', teamFilter === 'all' && 'is-active')} onClick={() => setTeamFilter('all')}>All Teams</button>
         {teams.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={cx('chip', teamFilter === t.id && 'is-active')}
-            onClick={() => setTeamFilter(t.id)}
-          >
-            {t.name}
-          </button>
+          <button key={t.id} type="button" className={cx('chip', teamFilter === t.id && 'is-active')} onClick={() => setTeamFilter(t.id)}>{t.name}</button>
         ))}
       </div>
-
       <div className="chips mb-4">
-        <button
-          type="button"
-          className={cx('chip', committeeFilter === 'all' && 'is-active')}
-          onClick={() => setCommitteeFilter('all')}
-        >
-          كل اللجان
-        </button>
+        <button type="button" className={cx('chip', committeeFilter === 'all' && 'is-active')} onClick={() => setCommitteeFilter('all')}>All Committees</button>
         {committees.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={cx('chip', committeeFilter === c.id && 'is-active')}
-            onClick={() => setCommitteeFilter(c.id)}
-          >
-            {c.icon} {c.nameAr}
-          </button>
+          <button key={c.id} type="button" className={cx('chip', committeeFilter === c.id && 'is-active')} onClick={() => setCommitteeFilter(c.id)}>{c.nameAr}</button>
         ))}
       </div>
-
-      {loading ? (
-        <SkeletonList count={6} />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon="👥"
-          title="لا نتائج"
-          message="لم يتم العثور على أعضاء مطابقين للبحث."
-        />
+      {loading ? <SkeletonList count={6} /> : filtered.length === 0 ? (
+        <EmptyState title="No results" message="No members match your search." />
       ) : (
         <div className="grid grid--wide">
-          {filtered.map((m) => (
-            <MemberCard key={m.id} member={m} />
-          ))}
+          {filtered.map((m) => <MemberCard key={m.id} member={m} />)}
         </div>
       )}
     </div>
