@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * fix.cjs — إصلاح أخطاء TypeScript (auth.ts + toast-or-fallback.ts)
+ * fix.cjs — حل قاطع لخطأ FirebaseUser في src/lib/auth.ts
  * Usage: node fix.cjs
  */
 
@@ -21,236 +21,247 @@ const C = {
   magenta: "\x1b[35m",
 };
 
-const log = {
-  ok: (m) => console.log(`${C.green}✓${C.reset} ${m}`),
-  warn: (m) => console.log(`${C.yellow}⚠${C.reset} ${m}`),
-  info: (m) => console.log(`${C.cyan}ℹ${C.reset} ${m}`),
-  dim: (m) => console.log(`${C.dim}  ${m}${C.reset}`),
-  err: (m) => console.log(`${C.red}✗${C.reset} ${m}`),
-};
-
-// ═══════════════════════════════════════════════════════════════
-// 1) إصلاح src/lib/auth.ts
-// ═══════════════════════════════════════════════════════════════
-function fixAuth() {
-  const file = path.join(ROOT, "src/lib/auth.ts");
-  if (!fs.existsSync(file)) {
-    log.warn("src/lib/auth.ts غير موجود");
-    return false;
-  }
-
-  let content = fs.readFileSync(file, "utf8");
-
-  // تأكد من وجود type FirebaseUser في الاستيراد
-  const firebaseAuthImportRegex =
-    /import\s*\{([^}]+)\}\s*from\s*['"]firebase\/auth['"];?/;
-
-  const match = content.match(firebaseAuthImportRegex);
-  if (!match) {
-    log.err("مش لاقي استيراد firebase/auth في auth.ts");
-    return false;
-  }
-
-  const importsStr = match[1];
-  const hasFirebaseUser =
-    /type\s+User\s+as\s+FirebaseUser/.test(importsStr) ||
-    /FirebaseUser/.test(importsStr);
-
-  if (!hasFirebaseUser) {
-    // ضيف الاستيراد
-    const newImports =
-      importsStr.trim().replace(/,\s*$/, "") +
-      ",\n  type User as FirebaseUser,\n";
-    content = content.replace(
-      firebaseAuthImportRegex,
-      `import {\n  ${newImports
-        .trim()
-        .replace(/,\s*$/, "")}\n} from 'firebase/auth';`
-    );
-
-    // تنظيف أي مسافات زايدة
-    content = content.replace(/\n{3,}/g, "\n\n");
-
-    fs.writeFileSync(file, content, "utf8");
-    log.ok("src/lib/auth.ts — إضافة FirebaseUser");
-    return true;
-  }
-
-  // لو موجود بس فيه مشكلة، أعد كتابة الاستيراد
-  const fixedImport = `import {
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updatePassword,
-  type User as FirebaseUser,
-} from 'firebase/auth';`;
-
-  const newContent = content.replace(firebaseAuthImportRegex, fixedImport);
-  if (newContent !== content) {
-    fs.writeFileSync(file, newContent, "utf8");
-    log.ok("src/lib/auth.ts — إعادة كتابة الاستيراد");
-    return true;
-  }
-
-  log.dim("src/lib/auth.ts — سليم بالفعل");
-  return false;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 2) إصلاح src/components/ui/toast-or-fallback.ts
-// ═══════════════════════════════════════════════════════════════
-function fixToastFallback() {
-  const file = path.join(ROOT, "src/components/ui/toast-or-fallback.ts");
-  if (!fs.existsSync(file)) {
-    log.dim("src/components/ui/toast-or-fallback.ts — غير موجود (تخطي)");
-    return false;
-  }
-
-  // الملف ده مش محتاجينه — الأفضل نحذفه
-  // لكن للتأمين، نعيد كتابته صح
-  const content = `import { toast as realToast } from './Toast';
-
-export { realToast as toast };
-`;
-
-  fs.writeFileSync(file, content, "utf8");
-  log.ok("src/components/ui/toast-or-fallback.ts — إعادة كتابة صحيحة");
-  return true;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 3) حذف الملف نهائيًا (بديل أنضف)
-// ═══════════════════════════════════════════════════════════════
-function deleteToastFallback() {
-  const file = path.join(ROOT, "src/components/ui/toast-or-fallback.ts");
-  if (!fs.existsSync(file)) return false;
-
-  // اتأكد إنه مش مستخدم في أي مكان
-  const srcDir = path.join(ROOT, "src");
-  let used = false;
-
-  function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
-        const c = fs.readFileSync(full, "utf8");
-        if (c.includes("toast-or-fallback")) {
-          used = true;
-          log.dim(`مستخدم في: ${path.relative(ROOT, full)}`);
-        }
-      }
-    }
-  }
-  walk(srcDir);
-
-  if (used) {
-    log.warn("toast-or-fallback مستخدم — هيتم إصلاحه بدل حذفه");
-    return fixToastFallback();
-  }
-
-  fs.unlinkSync(file);
-  log.ok("src/components/ui/toast-or-fallback.ts — تم الحذف (غير مستخدم)");
-  return true;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// 4) مسح unused imports شامل (احتياطي)
-// ═══════════════════════════════════════════════════════════════
-function cleanUnusedImports() {
-  const srcDir = path.join(ROOT, "src");
-  if (!fs.existsSync(srcDir)) return 0;
-
-  let fixed = 0;
-  const files = [];
-
-  function walk(dir) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) walk(full);
-      else if (/\.(tsx?)$/.test(entry.name)) files.push(full);
-    }
-  }
-  walk(srcDir);
-
-  for (const file of files) {
-    let content = fs.readFileSync(file, "utf8");
-    const original = content;
-    const importRegex = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/g;
-
-    content = content.replace(importRegex, (match, imports, source) => {
-      const names = imports
-        .split(",")
-        .map((n) => n.trim())
-        .filter(Boolean);
-      const body = content.replace(importRegex, "");
-
-      const used = names.filter((name) => {
-        const cleanName = name.replace(/^type\s+/, "").trim();
-        const regex = new RegExp(
-          `\\b${cleanName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
-          "g"
-        );
-        return regex.test(body);
-      });
-
-      if (used.length === 0) return "";
-      if (used.length === names.length) return match;
-      return `import { ${used.join(", ")} } from '${source}';`;
-    });
-
-    content = content.replace(/\n{3,}/g, "\n\n");
-
-    if (content !== original) {
-      fs.writeFileSync(file, content, "utf8");
-      log.ok(
-        path.relative(ROOT, file).replace(/\\/g, "/") + " — تنظيف imports"
-      );
-      fixed++;
-    }
-  }
-
-  return fixed;
-}
-
-// ═══════════════════════════════════════════════════════════════
-// RUN
-// ═══════════════════════════════════════════════════════════════
 console.log("");
 console.log(
   `${C.bold}${C.magenta}╔══════════════════════════════════════════════════════╗${C.reset}`
 );
 console.log(
-  `${C.bold}${C.magenta}║  fix.cjs — إصلاح أخطاء build                         ║${C.reset}`
+  `${C.bold}${C.magenta}║  fix.cjs — إصلاح FirebaseUser                        ║${C.reset}`
 );
 console.log(
   `${C.bold}${C.magenta}╚══════════════════════════════════════════════════════╝${C.reset}`
 );
 console.log("");
 
-// Step 1: auth.ts
-console.log(`${C.bold}▶ Step 1: إصلاح src/lib/auth.ts${C.reset}`);
-fixAuth();
+// ═══════════════════════════════════════════════════════════════
+// 1) نسخة احتياطية
+// ═══════════════════════════════════════════════════════════════
+const authPath = path.join(ROOT, "src/lib/auth.ts");
+
+if (!fs.existsSync(authPath)) {
+  console.log(`${C.red}✗ src/lib/auth.ts غير موجود${C.reset}`);
+  process.exit(1);
+}
+
+const backupDir = path.join(ROOT, ".fix-backups", Date.now().toString());
+fs.mkdirSync(backupDir, { recursive: true });
+fs.copyFileSync(authPath, path.join(backupDir, "auth.ts"));
+console.log(
+  `${C.green}✓${C.reset} نسخة احتياطية: .fix-backups/${path.basename(
+    backupDir
+  )}/auth.ts`
+);
 console.log("");
 
-// Step 2: toast-or-fallback.ts
-console.log(`${C.bold}▶ Step 2: إصلاح toast-or-fallback.ts${C.reset}`);
-deleteToastFallback();
+// ═══════════════════════════════════════════════════════════════
+// 2) الملف الكامل الصحيح
+// ═══════════════════════════════════════════════════════════════
+const AUTH_CONTENT = `import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updatePassword,
+  type User,
+} from 'firebase/auth';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { auth, db } from './firebase';
+import type { AppUser, RoleId, TeamId, Member } from '@/types';
+
+/* ═══════════════════════════════════════════════════════════════
+   تسجيل الدخول
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function login(email: string, password: string): Promise<AppUser> {
+  const cred = await signInWithEmailAndPassword(auth, email, password);
+  return await ensureUserDoc(cred.user);
+}
+
+export async function logout(): Promise<void> {
+  await signOut(auth);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   إعادة تعيين كلمة المرور
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  await sendPasswordResetEmail(auth, email);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   تغيير كلمة المرور
+   ═══════════════════════════════════════════════════════════════ */
+
+export async function changePassword(newPassword: string): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('لا يوجد مستخدم مسجل');
+  await updatePassword(user, newPassword);
+  await updateDoc(doc(db, 'users', user.uid), {
+    mustChangePassword: false,
+  });
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   إنشاء حساب من الأدمن
+   ═══════════════════════════════════════════════════════════════ */
+
+export interface CreateMemberInput {
+  email: string;
+  temporaryPassword: string;
+  name: string;
+  role: RoleId;
+  teamIds: TeamId[];
+  committeeIds: string[];
+  bio?: string;
+}
+
+export async function adminCreateMember(
+  input: CreateMemberInput,
+  adminUid: string,
+): Promise<string> {
+  const response = await fetch(
+    \`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=\${import.meta.env.VITE_FIREBASE_API_KEY}\`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: input.email.trim(),
+        password: input.temporaryPassword,
+        returnSecureToken: true,
+      }),
+    },
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    const code = data?.error?.message ?? '';
+    if (code.includes('EMAIL_EXISTS')) throw new Error('البريد مستخدم بالفعل');
+    if (code.includes('WEAK_PASSWORD')) throw new Error('كلمة المرور ضعيفة');
+    if (code.includes('INVALID_EMAIL')) throw new Error('البريد الإلكتروني غير صالح');
+    throw new Error('فشل إنشاء الحساب');
+  }
+
+  const uid: string = data.localId;
+  const memberId = 'M-' + uid.slice(0, 8).toUpperCase();
+
+  const userData: AppUser = {
+    uid,
+    email: input.email.trim(),
+    displayName: input.name.trim(),
+    role: input.role,
+    teamId: input.teamIds[0] ?? null,
+    committeeIds: input.committeeIds,
+    memberId,
+    createdAt: new Date().toISOString(),
+    emailVerified: false,
+    mustChangePassword: true,
+    createdByAdmin: adminUid,
+  };
+
+  await setDoc(doc(db, 'users', uid), userData);
+
+  const memberData: Member = {
+    id: memberId,
+    name: input.name.trim(),
+    role: input.role,
+    teamIds: input.teamIds,
+    committeeIds: input.committeeIds,
+    joinedSeason: 7,
+    hours: 0,
+    status: 'active',
+    bio: input.bio?.trim() || undefined,
+    email: input.email.trim(),
+    linkedUserId: uid,
+  };
+
+  await setDoc(doc(db, 'members', memberId), memberData);
+
+  return uid;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   مزامنة user doc
+   ═══════════════════════════════════════════════════════════════ */
+
+async function ensureUserDoc(fbUser: User): Promise<AppUser> {
+  const ref = doc(db, 'users', fbUser.uid);
+  const snap = await getDoc(ref);
+
+  if (snap.exists()) {
+    const data = snap.data() as Omit<AppUser, 'uid'>;
+    return { uid: fbUser.uid, ...data, emailVerified: fbUser.emailVerified };
+  }
+
+  const fallback: AppUser = {
+    uid: fbUser.uid,
+    email: fbUser.email ?? '',
+    displayName: fbUser.displayName ?? fbUser.email ?? 'عضو',
+    role: 'VIEWER',
+    teamId: null,
+    committeeIds: [],
+    memberId: null,
+    createdAt: new Date().toISOString(),
+    emailVerified: fbUser.emailVerified,
+    mustChangePassword: false,
+  };
+
+  await setDoc(ref, fallback);
+  return fallback;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   Observer
+   ═══════════════════════════════════════════════════════════════ */
+
+export function observeAuth(
+  callback: (user: AppUser | null, loading: boolean) => void,
+): () => void {
+  return onAuthStateChanged(auth, async (fbUser) => {
+    if (!fbUser) {
+      callback(null, false);
+      return;
+    }
+    try {
+      const appUser = await ensureUserDoc(fbUser);
+      callback(appUser, false);
+    } catch {
+      callback(null, false);
+    }
+  });
+}
+
+export function hasRole(user: AppUser | null, roles: RoleId[]): boolean {
+  if (!user) return false;
+  return roles.includes(user.role);
+}
+`;
+
+fs.writeFileSync(authPath, AUTH_CONTENT, "utf8");
+console.log(`${C.green}✓${C.reset} src/lib/auth.ts — تم الكتابة بالشكل الصحيح`);
 console.log("");
 
-// Step 3: unused imports
-console.log(`${C.bold}▶ Step 3: مسح unused imports شامل${C.reset}`);
-const cleaned = cleanUnusedImports();
-if (cleaned === 0) log.dim("لا يوجد unused imports");
-console.log("");
+// ═══════════════════════════════════════════════════════════════
+// 3) حذف toast-or-fallback إذا لسه موجود
+// ═══════════════════════════════════════════════════════════════
+const toastFallback = path.join(ROOT, "src/components/ui/toast-or-fallback.ts");
+if (fs.existsSync(toastFallback)) {
+  fs.unlinkSync(toastFallback);
+  console.log(
+    `${C.green}✓${C.reset} src/components/ui/toast-or-fallback.ts — تم الحذف`
+  );
+  console.log("");
+}
 
-// Step 4: TypeScript check
-console.log(`${C.bold}▶ Step 4: التحقق من TypeScript${C.reset}\n`);
-let tscOk = false;
+// ═══════════════════════════════════════════════════════════════
+// 4) التحقق من TypeScript
+// ═══════════════════════════════════════════════════════════════
+console.log(`${C.bold}▶ التحقق من TypeScript${C.reset}\n`);
+
+let ok = false;
 try {
   execSync("npx tsc --noEmit", { cwd: ROOT, stdio: "inherit" });
-  tscOk = true;
+  ok = true;
   console.log("");
   console.log(`${C.green}${C.bold}✓ لا أخطاء TypeScript!${C.reset}`);
 } catch {
@@ -260,14 +271,15 @@ try {
 
 console.log("");
 console.log(`${C.bold}═══ الخلاصة ═══${C.reset}`);
-if (tscOk) {
-  console.log(`${C.green}✓ المشروع جاهز للـ push${C.reset}`);
+if (ok) {
+  console.log(`${C.green}✓ auth.ts اتصلح${C.reset}`);
+  console.log(`${C.green}✓ toast-or-fallback اتحذف${C.reset}`);
   console.log("");
   console.log(`${C.bold}الخطوة التالية:${C.reset}`);
-  console.log(`  ${C.cyan}git add -A`);
-  console.log(`  git commit -m "fix: auth + toast imports"`);
+  console.log(`${C.cyan}  git add -A`);
+  console.log(`  git commit -m "fix: auth.ts FirebaseUser import"`);
   console.log(`  git push origin main --force${C.reset}`);
 } else {
-  console.log(`${C.yellow}⚠ راجع الأخطاء فوق وأعد التشغيل${C.reset}`);
+  console.log(`${C.yellow}⚠ فيه أخطاء تانية — ابعتلي رسائل tsc${C.reset}`);
 }
 console.log("");
