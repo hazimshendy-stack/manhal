@@ -1,20 +1,17 @@
-interface AvatarProps {
-  name?: string;
-  size?: number;
-  variant?: 'navy' | 'red' | 'gradient' | 'light';
-  src?: string;
-}
+interface AvatarProps { name?: string; size?: number; variant?: 'navy' | 'red' | 'gradient' | 'light'; src?: string; }
+
 const BG: Record<string, string> = {
   navy: 'var(--c-navy)', red: 'var(--c-red)',
   gradient: 'linear-gradient(150deg, var(--c-red), var(--c-red-soft))',
   light: 'var(--c-off-white)',
 };
+
 export function Avatar({ name, size = 44, variant = 'navy', src }: AvatarProps) {
   if (src) {
     return <img src={src} alt={name ?? ''} width={size} height={size} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: '2px solid rgba(255,255,255,0.9)' }} />;
   }
   return (
-    <div aria-label={name ?? 'صورة العضو'} title={name} style={{
+    <div aria-label={name ?? 'Member'} title={name} style={{
       width: size, height: size, borderRadius: '50%', display: 'grid', placeItems: 'center',
       background: BG[variant], color: variant === 'light' ? 'var(--c-navy)' : '#fff',
       flexShrink: 0, border: variant === 'light' ? '1.5px solid var(--c-line-mid)' : '2px solid rgba(255,255,255,0.15)',

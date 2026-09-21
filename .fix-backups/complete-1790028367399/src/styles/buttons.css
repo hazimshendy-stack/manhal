@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════════════════════
+     Button Base
+     ═══════════════════════════════════════════════════════════════ */
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid transparent;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+    text-decoration: none;
+    line-height: 1.4;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* ═══════════ Variants ═══════════ */
+
+  .btn--primary {
+    background: var(--c-red);
+    color: #fff;
+    border-color: var(--c-red);
+  }
+  .btn--primary:hover:not(:disabled) {
+    background: var(--c-red-soft);
+    border-color: var(--c-red-soft);
+  }
+
+  .btn--navy {
+    background: var(--c-navy);
+    color: #fff;
+    border-color: var(--c-navy);
+  }
+  .btn--navy:hover:not(:disabled) {
+    background: var(--c-navy-2);
+    border-color: var(--c-navy-2);
+  }
+
+  .btn--ghost {
+    background: var(--c-white);
+    border-color: var(--c-line-mid);
+    color: var(--c-ink);
+  }
+  .btn--ghost:hover:not(:disabled) {
+    background: var(--c-off-white);
+    border-color: var(--c-navy);
+    color: var(--c-navy);
+  }
+
+  .btn--danger {
+    background: var(--c-red);
+    border-color: var(--c-red);
+    color: #fff;
+  }
+  .btn--danger:hover:not(:disabled) {
+    background: var(--c-red-soft);
+  }
+
+  .btn--success {
+    background: var(--c-green);
+    border-color: var(--c-green);
+    color: #fff;
+  }
+  .btn--success:hover:not(:disabled) {
+    background: #15803D;
+  }
+
+  .btn--outline-danger {
+    background: transparent;
+    border-color: var(--c-red);
+    color: var(--c-red);
+  }
+  .btn--outline-danger:hover:not(:disabled) {
+    background: var(--c-red);
+    color: #fff;
+  }
+
+  .btn--outline-success {
+    background: transparent;
+    border-color: var(--c-green);
+    color: var(--c-green);
+  }
+  .btn--outline-success:hover:not(:disabled) {
+    background: var(--c-green);
+    color: #fff;
+  }
+
+  /* ═══════════ Sizes ═══════════ */
+
+  .btn--lg {
+    padding: 14px 24px;
+    font-size: 0.95rem;
+    border-radius: var(--radius);
+  }
+
+  .btn--sm {
+    padding: 7px 14px;
+    font-size: 0.8rem;
+  }
+
+  .btn--xs {
+    padding: 5px 10px;
+    font-size: 0.72rem;
+    gap: 4px;
+  }
+
+  .btn--block {
+    width: 100%;
+  }
+
+  .btn--pill {
+    border-radius: var(--radius-full);
+  }
+
+  .btn--icon-only {
+    padding: 10px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .btn--sm.btn--icon-only {
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+  }
+  

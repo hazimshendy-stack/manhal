@@ -12,56 +12,54 @@ interface SidebarProps { open: boolean; onClose: () => void; }
 
 function buildAdminNav(pending: number): NavItem[] {
   return [
-    { to: '/admin', label: 'لوحة الإدارة' },
-    { to: '/admin/analytics', label: 'التحليلات' },
-    { to: '/admin/requests', label: 'الطلبات', count: pending },
-    { to: '/admin/users', label: 'المستخدمون' },
-    { to: '/admin/members', label: 'الأعضاء' },
-    { to: '/admin/contributions', label: 'المشاركات' },
-    { to: '/admin/committees', label: 'اللجان' },
-    { to: '/admin/achievements', label: 'الإنجازات' },
-    { to: '/admin/warnings', label: 'التحذيرات' },
-    { to: '/admin/calendar', label: 'التقويم' },
-    { to: '/admin/conversations', label: 'المحادثات' },
-    { to: '/admin/notifications', label: 'إرسال إشعار' },
-    { to: '/admin/governance', label: 'الحوكمة' },
-    { to: '/admin/audit', label: 'سجل التغييرات' },
+    { to: '/admin', label: 'Admin Dashboard' },
+    { to: '/admin/analytics', label: 'Analytics' },
+    { to: '/admin/requests', label: 'Requests', count: pending },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/members', label: 'Members' },
+    { to: '/admin/contributions', label: 'Contributions' },
+    { to: '/admin/committees', label: 'Committees' },
+    { to: '/admin/achievements', label: 'Achievements' },
+    { to: '/admin/warnings', label: 'Warnings' },
+    { to: '/admin/calendar', label: 'Calendar' },
+    { to: '/admin/conversations', label: 'Conversations' },
+    { to: '/admin/notifications', label: 'Send Notification' },
+    { to: '/admin/governance', label: 'Governance' },
+    { to: '/admin/audit', label: 'Audit Log' },
   ];
 }
-
 function buildManagerNav(pending: number): NavItem[] {
   return [
-    { to: '/dashboard', label: 'لوحة التحكم' },
-    { to: '/members', label: 'الأعضاء' },
-    { to: '/requests', label: 'الطلبات' },
-    { to: '/approvals', label: 'الموافقات', count: pending },
-    { to: '/contributions', label: 'المشاركات' },
-    { to: '/committees', label: 'اللجان' },
-    { to: '/league', label: 'الليج' },
-    { to: '/achievements', label: 'الإنجازات' },
-    { to: '/warnings', label: 'التحذيرات' },
-    { to: '/conversations', label: 'المحادثات' },
-    { to: '/calendar', label: 'التقويم' },
-    { to: '/notifications', label: 'الإشعارات' },
-    { to: '/reports', label: 'التقارير' },
-    { to: '/governance', label: 'الحوكمة' },
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/members', label: 'Members' },
+    { to: '/requests', label: 'Requests' },
+    { to: '/approvals', label: 'Approvals', count: pending },
+    { to: '/contributions', label: 'Contributions' },
+    { to: '/committees', label: 'Committees' },
+    { to: '/league', label: 'League' },
+    { to: '/achievements', label: 'Achievements' },
+    { to: '/warnings', label: 'Warnings' },
+    { to: '/conversations', label: 'Conversations' },
+    { to: '/calendar', label: 'Calendar' },
+    { to: '/notifications', label: 'Notifications' },
+    { to: '/reports', label: 'Reports' },
+    { to: '/governance', label: 'Governance' },
   ];
 }
-
 function buildMemberNav(): NavItem[] {
   return [
-    { to: '/dashboard', label: 'لوحة التحكم' },
-    { to: '/profile', label: 'ملفي الشخصي' },
-    { to: '/my-contributions', label: 'مشاركاتي' },
-    { to: '/requests/new', label: 'طلب جديد' },
-    { to: '/my-requests', label: 'طلباتي' },
-    { to: '/committees', label: 'اللجان' },
-    { to: '/league', label: 'الليج' },
-    { to: '/achievements', label: 'الإنجازات' },
-    { to: '/conversations', label: 'المحادثات' },
-    { to: '/calendar', label: 'التقويم' },
-    { to: '/notifications', label: 'الإشعارات' },
-    { to: '/governance', label: 'الحوكمة' },
+    { to: '/dashboard', label: 'Dashboard' },
+    { to: '/profile', label: 'My Profile' },
+    { to: '/my-contributions', label: 'My Contributions' },
+    { to: '/requests/new', label: 'New Request' },
+    { to: '/my-requests', label: 'My Requests' },
+    { to: '/committees', label: 'Committees' },
+    { to: '/league', label: 'League' },
+    { to: '/achievements', label: 'Achievements' },
+    { to: '/conversations', label: 'Conversations' },
+    { to: '/calendar', label: 'Calendar' },
+    { to: '/notifications', label: 'Notifications' },
+    { to: '/governance', label: 'Governance' },
   ];
 }
 
@@ -70,7 +68,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const nav = useNavigate();
   const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
   const [isMobile, setIsMobile] = useState(false);
-
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 900px)');
     const update = () => setIsMobile(mq.matches);
@@ -78,9 +75,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, []);
-
   if (!user) return null;
-
   const pending = approvals.filter((a) => {
     if (a.status !== 'PENDING') return false;
     if (isAdmin(user)) return true;
@@ -88,52 +83,37 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (a.requiredTeamId !== null && a.requiredTeamId !== user.teamId) return false;
     return true;
   }).length;
-
   let items: NavItem[];
   if (isAdmin(user)) items = buildAdminNav(pending);
   else if (user.role === 'MEMBER' || user.role === 'VIEWER') items = buildMemberNav();
   else items = buildManagerNav(pending);
-
   const handleLogout = async () => { onClose(); await logout(); nav('/'); };
   const handleNavClick = () => { if (isMobile) onClose(); };
-
   return (
     <>
       <div className={'sidebar-overlay' + (open ? ' is-open' : '')} onClick={onClose} aria-hidden="true" />
-
       <aside className={'sidebar no-print' + (open ? ' is-open' : '')}>
-        <button type="button" className="sidebar-close" onClick={onClose} aria-label="إغلاق القائمة">×</button>
-
+        <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close menu">×</button>
         <div className="sidebar__user">
           <div className="sidebar__user-info">
             <div className="sidebar__user-name">{user.displayName}</div>
             <div className="sidebar__user-role">{ROLE_LABEL[user.role]}</div>
           </div>
         </div>
-
         <div className="sidebar__group">
-          <div className="sidebar__title">{seesAllTeams(user) ? 'الإدارة' : 'القائمة'}</div>
+          <div className="sidebar__title">{seesAllTeams(user) ? 'Administration' : 'Menu'}</div>
           {items.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.to === '/dashboard' || it.to === '/admin' || it.to === '/'}
+            <NavLink key={it.to} to={it.to} end={it.to === '/dashboard' || it.to === '/admin' || it.to === '/'}
               onClick={handleNavClick}
-              className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}
-            >
+              className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}>
               <span>{it.label}</span>
-              {it.count && it.count > 0 ? (
-                <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span>
-              ) : null}
+              {it.count && it.count > 0 ? <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span> : null}
             </NavLink>
           ))}
         </div>
-
         <div className="sidebar__group">
-          <div className="sidebar__title">الحساب</div>
-          <button type="button" className="sidebar__link sidebar__link--danger" onClick={handleLogout}>
-            تسجيل الخروج
-          </button>
+          <div className="sidebar__title">Account</div>
+          <button type="button" className="sidebar__link sidebar__link--danger" onClick={handleLogout}>Logout</button>
         </div>
       </aside>
     </>

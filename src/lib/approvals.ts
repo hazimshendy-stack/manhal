@@ -41,29 +41,23 @@ export async function createRequestWithChain(request: RequestRecord): Promise<vo
   await createOne('requests', request);
   const chain = buildApprovalChain(request);
   for (let i = 0; i < chain.length; i += 1) {
-    await createOne('approvals', {
-      id: newId('APR'), requestId: request.id, order: i + 1,
-      requiredRole: chain[i].role, requiredTeamId: chain[i].teamId, status: 'PENDING',
-    });
+    await createOne('approvals', { id: newId('APR'), requestId: request.id, order: i + 1, requiredRole: chain[i].role, requiredTeamId: chain[i].teamId, status: 'PENDING' });
   }
 }
 
 export async function approveStep(request: RequestRecord, step: ApprovalStep, user: AppUser): Promise<void> {
-  await updateOne('approvals', step.id, {
-    status: 'APPROVED', approverUid: user.uid,
-    approverName: user.displayName, actionDate: today(),
-  });
+  await updateOne('approvals', step.id, { status: 'APPROVED', approverUid: user.uid, approverName: user.displayName, actionDate: today() });
   const allSteps = await listWhere<ApprovalStep>('approvals', 'requestId', request.id);
   const sorted = allSteps.sort((a, b) => a.order - b.order);
   const remaining = sorted.filter((s) => s.status === 'PENDING' && s.id !== step.id);
   if (remaining.length === 0) {
     await updateOne('requests', request.id, { status: 'APPROVED', currentStepOrder: sorted.length, updatedAt: today() });
-    await notifyUser(request.requesterUid, 'تمت الموافقة', 'طلبك "' + request.title + '" تمت الموافقة عليه.', 'request', '/requests/' + request.id, 'high');
-    await logAudit(user, 'APPROVE_REQUEST', 'Request', request.id, 'موافقة نهائية');
+    await notifyUser(request.requesterUid, 'Request approved', 'Your request "' + request.title + '" was finally approved.', 'request', '/requests/' + request.id, 'high');
+    await logAudit(user, 'APPROVE_REQUEST', 'Request', request.id, 'Final approval');
   } else {
     const nextOrder = Math.min(...remaining.map((s) => s.order));
     await updateOne('requests', request.id, { status: 'IN_REVIEW', currentStepOrder: nextOrder, updatedAt: today() });
-    await notifyUser(request.requesterUid, 'تقدّم طلبك', 'طلبك "' + request.title + '" في المرحلة ' + nextOrder + '.', 'approval', '/requests/' + request.id, 'normal');
+    await notifyUser(request.requesterUid, 'Request progressing', 'Your request "' + request.title + '" is at step ' + nextOrder + '.', 'approval', '/requests/' + request.id, 'normal');
   }
 }
 
@@ -72,27 +66,20 @@ export async function adminApproveAll(request: RequestRecord, user: AppUser): Pr
   const sorted = allSteps.sort((a, b) => a.order - b.order);
   for (const step of sorted) {
     if (step.status === 'PENDING') {
-      await updateOne('approvals', step.id, {
-        status: 'APPROVED', approverUid: user.uid,
-        approverName: user.displayName, actionDate: today(), comment: 'موافقة شاملة',
-      });
+      await updateOne('approvals', step.id, { status: 'APPROVED', approverUid: user.uid, approverName: user.displayName, actionDate: today(), comment: 'Admin final approval' });
     }
   }
   await updateOne('requests', request.id, { status: 'APPROVED', currentStepOrder: sorted.length, updatedAt: today() });
-  await notifyUser(request.requesterUid, 'تمت الموافقة', 'طلبك "' + request.title + '" معتمد نهائيًا.', 'request', '/requests/' + request.id, 'high');
-  await logAudit(user, 'ADMIN_APPROVE_ALL', 'Request', request.id, 'موافقة شاملة');
+  await notifyUser(request.requesterUid, 'Request approved', 'Your request "' + request.title + '" was finally approved by admin.', 'request', '/requests/' + request.id, 'high');
+  await logAudit(user, 'ADMIN_APPROVE_ALL', 'Request', request.id, 'Admin final approval');
 }
 
 export async function rejectStep(request: RequestRecord, step: ApprovalStep, user: AppUser, comment: string): Promise<void> {
-  await updateOne('approvals', step.id, {
-    status: 'REJECTED', approverUid: user.uid, approverName: user.displayName,
-    comment: comment.trim() || undefined, actionDate: today(),
-  });
+  await updateOne('approvals', step.id, { status: 'REJECTED', approverUid: user.uid, approverName: user.displayName, comment: comment.trim() || undefined, actionDate: today() });
   await updateOne('requests', request.id, { status: 'REJECTED', updatedAt: today() });
   const allSteps = await listWhere<ApprovalStep>('approvals', 'requestId', request.id);
-  for (const s of allSteps) {
-    if (s.order > step.order && s.status === 'PENDING') await updateOne('approvals', s.id, { status: 'SKIPPED' });
-  }
-  await notifyUser(request.requesterUid, 'تم الرفض', 'طلبك "' + request.title + '" رُفض. ' + comment, 'request', '/requests/' + request.id, 'high');
-  await logAudit(user, 'REJECT_REQUEST', 'Request', request.id, 'رفض');
+  for (const s of allSteps) { if (s.order > step.order && s.status === 'PENDING') await updateOne('approvals', s.id, { status: 'SKIPPED' }); }
+  const reasonText = comment.trim() ? ' Reason: ' + comment : '';
+  await notifyUser(request.requesterUid, 'Request rejected', 'Your request "' + request.title + '" was rejected.' + reasonText, 'request', '/requests/' + request.id, 'high');
+  await logAudit(user, 'REJECT_REQUEST', 'Request', request.id, 'Rejected');
 }

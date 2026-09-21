@@ -1,0 +1,105 @@
+:root {
+    /* ═══════════ الألوان الأساسية ═══════════ */
+    --c-navy:        #151A45;
+    --c-navy-soft:   #1B2156;
+    --c-navy-2:      #232A66;
+    --c-navy-3:      #2E3680;
+    --c-navy-4:      #3A42A0;
+
+    --c-red:         #C1272D;
+    --c-red-soft:    #A01F24;
+    --c-red-light:   #DC2626;
+    --c-red-tint:    #FEE2E2;
+
+    --c-white:       #FFFFFF;
+    --c-off-white:   #FAFBFD;
+    --c-line:        #E3E6F0;
+    --c-line-mid:    #C9CFE1;
+    --c-line-strong: #A8B0C9;
+
+    --c-ink:         #151A45;
+    --c-ink-soft:    #3A4176;
+    --c-ink-muted:   #6B7299;
+
+    --c-paper:       #FFFFFF;
+    --c-paper-soft:  #D5DAF0;
+    --c-paper-muted: #8891BE;
+
+    /* ═══════════ ألوان دلالية ═══════════ */
+    --c-green:       #16A34A;
+    --c-green-soft:  #DCFCE7;
+    --c-green-text:  #166534;
+
+    --c-amber:       #D97706;
+    --c-amber-soft:  #FEF3C7;
+    --c-amber-text:  #92400E;
+
+    --c-blue:        #2563EB;
+    --c-blue-soft:   #DBEAFE;
+    --c-blue-text:   #1E40AF;
+
+    --c-purple:      #7C3AED;
+    --c-purple-soft: #EDE9FE;
+    --c-purple-text: #5B21B6;
+
+    --c-pink:        #EC4899;
+    --c-pink-soft:   #FCE7F3;
+    --c-pink-text:   #9D174D;
+
+    --c-cyan:        #0891B2;
+    --c-cyan-soft:   #CFFAFE;
+    --c-cyan-text:   #155E75;
+
+    --c-orange:      #EA580C;
+    --c-orange-soft: #FFEDD5;
+    --c-orange-text: #9A3412;
+
+    /* ═══════════ الخطوط ═══════════ */
+    --font:           'Tajawal', system-ui, -apple-system, sans-serif;
+    --font-en:        'Space Grotesk', 'Tajawal', system-ui, sans-serif;
+    --font-mono:      'Space Grotesk', monospace;
+
+    /* ═══════════ أنصاف الأقطار ═══════════ */
+    --radius-xs:      6px;
+    --radius-sm:      10px;
+    --radius:         14px;
+    --radius-lg:      20px;
+    --radius-xl:      28px;
+    --radius-full:    999px;
+
+    /* ═══════════ المسافات ═══════════ */
+    --space-1:  4px;
+    --space-2:  8px;
+    --space-3:  12px;
+    --space-4:  16px;
+    --space-5:  20px;
+    --space-6:  24px;
+    --space-7:  32px;
+    --space-8:  48px;
+    --space-9:  64px;
+
+    /* ═══════════ التخطيط ═══════════ */
+    --container:      1200px;
+    --navbar-h:       60px;
+    --sidebar-w:      260px;
+    --sidebar-w-mob:  280px;
+    --bottom-nav-h:   64px;
+
+    /* ═══════════ الظلال ═══════════ */
+    --shadow-xs:      0 1px 2px rgba(21, 26, 69, 0.04);
+    --shadow-sm:      0 2px 8px rgba(21, 26, 69, 0.06);
+    --shadow:         0 8px 24px rgba(21, 26, 69, 0.10);
+    --shadow-lg:      0 20px 60px -20px rgba(21, 26, 69, 0.20);
+    --shadow-red:     0 8px 24px -8px rgba(193, 39, 45, 0.4);
+
+    /* ═══════════ الحركة ═══════════ */
+    --ease:           cubic-bezier(0.2, 0.7, 0.3, 1);
+    --ease-bounce:    cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    /* ═══════════ Safe Area (iPhone) ═══════════ */
+    --safe-top:    env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left:   env(safe-area-inset-left, 0px);
+    --safe-right:  env(safe-area-inset-right, 0px);
+  }
+  

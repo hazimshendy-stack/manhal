@@ -1,0 +1,55 @@
+/* ═══════════════════════════════════════════════════════════════
+   PWA Install Banner — احترافي وظاهر
+   ═══════════════════════════════════════════════════════════════ */
+
+.pwa-install-banner {
+  position: fixed;
+  bottom: calc(24px + var(--safe-bottom));
+  inset-inline: 20px;
+  z-index: 350;
+  background: var(--c-navy);
+  color: #fff;
+  border-radius: var(--radius-lg);
+  padding: 18px 20px;
+  box-shadow: 0 20px 60px -15px rgba(21, 26, 69, 0.55);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  border: 1px solid var(--c-navy-2);
+  animation: pwa-slide-in 0.4s var(--ease-bounce);
+}
+
+@media (min-width: 640px) {
+  .pwa-install-banner {
+    inset-inline: auto;
+    inset-inline-end: 24px;
+    max-width: 460px;
+    padding: 20px 22px;
+  }
+}
+
+@keyframes pwa-slide-in {
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pwa-install-banner__body { flex: 1; min-width: 200px; }
+
+.pwa-install-banner__title {
+  font-weight: 800;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.pwa-install-banner__desc {
+  font-size: 0.82rem;
+  color: var(--c-paper-soft);
+  line-height: 1.6;
+}
+
+.pwa-install-banner__actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
