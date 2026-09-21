@@ -1,8 +1,6 @@
 #!/usr/bin/env node
 /**
- * fix.cjs v3 — إصلاح شامل
- * - Add labels to format.ts
- * - Remove unused imports
+ * fix.cjs v4 — إزالة الاستيرادات غير المستخدمة
  */
 
 const fs = require("fs");
@@ -13,1493 +11,789 @@ const ROOT = __dirname;
 const files = {};
 
 /* ═══════════════════════════════════════════════════════════════
-   1. src/lib/format.ts — إضافة التسميات (Labels)
+   1. src/pages/admin/AdminWarningsPage.tsx
+   إزالة TextInput غير المستخدم
    ═══════════════════════════════════════════════════════════════ */
 
 files[
-  "src/lib/format.ts"
-] = `export function cx(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(' ');
-}
-
-export function formatDate(iso: string): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('ar-EG', { day: '2-digit', month: 'long', year: 'numeric' });
-}
-
-export function formatShortDate(iso: string): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString('ar-EG', { day: '2-digit', month: 'short' });
-}
-
-export function formatDateTime(iso: string): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString('ar-EG', {
-    day: '2-digit',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-export function formatTime(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-}
-
-export function relativeTime(iso: string): string {
-  if (!iso) return '';
-  const d = new Date(iso).getTime();
-  const diff = Date.now() - d;
-  const mins = Math.floor(diff / 60000);
-  const hrs = Math.floor(diff / 3600000);
-  const days = Math.floor(diff / 86400000);
-  if (mins < 1) return 'الآن';
-  if (mins < 60) return 'قبل ' + mins + ' دقيقة';
-  if (hrs < 24) return 'قبل ' + hrs + ' ساعة';
-  if (days < 30) return 'قبل ' + days + ' يوم';
-  return formatDate(iso);
-}
-
-export function initials(name: string): string {
-  const trimmed = name.trim();
-  const parts: string[] = [];
-  let current = '';
-  for (let i = 0; i < trimmed.length; i += 1) {
-    const c = trimmed[i];
-    if (c === ' ') {
-      if (current.length > 0) {
-        parts.push(current);
-        current = '';
-      }
-    } else {
-      current += c;
-    }
-  }
-  if (current.length > 0) parts.push(current);
-  if (parts.length === 0) return '?';
-  if (parts.length === 1) return parts[0].slice(0, 2);
-  return (parts[0][0] + parts[parts.length - 1][0]).trim();
-}
-
-export function hoursToPoints(hours: number): number {
-  return Math.round(hours * 5);
-}
-
-export function truncate(text: string, len = 90): string {
-  return text.length <= len ? text : text.slice(0, len) + '...';
-}
-
-export function today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-/* ═══════════ Arabic Month Helpers ═══════════ */
-
-const AR_MONTHS = [
-  'يناير',
-  'فبراير',
-  'مارس',
-  'أبريل',
-  'مايو',
-  'يونيو',
-  'يوليو',
-  'أغسطس',
-  'سبتمبر',
-  'أكتوبر',
-  'نوفمبر',
-  'ديسمبر',
-];
-
-export function getArabicMonth(month: number): string {
-  return AR_MONTHS[month];
-}
-
-export function getDaysInMonth(year: number, month: number): number {
-  return new Date(year, month + 1, 0).getDate();
-}
-
-export function getFirstWeekdayOfMonth(year: number, month: number): number {
-  return new Date(year, month, 1).getDay();
-}
-
-/* ═══════════ Request / Status / Priority Labels ═══════════ */
-
-export const REQUEST_TYPE_LABEL: Record<string, string> = {
-  TRANSFER: 'نقل',
-  PROMOTION: 'ترقية',
-  RESIGNATION: 'استقالة',
-  COMPLAINT: 'شكوى',
-  SUGGESTION: 'اقتراح',
-  LEAVE: 'إجازة',
-};
-
-export const REQUEST_STATUS_LABEL: Record<string, string> = {
-  PENDING: 'قيد الانتظار',
-  IN_REVIEW: 'قيد المراجعة',
-  APPROVED: 'معتمد',
-  REJECTED: 'مرفوض',
-  CANCELLED: 'ملغى',
-  COMPLETED: 'مكتمل',
-};
-
-export const PRIORITY_LABEL: Record<string, string> = {
-  LOW: 'منخفضة',
-  NORMAL: 'عادية',
-  HIGH: 'مرتفعة',
-  URGENT: 'عاجلة',
-};
-
-export const APPROVAL_STATUS_LABEL: Record<string, string> = {
-  PENDING: 'بانتظار الموافقة',
-  APPROVED: 'موافق عليه',
-  REJECTED: 'مرفوض',
-  SKIPPED: 'تم تخطيه',
-};
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   2. src/pages/RequestDetailPage.tsx — إزالة Link غير المستخدم
-   ═══════════════════════════════════════════════════════════════ */
-
-files[
-  "src/pages/RequestDetailPage.tsx"
-] = `import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { getOne, listWhere } from '@/lib/db';
+  "src/pages/admin/AdminWarningsPage.tsx"
+] = `import { useState } from 'react';
+import { useCollection } from '@/lib/useRealtimeCollection';
 import { useAuth } from '@/lib/useAuth';
-import { canApproveStep } from '@/lib/permissions';
-import { approveStep, rejectStep } from '@/lib/approvals';
-import { teams } from '@/data/teams';
-import {
-  REQUEST_TYPE_LABEL,
-  REQUEST_STATUS_LABEL,
-  PRIORITY_LABEL,
-  formatDate,
-} from '@/lib/format';
+import { createOne, updateOne, removeOne } from '@/lib/db';
+import { logAudit } from '@/lib/audit';
+import { notifyUser } from '@/lib/notifications';
+import { members } from '@/data/members';
+import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Badge } from '@/components/ui/Badge';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Loading';
 import { Modal } from '@/components/ui/Modal';
-import { FormField, TextArea } from '@/components/ui/FormField';
-import { ApprovalChain } from '@/components/request/ApprovalChain';
-import { Loading } from '@/components/ui/Loading';
-import { NotFoundPage } from './NotFoundPage';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import {
+  FormField,
+  TextArea,
+  DateInput,
+  Select,
+} from '@/components/ui/FormField';
 import { toast } from '@/components/ui/Toast';
-import type { RequestRecord, ApprovalStep } from '@/types';
+import type { WarningRecord } from '@/types';
 
-export function RequestDetailPage() {
-  const { requestId } = useParams<{ requestId: string }>();
-  const { user } = useAuth();
-  const [request, setRequest] = useState<RequestRecord | null>(null);
-  const [steps, setSteps] = useState<ApprovalStep[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
-  const [comment, setComment] = useState('');
+const EMPTY: Omit<WarningRecord, 'id'> = {
+  memberId: '',
+  memberName: '',
+  type: 'VERBAL',
+  reason: '',
+  severity: 'LOW',
+  issuedByMemberId: '',
+  issuedByName: '',
+  issuedAt: new Date().toISOString().slice(0, 10),
+  status: 'active',
+  notes: '',
+};
+
+export function AdminWarningsPage() {
+  const { user: me } = useAuth();
+  const { data, loading } = useCollection<WarningRecord>('warnings');
+  const [editing, setEditing] = useState<WarningRecord | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState<Omit<WarningRecord, 'id'>>(EMPTY);
+  const [toDelete, setToDelete] = useState<WarningRecord | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const load = async () => {
-    if (!requestId) return;
-    setLoading(true);
-    const r = await getOne<RequestRecord>('requests', requestId);
-    if (r) {
-      const allSteps = await listWhere<ApprovalStep>('approvals', 'requestId', r.id);
-      setSteps(allSteps.sort((a, b) => a.order - b.order));
-    }
-    setRequest(r);
-    setLoading(false);
+  const openCreate = () => {
+    setForm({
+      ...EMPTY,
+      issuedByMemberId: me?.memberId ?? '',
+      issuedByName: me?.displayName ?? '',
+    });
+    setCreating(true);
+    setEditing(null);
   };
 
-  useEffect(() => {
-    void load();
-  }, [requestId]);
+  const openEdit = (w: WarningRecord) => {
+    setForm({
+      memberId: w.memberId,
+      memberName: w.memberName,
+      type: w.type,
+      reason: w.reason,
+      severity: w.severity,
+      issuedByMemberId: w.issuedByMemberId,
+      issuedByName: w.issuedByName,
+      issuedAt: w.issuedAt,
+      status: w.status,
+      notes: w.notes || '',
+    });
+    setEditing(w);
+    setCreating(false);
+  };
 
-  if (loading) return <Loading fullHeight />;
-  if (!request) return <NotFoundPage />;
+  const close = () => {
+    setCreating(false);
+    setEditing(null);
+  };
 
-  const currentStep = steps.find(
-    (s) => s.status === 'PENDING' && s.order === request.currentStepOrder,
-  );
-  const canAct = user && currentStep && canApproveStep(user, currentStep);
-
-  const fromTeam = request.fromTeamId
-    ? teams.find((t) => t.id === request.fromTeamId)
-    : null;
-  const toTeam = request.toTeamId
-    ? teams.find((t) => t.id === request.toTeamId)
-    : null;
-
-  const doAction = async () => {
-    if (!user || !currentStep || !actionType) return;
+  const save = async () => {
+    if (!form.memberId || !form.reason.trim()) {
+      toast.error('العضو والسبب مطلوبان');
+      return;
+    }
     setBusy(true);
     try {
-      if (actionType === 'approve') {
-        await approveStep(request, currentStep, user);
-        toast.success('تمت الموافقة');
+      const member = members.find((m) => m.id === form.memberId);
+      const payload = {
+        ...form,
+        memberName: member?.name ?? form.memberName,
+      };
+
+      if (editing) {
+        await updateOne('warnings', editing.id, payload);
+        await logAudit(me, 'UPDATE_WARNING', 'Warning', editing.id, form.reason);
+        toast.success('تم التحديث');
       } else {
-        if (!comment.trim()) {
-          toast.error('سبب الرفض مطلوب');
-          setBusy(false);
-          return;
+        const id = 'WARN-' + Date.now().toString(36).toUpperCase();
+        await createOne('warnings', { id, ...payload });
+        await logAudit(me, 'CREATE_WARNING', 'Warning', id, form.reason);
+
+        const memberUser = (await import('@/lib/db')).listWhere<{ uid: string }>(
+          'users',
+          'memberId',
+          form.memberId,
+        );
+        const users = await memberUser;
+        if (users.length > 0) {
+          await notifyUser(
+            users[0].uid,
+            'تحذير جديد',
+            form.reason,
+            'warning',
+            '/dashboard',
+            'high',
+            me?.displayName,
+          );
         }
-        await rejectStep(request, currentStep, user, comment);
-        toast.success('تم رفض الطلب');
+
+        toast.success('تم إصدار التحذير');
       }
-      setActionType(null);
-      setComment('');
-      await load();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل الإجراء';
-      toast.error('فشل الإجراء', msg);
+      close();
+    } catch {
+      toast.error('فشل الحفظ');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setBusy(true);
+    try {
+      await removeOne('warnings', toDelete.id);
+      await logAudit(me, 'DELETE_WARNING', 'Warning', toDelete.id, toDelete.reason);
+      toast.success('تم الحذف');
+      setToDelete(null);
+    } catch {
+      toast.error('فشل الحذف');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="container">
-      <PageHeader eyebrow="الطلب" title={request.title} />
+    <div>
+      <PageHeader
+        eyebrow="إدارة"
+        title="التحذيرات"
+        description="إصدار ومتابعة التحذيرات الرسمية."
+      />
 
-      <section className="section">
-        <div className="grid grid--2">
-          <div className="card no-click">
-            <div className="kv">
-              <span className="kv__k">النوع</span>
-              <span className="kv__v">
-                {REQUEST_TYPE_LABEL[request.type]}
-              </span>
-            </div>
-            <div className="kv mt-4">
-              <span className="kv__k">مقدم الطلب</span>
-              <span className="kv__v">{request.requesterName}</span>
-            </div>
-            <div className="kv mt-4">
-              <span className="kv__k">التاريخ</span>
-              <span className="kv__v">{formatDate(request.submittedAt)}</span>
-            </div>
-            {fromTeam ? (
-              <div className="kv mt-4">
-                <span className="kv__k">من فريق</span>
-                <span className="kv__v">{fromTeam.name}</span>
-              </div>
-            ) : null}
-            {toTeam ? (
-              <div className="kv mt-4">
-                <span className="kv__k">إلى فريق</span>
-                <span className="kv__v">{toTeam.name}</span>
-              </div>
-            ) : null}
-          </div>
+      <SectionHeader
+        eyebrow="القائمة"
+        title={'التحذيرات (' + data.length + ')'}
+        action={
+          <button
+            type="button"
+            className="btn btn--primary btn--sm"
+            onClick={openCreate}
+          >
+            + تحذير جديد
+          </button>
+        }
+      />
 
-          <div className="card no-click">
-            <div className="row row--between">
-              <span className="muted small">الحالة</span>
-              <Badge
-                variant={
-                  request.status === 'APPROVED'
-                    ? 'success'
-                    : request.status === 'REJECTED'
+      {loading ? (
+        <SkeletonList count={4} />
+      ) : data.length === 0 ? (
+        <EmptyState
+          icon="⚠️"
+          title="لا تحذيرات"
+          message="لم يتم إصدار أي تحذيرات."
+        />
+      ) : (
+        <div className="stack">
+          {data.map((w) => (
+            <div key={w.id} className="card no-click">
+              <div className="row row--between">
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div className="card__title">{w.memberName}</div>
+                  <div className="card__meta">{w.reason}</div>
+                </div>
+                <Badge
+                  variant={w.status === 'active' ? 'danger' : 'success'}
+                  dot
+                >
+                  {w.status === 'active' ? 'نشط' : 'منتهي'}
+                </Badge>
+              </div>
+
+              <div className="row mt-3" style={{ gap: 6 }}>
+                <Badge variant="neutral">{w.type}</Badge>
+                <Badge
+                  variant={
+                    w.severity === 'HIGH'
                       ? 'danger'
-                      : 'warning'
-                }
+                      : w.severity === 'MEDIUM'
+                        ? 'warning'
+                        : 'info'
+                  }
+                >
+                  {w.severity}
+                </Badge>
+                <span className="small muted">{formatDate(w.issuedAt)}</span>
+              </div>
+
+              <div
+                className="row mt-3"
+                style={{ gap: 6, justifyContent: 'flex-end' }}
               >
-                {REQUEST_STATUS_LABEL[request.status]}
-              </Badge>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs"
+                  onClick={() => openEdit(w)}
+                >
+                  تعديل
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--danger btn--xs"
+                  onClick={() => setToDelete(w)}
+                >
+                  حذف
+                </button>
+              </div>
             </div>
-            <div className="row row--between mt-4">
-              <span className="muted small">الأولوية</span>
-              <Badge variant="neutral">{PRIORITY_LABEL[request.priority]}</Badge>
-            </div>
-            <div className="row row--between mt-4">
-              <span className="muted small">المرحلة الحالية</span>
-              <span className="kv__v">
-                {request.currentStepOrder} من {steps.length}
-              </span>
-            </div>
-            <div className="mt-5">
-              <div className="muted small">الوصف</div>
-              <p className="mt-2" style={{ lineHeight: 1.8 }}>
-                {request.description}
-              </p>
-            </div>
-          </div>
+          ))}
         </div>
-      </section>
-
-      {canAct ? (
-        <section className="section">
-          <SectionHeader eyebrow="قرارك" title="الإجراء المطلوب منك" />
-          <div className="card no-click">
-            <p className="muted small mb-4">
-              أنت مخوّل باتخاذ القرار في هذه المرحلة.
-            </p>
-            <div className="row" style={{ gap: 10 }}>
-              <button
-                type="button"
-                className="btn btn--success"
-                onClick={() => setActionType('approve')}
-              >
-                موافقة
-              </button>
-              <button
-                type="button"
-                className="btn btn--danger"
-                onClick={() => setActionType('reject')}
-              >
-                رفض
-              </button>
-            </div>
-          </div>
-        </section>
-      ) : null}
-
-      <section className="section">
-        <SectionHeader eyebrow="سلسلة الموافقات" title="الموافقات" />
-        <ApprovalChain steps={steps} />
-      </section>
+      )}
 
       <Modal
-        open={actionType !== null}
-        title={actionType === 'approve' ? 'موافقة على الطلب' : 'رفض الطلب'}
-        onClose={() => {
-          setActionType(null);
-          setComment('');
-        }}
+        open={creating || editing !== null}
+        title={editing ? 'تعديل تحذير' : 'تحذير جديد'}
+        onClose={close}
+        wide
         footer={
           <>
-            <button
-              type="button"
-              className="btn btn--ghost"
-              onClick={() => {
-                setActionType(null);
-                setComment('');
-              }}
-            >
+            <button type="button" className="btn btn--ghost" onClick={close}>
               إلغاء
             </button>
             <button
               type="button"
-              className={
-                'btn ' +
-                (actionType === 'approve' ? 'btn--success' : 'btn--danger')
-              }
-              onClick={doAction}
+              className="btn btn--primary"
+              onClick={save}
               disabled={busy}
             >
-              {busy
-                ? '...'
-                : actionType === 'approve'
-                  ? 'تأكيد الموافقة'
-                  : 'تأكيد الرفض'}
+              {busy ? '...' : 'حفظ'}
             </button>
           </>
         }
       >
-        <FormField
-          label={actionType === 'approve' ? 'تعليق (اختياري)' : 'سبب الرفض'}
-          required={actionType === 'reject'}
-        >
-          <TextArea
-            value={comment}
-            onChange={setComment}
-            placeholder={
-              actionType === 'approve'
-                ? 'ملاحظات إضافية...'
-                : 'اشرح سبب الرفض'
+        <FormField label="العضو" required>
+          <Select
+            value={form.memberId}
+            onChange={(v) => {
+              const m = members.find((x) => x.id === v);
+              setForm({
+                ...form,
+                memberId: v,
+                memberName: m?.name ?? '',
+              });
+            }}
+            options={[
+              { value: '', label: '— اختر —' },
+              ...members.map((m) => ({ value: m.id, label: m.name })),
+            ]}
+          />
+        </FormField>
+
+        <FormField label="النوع" required>
+          <Select
+            value={form.type}
+            onChange={(v) =>
+              setForm({ ...form, type: v as WarningRecord['type'] })
             }
+            options={[
+              { value: 'VERBAL', label: 'شفهي' },
+              { value: 'WRITTEN', label: 'كتابي' },
+              { value: 'FINAL', label: 'نهائي' },
+            ]}
+          />
+        </FormField>
+
+        <FormField label="السبب" required>
+          <TextArea
+            value={form.reason}
+            onChange={(v) => setForm({ ...form, reason: v })}
             rows={3}
           />
         </FormField>
+
+        <FormField label="الخطورة" required>
+          <Select
+            value={form.severity}
+            onChange={(v) =>
+              setForm({ ...form, severity: v as WarningRecord['severity'] })
+            }
+            options={[
+              { value: 'LOW', label: 'منخفضة' },
+              { value: 'MEDIUM', label: 'متوسطة' },
+              { value: 'HIGH', label: 'مرتفعة' },
+            ]}
+          />
+        </FormField>
+
+        <FormField label="التاريخ" required>
+          <DateInput
+            value={form.issuedAt}
+            onChange={(v) => setForm({ ...form, issuedAt: v })}
+          />
+        </FormField>
+
+        <FormField label="الحالة">
+          <Select
+            value={form.status}
+            onChange={(v) =>
+              setForm({ ...form, status: v as 'active' | 'resolved' })
+            }
+            options={[
+              { value: 'active', label: 'نشط' },
+              { value: 'resolved', label: 'منتهي' },
+            ]}
+          />
+        </FormField>
+
+        <FormField label="ملاحظات">
+          <TextArea
+            value={form.notes || ''}
+            onChange={(v) => setForm({ ...form, notes: v })}
+            rows={2}
+          />
+        </FormField>
       </Modal>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="حذف التحذير"
+        message="هل أنت متأكد من الحذف؟"
+        confirmLabel="حذف"
+        danger
+        busy={busy}
+        onConfirm={handleDelete}
+        onCancel={() => setToDelete(null)}
+      />
     </div>
   );
 }
 `;
 
 /* ═══════════════════════════════════════════════════════════════
-   3. src/pages/SearchPage.tsx — إزالة Avatar غير المستخدم
-   ═══════════════════════════════════════════════════════════════ */
-
-files["src/pages/SearchPage.tsx"] = `import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Badge } from '@/components/ui/Badge';
-import type { Member, Contribution, Achievement, CalendarEvent } from '@/types';
-
-interface SearchResult {
-  id: string;
-  type: 'member' | 'contribution' | 'achievement' | 'event' | 'team' | 'committee';
-  title: string;
-  subtitle?: string;
-  route: string;
-  icon: string;
-}
-
-export function SearchPage() {
-  const [query, setQuery] = useState('');
-  const { data: members } = useRealtimeCollection<Member>('members');
-  const { data: contributions } = useRealtimeCollection<Contribution>('contributions');
-  const { data: achievements } = useRealtimeCollection<Achievement>('achievements');
-  const { data: events } = useRealtimeCollection<CalendarEvent>('calendar');
-
-  const results = useMemo<SearchResult[]>(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || q.length < 2) return [];
-
-    const out: SearchResult[] = [];
-
-    members.forEach((m) => {
-      if (m.name.toLowerCase().includes(q)) {
-        out.push({
-          id: m.id,
-          type: 'member',
-          title: m.name,
-          subtitle: m.bio?.slice(0, 80),
-          route: '/members/' + m.id,
-          icon: '👤',
-        });
-      }
-    });
-
-    contributions.forEach((c) => {
-      if (
-        c.title.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
-      ) {
-        out.push({
-          id: c.id,
-          type: 'contribution',
-          title: c.title,
-          subtitle: c.memberName + ' · ' + c.hours + ' ساعة',
-          route: '/contributions/' + c.id,
-          icon: '📝',
-        });
-      }
-    });
-
-    achievements.forEach((a) => {
-      if (
-        a.title.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q)
-      ) {
-        out.push({
-          id: a.id,
-          type: 'achievement',
-          title: a.title,
-          subtitle: a.description.slice(0, 80),
-          route: '/achievements',
-          icon: '🏆',
-        });
-      }
-    });
-
-    events.forEach((e) => {
-      if (e.title.toLowerCase().includes(q)) {
-        out.push({
-          id: e.id,
-          type: 'event',
-          title: e.title,
-          subtitle: e.date,
-          route: '/calendar',
-          icon: '📅',
-        });
-      }
-    });
-
-    teams.forEach((t) => {
-      if (t.name.toLowerCase().includes(q) || t.nameAr.includes(query)) {
-        out.push({
-          id: t.id,
-          type: 'team',
-          title: t.name,
-          subtitle: t.nameAr,
-          route: '/teams/' + t.id,
-          icon: '🏅',
-        });
-      }
-    });
-
-    committees.forEach((c) => {
-      if (c.nameAr.includes(query) || c.name.toLowerCase().includes(q)) {
-        out.push({
-          id: c.id,
-          type: 'committee',
-          title: c.nameAr,
-          subtitle: c.description,
-          route: '/committees',
-          icon: '🏛️',
-        });
-      }
-    });
-
-    return out.slice(0, 50);
-  }, [query, members, contributions, achievements, events]);
-
-  return (
-    <div className="container">
-      <PageHeader
-        eyebrow="بحث"
-        title="بحث شامل"
-        description="ابحث في الأعضاء، المشاركات، الإنجازات، الأحداث، الفرق، واللجان."
-      />
-
-      <input
-        className="input"
-        type="search"
-        placeholder="اكتب حرفين على الأقل..."
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        autoFocus
-        style={{ marginBottom: 20 }}
-      />
-
-      {query.length < 2 ? (
-        <EmptyState
-          icon="🔍"
-          title="ابدأ الكتابة"
-          message="اكتب حرفين على الأقل للبحث."
-        />
-      ) : results.length === 0 ? (
-        <EmptyState
-          icon="🔍"
-          title="لا نتائج"
-          message={'لم يتم العثور على نتائج لـ "' + query + '".'}
-        />
-      ) : (
-        <div className="stack">
-          {results.map((r) => (
-            <Link
-              key={r.type + '-' + r.id}
-              to={r.route}
-              className="card"
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'var(--c-off-white)',
-                    border: '1px solid var(--c-line)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '1.15rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {r.icon}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="card__title">{r.title}</div>
-                  {r.subtitle ? (
-                    <div className="card__meta">{r.subtitle}</div>
-                  ) : null}
-                </div>
-                <Badge variant="neutral">{r.type}</Badge>
-              </div>
-            </Link>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   4. src/pages/MembersPage.tsx — إزالة Loading + ROLE_LABEL
-   ═══════════════════════════════════════════════════════════════ */
-
-files["src/pages/MembersPage.tsx"] = `import { useMemo, useState } from 'react';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import type { Member, TeamId } from '@/types';
-import { MemberCard } from '@/components/member/MemberCard';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { cx } from '@/lib/format';
-
-export function MembersPage() {
-  const { data: members, loading } = useRealtimeCollection<Member>('members');
-  const [query, setQuery] = useState('');
-  const [teamFilter, setTeamFilter] = useState<TeamId | 'all'>('all');
-  const [committeeFilter, setCommitteeFilter] = useState<string>('all');
-
-  const filtered = useMemo(() => {
-    const q = query.trim();
-    return members.filter((m) => {
-      const matchesQuery = !q || m.name.includes(q);
-      const matchesTeam =
-        teamFilter === 'all' || m.teamIds.includes(teamFilter);
-      const matchesCommittee =
-        committeeFilter === 'all' ||
-        m.committeeIds.includes(committeeFilter);
-      return matchesQuery && matchesTeam && matchesCommittee;
-    });
-  }, [members, query, teamFilter, committeeFilter]);
-
-  return (
-    <div className="container">
-      <PageHeader
-        eyebrow="الأعضاء"
-        title="جميع الأعضاء"
-        description="تصفّح، ابحث، وفلتر بالفريق واللجنة."
-      />
-
-      <div className="toolbar">
-        <input
-          className="input"
-          type="search"
-          placeholder="ابحث بالاسم..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </div>
-
-      <div className="chips mb-4">
-        <button
-          type="button"
-          className={cx('chip', teamFilter === 'all' && 'is-active')}
-          onClick={() => setTeamFilter('all')}
-        >
-          كل الفرق
-        </button>
-        {teams.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            className={cx('chip', teamFilter === t.id && 'is-active')}
-            onClick={() => setTeamFilter(t.id)}
-          >
-            {t.name}
-          </button>
-        ))}
-      </div>
-
-      <div className="chips mb-4">
-        <button
-          type="button"
-          className={cx('chip', committeeFilter === 'all' && 'is-active')}
-          onClick={() => setCommitteeFilter('all')}
-        >
-          كل اللجان
-        </button>
-        {committees.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className={cx('chip', committeeFilter === c.id && 'is-active')}
-            onClick={() => setCommitteeFilter(c.id)}
-          >
-            {c.icon} {c.nameAr}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <SkeletonList count={6} />
-      ) : filtered.length === 0 ? (
-        <EmptyState
-          icon="👥"
-          title="لا نتائج"
-          message="لم يتم العثور على أعضاء مطابقين للبحث."
-        />
-      ) : (
-        <div className="grid grid--wide">
-          {filtered.map((m) => (
-            <MemberCard key={m.id} member={m} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   5. src/pages/LoginPage.tsx — إزالة FormField + TextInput
+   2. src/pages/admin/AdminHomePage.tsx
+   إزالة teams غير المستخدمة
    ═══════════════════════════════════════════════════════════════ */
 
 files[
-  "src/pages/LoginPage.tsx"
-] = `import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login, sendPasswordReset } from '@/lib/auth';
-
-type Mode = 'login' | 'forgot';
-
-export function LoginPage() {
-  const nav = useNavigate();
-  const [mode, setMode] = useState<Mode>('login');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [busy, setBusy] = useState(false);
-
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setBusy(true);
-    try {
-      await login(email.trim(), password);
-      nav('/dashboard');
-    } catch (err: unknown) {
-      setError(translateError(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const onForgot = async (e: FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-    setBusy(true);
-    try {
-      await sendPasswordReset(email.trim());
-      setSuccess('تم إرسال رابط إعادة التعيين إلى بريدك الإلكتروني');
-      setTimeout(() => setMode('login'), 2500);
-    } catch (err: unknown) {
-      setError(translateError(err));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-tabs">
-          <button
-            type="button"
-            className={'login-tab' + (mode === 'login' ? ' is-active' : '')}
-            onClick={() => {
-              setMode('login');
-              setError('');
-              setSuccess('');
-            }}
-          >
-            تسجيل الدخول
-          </button>
-          <button
-            type="button"
-            className={'login-tab' + (mode === 'forgot' ? ' is-active' : '')}
-            onClick={() => {
-              setMode('forgot');
-              setError('');
-              setSuccess('');
-            }}
-          >
-            نسيت كلمة المرور
-          </button>
-        </div>
-
-        {error ? <div className="login-error">{error}</div> : null}
-        {success ? <div className="login-success">{success}</div> : null}
-
-        {mode === 'login' ? (
-          <form onSubmit={onSubmit}>
-            <div className="login-field">
-              <label className="login-label">البريد الإلكتروني</label>
-              <input
-                className="login-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@resala-stem.org"
-                autoComplete="email"
-                required
-                dir="ltr"
-                style={{ textAlign: 'left' }}
-              />
-            </div>
-
-            <div className="login-field">
-              <label className="login-label">كلمة المرور</label>
-              <input
-                className="login-input"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                required
-                dir="ltr"
-                style={{ textAlign: 'left' }}
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="login-submit"
-              disabled={busy || !email || !password}
-            >
-              {busy ? '...' : 'تسجيل الدخول'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={onForgot}>
-            <div className="login-field">
-              <label className="login-label">البريد الإلكتروني</label>
-              <input
-                className="login-input"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@resala-stem.org"
-                autoComplete="email"
-                required
-                dir="ltr"
-                style={{ textAlign: 'left' }}
-              />
-            </div>
-            <button
-              type="submit"
-              className="login-submit"
-              disabled={busy || !email}
-            >
-              {busy ? '...' : 'إرسال رابط الاستعادة'}
-            </button>
-          </form>
-        )}
-
-        <p style={{ textAlign: 'center', marginTop: 20 }}>
-          <Link
-            to="/"
-            style={{
-              fontSize: '0.82rem',
-              color: 'var(--c-ink-muted)',
-            }}
-          >
-            العودة للرئيسية
-          </Link>
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function translateError(err: unknown): string {
-  const msg = err instanceof Error ? err.message : 'حدث خطأ غير متوقع';
-  if (msg.includes('invalid-credential'))
-    return 'البريد أو كلمة المرور غير صحيحة';
-  if (msg.includes('user-not-found')) return 'لا يوجد حساب بهذا البريد';
-  if (msg.includes('wrong-password')) return 'كلمة المرور غير صحيحة';
-  if (msg.includes('invalid-email')) return 'البريد الإلكتروني غير صالح';
-  if (msg.includes('network-request-failed')) return 'تعذر الاتصال بالشبكة';
-  if (msg.includes('too-many-requests')) return 'حاول مجددًا بعد قليل';
-  return msg;
-}
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   6. src/pages/LeaguePage.tsx — إزالة Loading
-   ═══════════════════════════════════════════════════════════════ */
-
-files["src/pages/LeaguePage.tsx"] = `import { useMemo, useState } from 'react';
+  "src/pages/admin/AdminHomePage.tsx"
+] = `import { Link } from 'react-router-dom';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
+import { seedAll, type SeedResult } from '@/lib/seed';
+import { members } from '@/data/members';
 import { committees } from '@/data/committees';
 import { hoursToPoints } from '@/lib/format';
+import { useState } from 'react';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat, StatRow } from '@/components/ui/Stat';
-import { SkeletonList } from '@/components/ui/Loading';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Avatar } from '@/components/ui/Avatar';
-import { cx } from '@/lib/format';
-import type { Member, TeamId, RoleId } from '@/types';
-
-const LEAGUE_EXCLUDED: RoleId[] = ['HEAD', 'VICE'];
-
-type FilterType = 'all' | 'team' | 'committee';
-
-export function LeaguePage() {
-  const { data: members, loading } = useRealtimeCollection<Member>('members');
-  const [filterType, setFilterType] = useState<FilterType>('all');
-  const [filterId, setFilterId] = useState<string>('all');
-
-  const eligible = useMemo(
-    () => members.filter((m) => !LEAGUE_EXCLUDED.includes(m.role)),
-    [members],
-  );
-
-  const filtered = useMemo(() => {
-    if (filterType === 'all' || filterId === 'all') return eligible;
-    if (filterType === 'team') {
-      return eligible.filter((m) => m.teamIds.includes(filterId as TeamId));
-    }
-    return eligible.filter((m) => m.committeeIds.includes(filterId));
-  }, [eligible, filterType, filterId]);
-
-  const board = useMemo(() => {
-    return [...filtered]
-      .sort((a, b) => hoursToPoints(b.hours) - hoursToPoints(a.hours))
-      .map((m, i) => ({
-        member: m,
-        rank: i + 1,
-        points: hoursToPoints(m.hours),
-      }));
-  }, [filtered]);
-
-  const totalPoints = board.reduce((s, e) => s + e.points, 0);
-  const totalHours = filtered.reduce((s, m) => s + (m.hours || 0), 0);
-
-  const title =
-    filterType === 'all'
-      ? 'الترتيب العام'
-      : filterType === 'team'
-        ? 'ترتيب فريق ' + (teams.find((t) => t.id === filterId)?.nameAr || '')
-        : 'ترتيب لجنة ' +
-          (committees.find((c) => c.id === filterId)?.nameAr || '');
-
-  return (
-    <div className="container">
-      <PageHeader
-        eyebrow="الترتيب"
-        title="الليج"
-        description="ترتيب الأعضاء على مستوى المنظمة، الفريق، واللجنة."
-      />
-
-      <section className="section--tight">
-        <StatRow>
-          <Stat value={board.length} label="الأعضاء" />
-          <Stat value={totalPoints} label="مجموع النقاط" />
-          <Stat value={totalHours} label="مجموع الساعات" />
-        </StatRow>
-      </section>
-
-      <div className="chips mb-3">
-        <button
-          type="button"
-          className={cx('chip', filterType === 'all' && 'is-active')}
-          onClick={() => {
-            setFilterType('all');
-            setFilterId('all');
-          }}
-        >
-          عام
-        </button>
-        <button
-          type="button"
-          className={cx('chip', filterType === 'team' && 'is-active')}
-          onClick={() => {
-            setFilterType('team');
-            setFilterId('all');
-          }}
-        >
-          حسب الفريق
-        </button>
-        <button
-          type="button"
-          className={cx('chip', filterType === 'committee' && 'is-active')}
-          onClick={() => {
-            setFilterType('committee');
-            setFilterId('all');
-          }}
-        >
-          حسب اللجنة
-        </button>
-      </div>
-
-      {filterType === 'team' ? (
-        <div className="chips mb-4">
-          <button
-            type="button"
-            className={cx('chip', filterId === 'all' && 'is-active')}
-            onClick={() => setFilterId('all')}
-          >
-            كل الفرق
-          </button>
-          {teams.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={cx('chip', filterId === t.id && 'is-active')}
-              onClick={() => setFilterId(t.id)}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {filterType === 'committee' ? (
-        <div className="chips mb-4">
-          <button
-            type="button"
-            className={cx('chip', filterId === 'all' && 'is-active')}
-            onClick={() => setFilterId('all')}
-          >
-            كل اللجان
-          </button>
-          {committees.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={cx('chip', filterId === c.id && 'is-active')}
-              onClick={() => setFilterId(c.id)}
-            >
-              {c.icon} {c.nameAr}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      <section className="section">
-        <SectionHeader eyebrow="الترتيب" title={title} />
-
-        {loading ? (
-          <SkeletonList count={8} />
-        ) : board.length === 0 ? (
-          <EmptyState
-            icon="🥇"
-            title="لا بيانات"
-            message="لا توجد مشاركات مسجلة لهذا التصنيف."
-          />
-        ) : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>العضو</th>
-                  <th>الفريق</th>
-                  <th>الساعات</th>
-                  <th>النقاط</th>
-                </tr>
-              </thead>
-              <tbody>
-                {board.map((e) => {
-                  const memberTeams = teams.filter((t) =>
-                    e.member.teamIds.includes(t.id),
-                  );
-                  return (
-                    <tr key={e.member.id}>
-                      <td
-                        className={
-                          'rank rank--' + (e.rank <= 3 ? e.rank : '')
-                        }
-                        data-label="الترتيب"
-                      >
-                        {e.rank}
-                      </td>
-                      <td data-label="العضو">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                          }}
-                        >
-                          <Avatar name={e.member.name} size={32} variant="navy" />
-                          <span style={{ fontWeight: 700 }}>
-                            {e.member.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td data-label="الفريق">
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 4,
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          {memberTeams.map((t) => (
-                            <span key={t.id} className="badge">
-                              {t.name}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td
-                        style={{ fontFamily: 'var(--font-en)' }}
-                        data-label="الساعات"
-                      >
-                        {e.member.hours}
-                      </td>
-                      <td className="points" data-label="النقاط">
-                        {e.points}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   7. src/pages/DashboardPage.tsx — إزالة isAdmin
-   ═══════════════════════════════════════════════════════════════ */
-
-files["src/pages/DashboardPage.tsx"] = `import { Link } from 'react-router-dom';
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { members } from '@/data/members';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import {
-  isManager,
-  seesAllTeams,
-  canApproveStep,
-} from '@/lib/permissions';
-import { hoursToPoints, formatDate } from '@/lib/format';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Badge } from '@/components/ui/Badge';
-import { Avatar } from '@/components/ui/Avatar';
-import { EventCard } from '@/components/calendar/EventCard';
-import { EmptyState } from '@/components/ui/EmptyState';
+import { toast } from '@/components/ui/Toast';
 import type {
-  Notification,
+  AppUser,
   RequestRecord,
   Contribution,
-  ApprovalStep,
-  CalendarEvent,
+  Notification,
   Member,
 } from '@/types';
 
-export function DashboardPage() {
-  const { user } = useAuth();
-  const { data: notifs } = useRealtimeCollection<Notification>('notifications');
+interface AdminCard {
+  to: string;
+  title: string;
+  icon: string;
+  count?: number;
+  description: string;
+}
+
+export function AdminHomePage() {
+  const { data: users } = useRealtimeCollection<AppUser>('users');
+  const { data: liveMembers } = useRealtimeCollection<Member>('members');
   const { data: requests } = useRealtimeCollection<RequestRecord>('requests');
   const { data: contributions } = useRealtimeCollection<Contribution>('contributions');
-  const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
-  const { data: events } = useRealtimeCollection<CalendarEvent>('calendar');
-  const { data: liveMembers } = useRealtimeCollection<Member>('members');
+  const { data: notifs } = useRealtimeCollection<Notification>('notifications');
 
-  if (!user) {
-    return (
-      <div className="container">
-        <EmptyState
-          icon="🔒"
-          title="يجب تسجيل الدخول"
-          message="سجّل دخولك للوصول إلى لوحة التحكم."
-        />
-      </div>
-    );
-  }
+  const [seeding, setSeeding] = useState(false);
+  const [result, setResult] = useState<SeedResult | null>(null);
 
   const allMembers = liveMembers.length > 0 ? liveMembers : members;
-  const myMember = user.memberId
-    ? allMembers.find((m) => m.id === user.memberId)
-    : null;
 
-  const myContribs = contributions.filter((c) => c.memberId === user.memberId);
-  const approvedContribs = myContribs.filter((c) => c.status === 'approved');
-  const myHours = approvedContribs.reduce((s, c) => s + c.hours, 0);
-  const myPoints = hoursToPoints(myHours);
+  const pendingReq = requests.filter(
+    (r) => r.status === 'PENDING' || r.status === 'IN_REVIEW',
+  ).length;
 
-  const myRequests = requests.filter((r) => r.requesterUid === user.uid);
+  const pendingContribs = contributions.filter(
+    (c) => c.status === 'pending',
+  ).length;
 
-  const myNotifs = notifs
-    .filter((n) => n.userId === user.uid)
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 5);
-
-  const myPendingApprovals = approvals.filter(
-    (a) => a.status === 'PENDING' && canApproveStep(user, a),
-  );
-
-  const upcomingEvents = events
-    .filter((e) => e.date >= new Date().toISOString().slice(0, 10))
-    .filter(
-      (e) => e.isPublic || e.teamId === user.teamId || seesAllTeams(user),
-    )
-    .sort((a, b) => (a.date > b.date ? 1 : -1))
-    .slice(0, 3);
-
-  const totalOrgPoints = allMembers.reduce(
+  const totalPoints = allMembers.reduce(
     (s, m) => s + hoursToPoints(m.hours || 0),
     0,
   );
 
-  const pendingRequestsCount = requests.filter(
-    (r) => r.status === 'PENDING' || r.status === 'IN_REVIEW',
-  ).length;
+  const onSeed = async () => {
+    if (!window.confirm('سيتم رفع البيانات الأساسية إلى Firestore. متابعة؟')) {
+      return;
+    }
+    setSeeding(true);
+    try {
+      const r = await seedAll();
+      setResult(r);
+      toast.success('تم رفع البيانات بنجاح');
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'فشل الرفع';
+      toast.error('فشل الرفع', msg);
+    } finally {
+      setSeeding(false);
+    }
+  };
+
+  const cards: AdminCard[] = [
+    {
+      to: '/admin/analytics',
+      title: 'التحليلات',
+      icon: '📊',
+      description: 'نظرة شاملة على الإحصائيات',
+    },
+    {
+      to: '/admin/requests',
+      title: 'الطلبات',
+      icon: '📋',
+      count: pendingReq,
+      description: 'إدارة كل الطلبات',
+    },
+    {
+      to: '/admin/users',
+      title: 'المستخدمون',
+      icon: '👤',
+      count: users.length,
+      description: 'الحسابات والأدوار',
+    },
+    {
+      to: '/admin/members',
+      title: 'الأعضاء',
+      icon: '👥',
+      count: allMembers.length,
+      description: 'إدارة بيانات الأعضاء',
+    },
+    {
+      to: '/admin/contributions',
+      title: 'المشاركات',
+      icon: '📝',
+      count: pendingContribs,
+      description: 'اعتماد مشاركات الأعضاء',
+    },
+    {
+      to: '/admin/committees',
+      title: 'اللجان',
+      icon: '🏛️',
+      count: committees.length,
+      description: 'إدارة اللجان وتوزيع الأعضاء',
+    },
+    {
+      to: '/admin/achievements',
+      title: 'الإنجازات',
+      icon: '🏆',
+      description: 'إدارة الإنجازات',
+    },
+    {
+      to: '/admin/warnings',
+      title: 'التحذيرات',
+      icon: '⚠️',
+      description: 'إصدار ومتابعة التحذيرات',
+    },
+    {
+      to: '/admin/calendar',
+      title: 'التقويم',
+      icon: '📅',
+      description: 'إدارة الأحداث',
+    },
+    {
+      to: '/admin/conversations',
+      title: 'المحادثات',
+      icon: '💬',
+      description: 'إدارة المحادثات الجماعية',
+    },
+    {
+      to: '/admin/notifications',
+      title: 'إرسال إشعار',
+      icon: '🔔',
+      count: notifs.length,
+      description: 'إرسال إشعارات جماعية',
+    },
+    {
+      to: '/admin/audit',
+      title: 'سجل التغييرات',
+      icon: '📜',
+      description: 'تتبع كل الإجراءات',
+    },
+  ];
 
   return (
-    <>
-      <div className="section section--tight">
-        <div className="section-head__eyebrow">أهلاً بك</div>
-        <h1>{user.displayName}</h1>
-      </div>
+    <div>
+      <PageHeader
+        eyebrow="لوحة الإدارة"
+        title="مرحبًا"
+        description="تحكم كامل بالمحتوى والأعضاء والطلبات."
+      />
 
-      {isManager(user) ? (
-        <section className="section--tight">
-          <StatRow>
-            <Stat value={allMembers.length} label="الأعضاء" />
-            <Stat value={teams.length} label="الفرق" />
-            <Stat
-              value={pendingRequestsCount}
-              label="طلبات قيد المعالجة"
-              variant="red"
-            />
-            <Stat value={totalOrgPoints} label="مجموع النقاط" />
-          </StatRow>
-        </section>
-      ) : (
-        <section className="section--tight">
-          <StatRow>
-            <Stat value={myPoints} label="نقاطي" variant="red" />
-            <Stat value={myHours} label="ساعاتي" />
-            <Stat value={myContribs.length} label="مشاركاتي" />
-            <Stat value={myRequests.length} label="طلباتي" />
-          </StatRow>
-        </section>
-      )}
-
-      {user.role === 'MEMBER' ? (
-        <section className="section--tight">
-          <div className="row" style={{ gap: 10 }}>
-            <Link to="/requests/new" className="btn btn--primary btn--sm">
-              + طلب جديد
-            </Link>
-            <Link
-              to="/my-contributions"
-              className="btn btn--ghost btn--sm"
-            >
-              تسجيل مشاركة
-            </Link>
-          </div>
-        </section>
-      ) : null}
-
-      {isManager(user) && myPendingApprovals.length > 0 ? (
-        <section className="section">
-          <SectionHeader
-            eyebrow="بانتظار قرارك"
-            title="الموافقات المعلّقة"
-            action={
-              <Link to="/approvals" className="btn btn--ghost btn--sm">
-                الكل
-              </Link>
-            }
-          />
-          <div className="stack">
-            {myPendingApprovals.slice(0, 4).map((a) => {
-              const req = requests.find((r) => r.id === a.requestId);
-              if (!req) return null;
-              return (
-                <Link
-                  key={a.id}
-                  to={'/requests/' + req.id}
-                  className="card"
-                >
-                  <div className="row row--between">
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="card__title">{req.title}</div>
-                      <div className="card__meta">
-                        {req.requesterName} · مرحلة {a.order}
-                      </div>
-                    </div>
-                    <Badge variant="warning" dot>
-                      بانتظارك
-                    </Badge>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {myNotifs.length > 0 ? (
-        <section className="section">
-          <SectionHeader
-            eyebrow="آخر التحديثات"
-            title="الإشعارات"
-            action={
-              <Link to="/notifications" className="btn btn--ghost btn--sm">
-                الكل
-              </Link>
-            }
-          />
-          <div className="stack">
-            {myNotifs.map((n) => (
-              <Link
-                key={n.id}
-                to={n.route || '/notifications'}
-                className="card"
-                style={
-                  !n.read
-                    ? { borderColor: '#FCA5A5', background: '#FFFBFC' }
-                    : undefined
-                }
-              >
-                <div className="row row--between">
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div className="card__title">{n.title}</div>
-                    <div className="card__meta">{n.message}</div>
-                  </div>
-                  {!n.read ? (
-                    <Badge variant="red" dot>
-                      جديد
-                    </Badge>
-                  ) : null}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <section className="section--tight">
+        <StatRow>
+          <Stat value={users.length} label="المستخدمون" />
+          <Stat value={allMembers.length} label="الأعضاء" />
+          <Stat value={pendingReq} label="طلبات معلّقة" variant="red" />
+          <Stat value={pendingContribs} label="مشاركات معلّقة" variant="amber" />
+          <Stat value={totalPoints} label="مجموع النقاط" />
+          <Stat value={notifs.length} label="الإشعارات" />
+        </StatRow>
+      </section>
 
       <section className="section">
         <SectionHeader
-          eyebrow="الترتيب"
-          title="أعلى الأعضاء"
+          eyebrow="التهيئة"
+          title="رفع البيانات الأساسية"
+          description="لمرة واحدة فقط — إن كانت Firestore فارغة."
           action={
-            <Link to="/league" className="btn btn--ghost btn--sm">
-              الليج الكامل
-            </Link>
+            <button
+              type="button"
+              className="btn btn--primary"
+              onClick={onSeed}
+              disabled={seeding}
+            >
+              {seeding ? 'جارٍ الرفع...' : 'رفع البيانات'}
+            </button>
           }
         />
-        <div className="table-wrap">
-          <table className="data">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>العضو</th>
-                <th>الساعات</th>
-                <th>النقاط</th>
-              </tr>
-            </thead>
-            <tbody>
-              {[...allMembers]
-                .filter((m) => m.role !== 'HEAD' && m.role !== 'VICE')
-                .sort((a, b) => hoursToPoints(b.hours) - hoursToPoints(a.hours))
-                .slice(0, 5)
-                .map((m, i) => (
-                  <tr key={m.id}>
-                    <td
-                      className={'rank rank--' + (i + 1 <= 3 ? i + 1 : '')}
-                      data-label="الترتيب"
-                    >
-                      {i + 1}
-                    </td>
-                    <td data-label="العضو">
-                      <Link
-                        to={'/members/' + m.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: 10,
-                        }}
-                      >
-                        <Avatar name={m.name} size={30} variant="navy" />
-                        <span style={{ fontWeight: 700 }}>{m.name}</span>
-                      </Link>
-                    </td>
-                    <td
-                      style={{ fontFamily: 'var(--font-en)' }}
-                      data-label="الساعات"
-                    >
-                      {m.hours}
-                    </td>
-                    <td className="points" data-label="النقاط">
-                      {hoursToPoints(m.hours)}
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+        {result ? (
+          <div className="card no-click mt-4">
+            <div className="card__title">✓ تم الرفع بنجاح</div>
+            <div
+              className="small muted mt-2"
+              style={{ lineHeight: 1.9 }}
+            >
+              أعضاء: {result.members} · فرق: {result.teams} · مشاركات:{' '}
+              {result.contributions} · طلبات: {result.requests} · موافقات:{' '}
+              {result.approvals} · تحذيرات: {result.warnings} · إنجازات:{' '}
+              {result.achievements} · إشعارات: {result.notifications} ·
+              محادثات: {result.conversations} · رسائل: {result.messages}
+            </div>
+          </div>
+        ) : null}
+      </section>
+
+      <section className="section">
+        <SectionHeader eyebrow="الأقسام" title="روابط سريعة" />
+        <div className="grid grid--wide">
+          {cards.map((c) => (
+            <Link key={c.to} to={c.to} className="card">
+              <div className="row row--between">
+                <div className="row" style={{ gap: 10 }}>
+                  <span style={{ fontSize: '1.4rem' }}>{c.icon}</span>
+                  <div className="card__title">{c.title}</div>
+                </div>
+                {c.count !== undefined && c.count > 0 ? (
+                  <span className="badge badge--red">{c.count}</span>
+                ) : null}
+              </div>
+              <div className="card__meta mt-2">{c.description}</div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+`;
+
+/* ═══════════════════════════════════════════════════════════════
+   3. src/pages/admin/AdminConversationsPage.tsx
+   إزالة TeamId غير المستخدم
+   ═══════════════════════════════════════════════════════════════ */
+
+files[
+  "src/pages/admin/AdminConversationsPage.tsx"
+] = `import { useState } from 'react';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { useAuth } from '@/lib/useAuth';
+import { createOne, removeOne } from '@/lib/db';
+import { logAudit } from '@/lib/audit';
+import { teams } from '@/data/teams';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Loading';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/ui/Toast';
+import { relativeTime } from '@/lib/format';
+import type { Conversation } from '@/types';
+
+export function AdminConversationsPage() {
+  const { user: me } = useAuth();
+  const { data, loading } = useCollection<Conversation>('conversations');
+  const [toDelete, setToDelete] = useState<Conversation | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const createTeamConv = async (team: (typeof teams)[number]) => {
+    const exists = data.some((c) => c.type === 'team' && c.teamId === team.id);
+    if (exists) {
+      toast.info('المحادثة موجودة بالفعل');
+      return;
+    }
+    setBusy(true);
+    try {
+      const id = 'CONV-TEAM-' + team.id;
+      await createOne('conversations', {
+        id,
+        type: 'team',
+        title: 'فريق ' + team.nameAr,
+        teamId: team.id,
+        participantUids: [],
+        lastMessageAt: new Date().toISOString(),
+      });
+      await logAudit(me, 'CREATE_CONVERSATION', 'Conversation', id, team.name);
+      toast.success('تم إنشاء محادثة الفريق');
+    } catch {
+      toast.error('فشل الإنشاء');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    setBusy(true);
+    try {
+      await removeOne('conversations', toDelete.id);
+      await logAudit(
+        me,
+        'DELETE_CONVERSATION',
+        'Conversation',
+        toDelete.id,
+        toDelete.title,
+      );
+      toast.success('تم الحذف');
+      setToDelete(null);
+    } catch {
+      toast.error('فشل الحذف');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div>
+      <PageHeader
+        eyebrow="إدارة"
+        title="المحادثات"
+        description="إدارة محادثات الفرق والمحادثة العامة."
+      />
+
+      <section className="section">
+        <SectionHeader
+          eyebrow="إنشاء سريع"
+          title="محادثات الفرق"
+          description="محادثة واحدة لكل فريق — تُنشأ تلقائيًا لكل فريق."
+        />
+        <div className="chips">
+          {teams.map((t) => {
+            const exists = data.some(
+              (c) => c.type === 'team' && c.teamId === t.id,
+            );
+            return (
+              <button
+                key={t.id}
+                type="button"
+                disabled={busy || exists}
+                className={'chip' + (exists ? ' is-active' : '')}
+                onClick={() => createTeamConv(t)}
+              >
+                {t.name} {exists ? '✓' : '+'}
+              </button>
+            );
+          })}
         </div>
       </section>
 
-      {upcomingEvents.length > 0 ? (
-        <section className="section">
-          <SectionHeader
-            eyebrow="قريبًا"
-            title="الأحداث القادمة"
-            action={
-              <Link to="/calendar" className="btn btn--ghost btn--sm">
-                التقويم
-              </Link>
-            }
+      <section className="section">
+        <SectionHeader
+          eyebrow="القائمة"
+          title={'المحادثات (' + data.length + ')'}
+        />
+        {loading ? (
+          <SkeletonList count={5} />
+        ) : data.length === 0 ? (
+          <EmptyState
+            icon="💬"
+            title="لا محادثات"
+            message="أنشئ محادثات الفرق من الأعلى."
           />
+        ) : (
           <div className="stack">
-            {upcomingEvents.map((e) => (
-              <EventCard key={e.id} event={e} />
-            ))}
-          </div>
-        </section>
-      ) : null}
+            {data.map((c) => {
+              const team = c.teamId
+                ? teams.find((t) => t.id === c.teamId)
+                : null;
+              return (
+                <div key={c.id} className="card no-click">
+                  <div className="row row--between">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="card__title">
+                        {c.title ||
+                          (c.type === 'general'
+                            ? 'المحادثة العامة'
+                            : team?.name)}
+                      </div>
+                      <div className="card__meta">
+                        {c.type === 'general'
+                          ? 'عام'
+                          : c.type === 'team'
+                            ? 'فريق'
+                            : 'خاصة'}
+                        {c.lastMessageAt
+                          ? ' · ' + relativeTime(c.lastMessageAt)
+                          : ''}
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        c.type === 'general'
+                          ? 'red'
+                          : c.type === 'team'
+                            ? 'info'
+                            : 'neutral'
+                      }
+                    >
+                      {c.type}
+                    </Badge>
+                  </div>
 
-      {myMember ? (
-        <section className="section">
-          <SectionHeader eyebrow="معلوماتي" title="حسابي" />
-          <div className="card no-click">
-            <div className="kv">
-              <span className="kv__k">الاسم</span>
-              <span className="kv__v">{myMember.name}</span>
-            </div>
-            <div className="kv mt-3">
-              <span className="kv__k">الفريق</span>
-              <span className="kv__v">
-                {user.teamId
-                  ? teams.find((t) => t.id === user.teamId)?.name
-                  : '—'}
-              </span>
-            </div>
-            {user.committeeIds.length > 0 ? (
-              <div className="kv mt-3">
-                <span className="kv__k">اللجان</span>
-                <span className="kv__v">
-                  {committees
-                    .filter((c) => user.committeeIds.includes(c.id))
-                    .map((c) => c.nameAr)
-                    .join(' · ')}
-                </span>
-              </div>
-            ) : null}
-            <div className="kv mt-3">
-              <span className="kv__k">تاريخ الانضمام</span>
-              <span className="kv__v">{formatDate(user.createdAt)}</span>
-            </div>
-            <div className="row mt-4" style={{ gap: 10 }}>
-              <Link to="/profile" className="btn btn--ghost btn--sm">
-                ملفي الشخصي
-              </Link>
-              <Link
-                to="/my-contributions"
-                className="btn btn--ghost btn--sm"
-              >
-                مشاركاتي
-              </Link>
-            </div>
+                  {c.type !== 'general' ? (
+                    <div
+                      className="row mt-3"
+                      style={{ justifyContent: 'flex-end' }}
+                    >
+                      <button
+                        type="button"
+                        className="btn btn--danger btn--xs"
+                        onClick={() => setToDelete(c)}
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
-        </section>
-      ) : null}
-    </>
+        )}
+      </section>
+
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="حذف المحادثة"
+        message="سيتم حذف المحادثة وكل رسائلها."
+        confirmLabel="حذف"
+        danger
+        busy={busy}
+        onConfirm={handleDelete}
+        onCancel={() => setToDelete(null)}
+      />
+    </div>
   );
 }
 `;
@@ -1519,7 +813,7 @@ function run(cmd) {
 
 console.log("");
 console.log("  ═══════════════════════════════════════════════════");
-console.log("  fix.cjs v3 — إصلاح شامل");
+console.log("  fix.cjs v4 — إزالة الاستيرادات غير المستخدمة");
 console.log("  ═══════════════════════════════════════════════════");
 console.log("");
 
@@ -1545,7 +839,9 @@ console.log("  📦 Git add...");
 run("git add .");
 
 console.log("  💾 Git commit...");
-const committed = run('git commit -m "fix: format labels + unused imports"');
+const committed = run(
+  'git commit -m "fix: remove unused imports in admin pages"'
+);
 
 if (!committed) {
   console.log("  ℹ️  لا تغييرات جديدة للـ commit");
