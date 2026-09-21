@@ -4,19 +4,11 @@ import { useAuth } from '@/lib/useAuth';
 import { logout } from '@/lib/auth';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
-import { cx, initials } from '@/lib/format';
+import { cx } from '@/lib/format';
 import type { ApprovalStep } from '@/types';
 
-interface NavItem {
-  to: string;
-  label: string;
-  count?: number;
-}
-
-interface SidebarProps {
-  open: boolean;
-  onClose: () => void;
-}
+interface NavItem { to: string; label: string; count?: number; }
+interface SidebarProps { open: boolean; onClose: () => void; }
 
 function buildAdminNav(pending: number): NavItem[] {
   return [
@@ -32,6 +24,7 @@ function buildAdminNav(pending: number): NavItem[] {
     { to: '/admin/calendar', label: 'التقويم' },
     { to: '/admin/conversations', label: 'المحادثات' },
     { to: '/admin/notifications', label: 'إرسال إشعار' },
+    { to: '/admin/governance', label: 'الحوكمة' },
     { to: '/admin/audit', label: 'سجل التغييرات' },
   ];
 }
@@ -51,6 +44,7 @@ function buildManagerNav(pending: number): NavItem[] {
     { to: '/calendar', label: 'التقويم' },
     { to: '/notifications', label: 'الإشعارات' },
     { to: '/reports', label: 'التقارير' },
+    { to: '/governance', label: 'الحوكمة' },
   ];
 }
 
@@ -96,44 +90,21 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   }).length;
 
   let items: NavItem[];
-  if (isAdmin(user)) {
-    items = buildAdminNav(pending);
-  } else if (user.role === 'MEMBER' || user.role === 'VIEWER') {
-    items = buildMemberNav();
-  } else {
-    items = buildManagerNav(pending);
-  }
+  if (isAdmin(user)) items = buildAdminNav(pending);
+  else if (user.role === 'MEMBER' || user.role === 'VIEWER') items = buildMemberNav();
+  else items = buildManagerNav(pending);
 
-  const handleLogout = async () => {
-    onClose();
-    await logout();
-    nav('/');
-  };
-
-  const handleNavClick = () => {
-    if (isMobile) onClose();
-  };
+  const handleLogout = async () => { onClose(); await logout(); nav('/'); };
+  const handleNavClick = () => { if (isMobile) onClose(); };
 
   return (
     <>
-      <div
-        className={'sidebar-overlay' + (open ? ' is-open' : '')}
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className={'sidebar-overlay' + (open ? ' is-open' : '')} onClick={onClose} aria-hidden="true" />
 
       <aside className={'sidebar no-print' + (open ? ' is-open' : '')}>
-        <button
-          type="button"
-          className="sidebar-close"
-          onClick={onClose}
-          aria-label="إغلاق القائمة"
-        >
-          ×
-        </button>
+        <button type="button" className="sidebar-close" onClick={onClose} aria-label="إغلاق القائمة">×</button>
 
         <div className="sidebar__user">
-          <div className="sidebar__avatar">{initials(user.displayName)}</div>
           <div className="sidebar__user-info">
             <div className="sidebar__user-name">{user.displayName}</div>
             <div className="sidebar__user-role">{ROLE_LABEL[user.role]}</div>
@@ -141,9 +112,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         </div>
 
         <div className="sidebar__group">
-          <div className="sidebar__title">
-            {seesAllTeams(user) ? 'الإدارة' : 'القائمة'}
-          </div>
+          <div className="sidebar__title">{seesAllTeams(user) ? 'الإدارة' : 'القائمة'}</div>
           {items.map((it) => (
             <NavLink
               key={it.to}
@@ -154,9 +123,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             >
               <span>{it.label}</span>
               {it.count && it.count > 0 ? (
-                <span className="sidebar__count">
-                  {it.count > 99 ? '99+' : it.count}
-                </span>
+                <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span>
               ) : null}
             </NavLink>
           ))}
@@ -164,12 +131,8 @@ export function Sidebar({ open, onClose }: SidebarProps) {
 
         <div className="sidebar__group">
           <div className="sidebar__title">الحساب</div>
-          <button
-            type="button"
-            className="sidebar__link sidebar__link--danger"
-            onClick={handleLogout}
-          >
-            <span>تسجيل الخروج</span>
+          <button type="button" className="sidebar__link sidebar__link--danger" onClick={handleLogout}>
+            تسجيل الخروج
           </button>
         </div>
       </aside>

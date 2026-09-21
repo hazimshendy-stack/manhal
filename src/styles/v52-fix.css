@@ -1,0 +1,118 @@
+/* ═══════════════════════════════════════════════════════════════
+   v5.2 Fix — تصحيحات نهائية شاملة
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── إزالة أي أيقونات من لوحة الإدارة ─── */
+.admin-only svg,
+.admin-page svg:not(.keep-icon) { display: none; }
+
+/* ─── إزالة أيقونة brand القديمة ─── */
+.brand::before,
+.footer__brand::before { content: none !important; display: none !important; }
+
+/* ─── إزالة أيقونة الـ sidebar avatar ─── */
+.sidebar__avatar { display: none !important; }
+
+/* ─── إزالة أيقونة nav-action القديمة ─── */
+.nav-action__icon { display: none !important; }
+.nav-action__menu { display: flex !important; }
+
+/* ─── Padding موحد ─── */
+.section,
+.section--tight {
+  padding-inline: 0;
+}
+
+/* ─── منع الصفحات من الالتصاق ─── */
+.page-content,
+.dashboard-layout > div > * {
+  padding-inline: 0;
+}
+
+/* ─── النصوص في البطاقات ─── */
+.card__title,
+.card__meta,
+.card__body {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ─── منع الفائض الأفقي ─── */
+body,
+.app-shell,
+.app-main {
+  overflow-x: hidden;
+}
+
+/* ─── الإشعارات — بدون أيقونات ─── */
+.notif-item__icon { display: none !important; }
+
+/* ─── الجداول — مساحة كافية ─── */
+@media (max-width: 900px) {
+  table.data td {
+    padding: 12px 16px;
+  }
+}
+
+/* ─── الفوتر — بدون أيقونات ─── */
+.footer__brand { padding-inline-start: 0; }
+
+/* ─── العضو في الرئيسية — أفضل ─── */
+.grid.grid--wide > .member-card {
+  min-height: 200px;
+}
+
+/* ─── الليج — عرض الاسم بالكامل ─── */
+table.data td[data-label="العضو"] span {
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* ─── فريق — بدون ترجمة ─── */
+.card__meta[data-team-name] { text-transform: none !important; }
+
+/* ─── Onboarding — خلفية بيضا ─── */
+.onboarding-backdrop {
+  background: #FFFFFF !important;
+}
+
+.onboarding-card {
+  background: #FFFFFF !important;
+  color: var(--c-ink) !important;
+  border: 1.5px solid var(--c-line) !important;
+}
+
+.onboarding-card__title { color: var(--c-navy) !important; }
+.onboarding-card__desc { color: var(--c-ink-soft) !important; }
+
+/* ─── إزالة أيقونة البحث القديمة ─── */
+.search-icon { display: none !important; }
+
+/* ─── صفحات الأدمن ─── */
+.admin-page .card__icon,
+.admin-page [class*="__icon"] {
+  display: none !important;
+}
+
+/* ─── Member Profile — إزالة حرفين ─── */
+.profile svg.avatar-initials { display: none !important; }
+
+/* ─── شكل عام للصور ─── */
+img, svg, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ─── Accessibility — إخفاء مرئي ─── */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

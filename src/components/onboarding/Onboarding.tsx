@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
-import { onboardingCards } from '@/data';
-import {
-  hasCompletedOnboarding,
-  markOnboardingComplete,
-} from '@/lib/onboarding';
-import { site } from '@/data';
+import { onboardingCards, site } from '@/data';
+import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding';
 
 export function Onboarding() {
   const [visible, setVisible] = useState(false);
@@ -14,9 +10,7 @@ export function Onboarding() {
       setVisible(true);
       document.body.style.overflow = 'hidden';
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
+    return () => { document.body.style.overflow = ''; };
   }, []);
 
   const finish = () => {

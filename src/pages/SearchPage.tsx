@@ -14,8 +14,16 @@ interface SearchResult {
   title: string;
   subtitle?: string;
   route: string;
-  icon: string;
 }
+
+const TYPE_LABEL: Record<string, string> = {
+  member: 'عضو',
+  contribution: 'مشاركة',
+  achievement: 'إنجاز',
+  event: 'حدث',
+  team: 'فريق',
+  committee: 'لجنة',
+};
 
 export function SearchPage() {
   const [query, setQuery] = useState('');
@@ -32,85 +40,37 @@ export function SearchPage() {
 
     members.forEach((m) => {
       if (m.name.toLowerCase().includes(q)) {
-        out.push({
-          id: m.id,
-          type: 'member',
-          title: m.name,
-          subtitle: m.bio?.slice(0, 80),
-          route: '/members/' + m.id,
-          icon: '👤',
-        });
+        out.push({ id: m.id, type: 'member', title: m.name, subtitle: m.bio?.slice(0, 80), route: '/members/' + m.id });
       }
     });
 
     contributions.forEach((c) => {
-      if (
-        c.title.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q)
-      ) {
-        out.push({
-          id: c.id,
-          type: 'contribution',
-          title: c.title,
-          subtitle: c.memberName + ' · ' + c.hours + ' ساعة',
-          route: '/contributions/' + c.id,
-          icon: '📝',
-        });
+      if (c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)) {
+        out.push({ id: c.id, type: 'contribution', title: c.title, subtitle: c.memberName + ' · ' + c.hours + ' ساعة', route: '/contributions' });
       }
     });
 
     achievements.forEach((a) => {
-      if (
-        a.title.toLowerCase().includes(q) ||
-        a.description.toLowerCase().includes(q)
-      ) {
-        out.push({
-          id: a.id,
-          type: 'achievement',
-          title: a.title,
-          subtitle: a.description.slice(0, 80),
-          route: '/achievements',
-          icon: '🏆',
-        });
+      if (a.title.toLowerCase().includes(q) || a.description.toLowerCase().includes(q)) {
+        out.push({ id: a.id, type: 'achievement', title: a.title, subtitle: a.description.slice(0, 80), route: '/achievements' });
       }
     });
 
     events.forEach((e) => {
       if (e.title.toLowerCase().includes(q)) {
-        out.push({
-          id: e.id,
-          type: 'event',
-          title: e.title,
-          subtitle: e.date,
-          route: '/calendar',
-          icon: '📅',
-        });
+        out.push({ id: e.id, type: 'event', title: e.title, subtitle: e.date, route: '/calendar' });
       }
     });
 
     teams.forEach((t) => {
-      if (t.name.toLowerCase().includes(q) || t.nameAr.includes(query)) {
-        out.push({
-          id: t.id,
-          type: 'team',
-          title: t.name,
-          subtitle: t.nameAr,
-          route: '/teams/' + t.id,
-          icon: '🏅',
-        });
+      if (t.name.toLowerCase().includes(q)) {
+        out.push({ id: t.id, type: 'team', title: t.name, subtitle: t.description, route: '/teams/' + t.id });
       }
     });
 
     committees.forEach((c) => {
       if (c.nameAr.includes(query) || c.name.toLowerCase().includes(q)) {
-        out.push({
-          id: c.id,
-          type: 'committee',
-          title: c.nameAr,
-          subtitle: c.description,
-          route: '/committees',
-          icon: '🏛️',
-        });
+        out.push({ id: c.id, type: 'committee', title: c.nameAr, subtitle: c.description, route: '/committees' });
       }
     });
 
@@ -136,54 +96,19 @@ export function SearchPage() {
       />
 
       {query.length < 2 ? (
-        <EmptyState
-          icon="🔍"
-          title="ابدأ الكتابة"
-          message="اكتب حرفين على الأقل للبحث."
-        />
+        <EmptyState title="ابدأ الكتابة" message="اكتب حرفين على الأقل للبحث." />
       ) : results.length === 0 ? (
-        <EmptyState
-          icon="🔍"
-          title="لا نتائج"
-          message={'لم يتم العثور على نتائج لـ "' + query + '".'}
-        />
+        <EmptyState title="لا نتائج" message={'لم يتم العثور على نتائج لـ "' + query + '".'} />
       ) : (
         <div className="stack">
           {results.map((r) => (
-            <Link
-              key={r.type + '-' + r.id}
-              to={r.route}
-              className="card"
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  gap: 12,
-                  alignItems: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    background: 'var(--c-off-white)',
-                    border: '1px solid var(--c-line)',
-                    display: 'grid',
-                    placeItems: 'center',
-                    fontSize: '1.15rem',
-                    flexShrink: 0,
-                  }}
-                >
-                  {r.icon}
-                </div>
+            <Link key={r.type + '-' + r.id} to={r.route} className="card">
+              <div className="row row--between">
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="card__title">{r.title}</div>
-                  {r.subtitle ? (
-                    <div className="card__meta">{r.subtitle}</div>
-                  ) : null}
+                  {r.subtitle ? <div className="card__meta">{r.subtitle}</div> : null}
                 </div>
-                <Badge variant="neutral">{r.type}</Badge>
+                <Badge variant="neutral">{TYPE_LABEL[r.type]}</Badge>
               </div>
             </Link>
           ))}

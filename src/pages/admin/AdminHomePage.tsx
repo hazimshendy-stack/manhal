@@ -9,18 +9,11 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat, StatRow } from '@/components/ui/Stat';
 import { toast } from '@/components/ui/Toast';
-import type {
-  AppUser,
-  RequestRecord,
-  Contribution,
-  Notification,
-  Member,
-} from '@/types';
+import type { AppUser, RequestRecord, Contribution, Notification, Member } from '@/types';
 
 interface AdminCard {
   to: string;
   title: string;
-  icon: string;
   count?: number;
   description: string;
 }
@@ -37,23 +30,12 @@ export function AdminHomePage() {
 
   const allMembers = liveMembers.length > 0 ? liveMembers : members;
 
-  const pendingReq = requests.filter(
-    (r) => r.status === 'PENDING' || r.status === 'IN_REVIEW',
-  ).length;
-
-  const pendingContribs = contributions.filter(
-    (c) => c.status === 'pending',
-  ).length;
-
-  const totalPoints = allMembers.reduce(
-    (s, m) => s + hoursToPoints(m.hours || 0),
-    0,
-  );
+  const pendingReq = requests.filter((r) => r.status === 'PENDING' || r.status === 'IN_REVIEW').length;
+  const pendingContribs = contributions.filter((c) => c.status === 'pending').length;
+  const totalPoints = allMembers.reduce((s, m) => s + hoursToPoints(m.hours || 0), 0);
 
   const onSeed = async () => {
-    if (!window.confirm('سيتم رفع البيانات الأساسية إلى Firestore. متابعة؟')) {
-      return;
-    }
+    if (!window.confirm('سيتم رفع البيانات الأساسية إلى Firestore. متابعة؟')) return;
     setSeeding(true);
     try {
       const r = await seedAll();
@@ -68,84 +50,19 @@ export function AdminHomePage() {
   };
 
   const cards: AdminCard[] = [
-    {
-      to: '/admin/analytics',
-      title: 'التحليلات',
-      icon: '📊',
-      description: 'نظرة شاملة على الإحصائيات',
-    },
-    {
-      to: '/admin/requests',
-      title: 'الطلبات',
-      icon: '📋',
-      count: pendingReq,
-      description: 'إدارة كل الطلبات',
-    },
-    {
-      to: '/admin/users',
-      title: 'المستخدمون',
-      icon: '👤',
-      count: users.length,
-      description: 'الحسابات والأدوار',
-    },
-    {
-      to: '/admin/members',
-      title: 'الأعضاء',
-      icon: '👥',
-      count: allMembers.length,
-      description: 'إدارة بيانات الأعضاء',
-    },
-    {
-      to: '/admin/contributions',
-      title: 'المشاركات',
-      icon: '📝',
-      count: pendingContribs,
-      description: 'اعتماد مشاركات الأعضاء',
-    },
-    {
-      to: '/admin/committees',
-      title: 'اللجان',
-      icon: '🏛️',
-      count: committees.length,
-      description: 'إدارة اللجان وتوزيع الأعضاء',
-    },
-    {
-      to: '/admin/achievements',
-      title: 'الإنجازات',
-      icon: '🏆',
-      description: 'إدارة الإنجازات',
-    },
-    {
-      to: '/admin/warnings',
-      title: 'التحذيرات',
-      icon: '⚠️',
-      description: 'إصدار ومتابعة التحذيرات',
-    },
-    {
-      to: '/admin/calendar',
-      title: 'التقويم',
-      icon: '📅',
-      description: 'إدارة الأحداث',
-    },
-    {
-      to: '/admin/conversations',
-      title: 'المحادثات',
-      icon: '💬',
-      description: 'إدارة المحادثات الجماعية',
-    },
-    {
-      to: '/admin/notifications',
-      title: 'إرسال إشعار',
-      icon: '🔔',
-      count: notifs.length,
-      description: 'إرسال إشعارات جماعية',
-    },
-    {
-      to: '/admin/audit',
-      title: 'سجل التغييرات',
-      icon: '📜',
-      description: 'تتبع كل الإجراءات',
-    },
+    { to: '/admin/analytics', title: 'التحليلات', description: 'نظرة شاملة على الإحصائيات' },
+    { to: '/admin/requests', title: 'الطلبات', count: pendingReq, description: 'إدارة كل الطلبات' },
+    { to: '/admin/users', title: 'المستخدمون', count: users.length, description: 'الحسابات والأدوار' },
+    { to: '/admin/members', title: 'الأعضاء', count: allMembers.length, description: 'إدارة بيانات الأعضاء' },
+    { to: '/admin/contributions', title: 'المشاركات', count: pendingContribs, description: 'اعتماد مشاركات الأعضاء' },
+    { to: '/admin/committees', title: 'اللجان', count: committees.length, description: 'إدارة اللجان وتوزيع الأعضاء' },
+    { to: '/admin/achievements', title: 'الإنجازات', description: 'إدارة الإنجازات' },
+    { to: '/admin/warnings', title: 'التحذيرات', description: 'إصدار ومتابعة التحذيرات' },
+    { to: '/admin/calendar', title: 'التقويم', description: 'إدارة الأحداث' },
+    { to: '/admin/conversations', title: 'المحادثات', description: 'إدارة المحادثات الجماعية' },
+    { to: '/admin/notifications', title: 'إرسال إشعار', count: notifs.length, description: 'إرسال إشعارات جماعية' },
+    { to: '/admin/governance', title: 'الحوكمة', description: 'إدارة السياسات واللوائح' },
+    { to: '/admin/audit', title: 'سجل التغييرات', description: 'تتبع كل الإجراءات' },
   ];
 
   return (
@@ -173,12 +90,7 @@ export function AdminHomePage() {
           title="رفع البيانات الأساسية"
           description="لمرة واحدة فقط — إن كانت Firestore فارغة."
           action={
-            <button
-              type="button"
-              className="btn btn--primary"
-              onClick={onSeed}
-              disabled={seeding}
-            >
+            <button type="button" className="btn btn--primary" onClick={onSeed} disabled={seeding}>
               {seeding ? 'جارٍ الرفع...' : 'رفع البيانات'}
             </button>
           }
@@ -186,14 +98,10 @@ export function AdminHomePage() {
         {result ? (
           <div className="card no-click mt-4">
             <div className="card__title">✓ تم الرفع بنجاح</div>
-            <div
-              className="small muted mt-2"
-              style={{ lineHeight: 1.9 }}
-            >
-              أعضاء: {result.members} · فرق: {result.teams} · مشاركات:{' '}
-              {result.contributions} · طلبات: {result.requests} · موافقات:{' '}
-              {result.approvals} · تحذيرات: {result.warnings} · إنجازات:{' '}
-              {result.achievements} · إشعارات: {result.notifications} ·
+            <div className="small muted mt-2" style={{ lineHeight: 1.9 }}>
+              أعضاء: {result.members} · فرق: {result.teams} · مشاركات: {result.contributions} ·
+              طلبات: {result.requests} · موافقات: {result.approvals} · تحذيرات: {result.warnings} ·
+              إنجازات: {result.achievements} · إشعارات: {result.notifications} ·
               محادثات: {result.conversations} · رسائل: {result.messages}
             </div>
           </div>
@@ -206,10 +114,7 @@ export function AdminHomePage() {
           {cards.map((c) => (
             <Link key={c.to} to={c.to} className="card">
               <div className="row row--between">
-                <div className="row" style={{ gap: 10 }}>
-                  <span style={{ fontSize: '1.4rem' }}>{c.icon}</span>
-                  <div className="card__title">{c.title}</div>
-                </div>
+                <div className="card__title">{c.title}</div>
                 {c.count !== undefined && c.count > 0 ? (
                   <span className="badge badge--red">{c.count}</span>
                 ) : null}

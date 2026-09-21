@@ -1,13 +1,9 @@
 import { useEffect, useState } from 'react';
-import {
-  canInstallPwa,
-  promptInstall,
-  isStandalone,
-  isIos,
-} from '@/lib/pwa';
+import { canInstallPwa, promptInstall, isStandalone, isIos } from '@/lib/pwa';
 import { toast } from '@/components/ui/Toast';
 
-const DISMISSED_KEY = 'sbapiaryy-pwa-dismissed';
+const DISMISSED_KEY = 'sbapiaryy-pwa-dismissed-v2';
+const SHOW_AFTER_MS = 8000;
 
 export function PwaInstallBanner() {
   const [visible, setVisible] = useState(false);
@@ -18,22 +14,12 @@ export function PwaInstallBanner() {
     if (localStorage.getItem(DISMISSED_KEY) === 'yes') return;
 
     const check = () => {
-      if (canInstallPwa()) {
-        setVisible(true);
-        setIosMode(false);
-      } else if (isIos()) {
-        setVisible(true);
-        setIosMode(true);
-      }
+      if (canInstallPwa()) { setVisible(true); setIosMode(false); }
+      else if (isIos()) { setVisible(true); setIosMode(true); }
     };
 
-    check();
-    const t = setTimeout(check, 2000);
-
-    const handler = () => {
-      setVisible(true);
-      setIosMode(false);
-    };
+    const t = setTimeout(check, SHOW_AFTER_MS);
+    const handler = () => { setVisible(true); setIosMode(false); };
     window.addEventListener('pwa-install-available', handler);
 
     return () => {
@@ -49,10 +35,7 @@ export function PwaInstallBanner() {
 
   const install = async () => {
     if (iosMode) {
-      toast.info(
-        'للتثبيت على iPhone',
-        'اضغط زر المشاركة ← Add to Home Screen',
-      );
+      toast.info('للتثبيت على iPhone', 'اضغط زر المشاركة ← Add to Home Screen');
       return;
     }
     const result = await promptInstall();
@@ -69,22 +52,18 @@ export function PwaInstallBanner() {
   if (!visible) return null;
 
   return (
-    <div className="pwa-install-banner no-print">
+    <div className="pwa-install-banner no-print" role="dialog" aria-label="تثبيت التطبيق">
       <div className="pwa-install-banner__body">
-        <div className="pwa-install-banner__title">ثبّت التطبيق</div>
+        <div className="pwa-install-banner__title">ثبّت sbapiaryy على هاتفك</div>
         <div className="pwa-install-banner__desc">
           {iosMode
             ? 'من Safari: اضغط Share ← Add to Home Screen'
-            : 'وصول أسرع من شاشة هاتفك'}
+            : 'تجربة أسرع، إشعارات، وبدون شريط المتصفح'}
         </div>
       </div>
       <div className="pwa-install-banner__actions">
-        <button type="button" className="btn btn--ghost btn--xs" onClick={dismiss}>
-          لاحقًا
-        </button>
-        <button type="button" className="btn btn--primary btn--xs" onClick={install}>
-          تثبيت
-        </button>
+        <button type="button" className="btn btn--ghost btn--xs" onClick={dismiss}>لاحقًا</button>
+        <button type="button" className="btn btn--primary btn--xs" onClick={install}>تثبيت</button>
       </div>
     </div>
   );
