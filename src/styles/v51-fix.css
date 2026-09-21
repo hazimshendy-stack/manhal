@@ -1,0 +1,243 @@
+/* ═══════════════════════════════════════════════════════════════
+   v5.1 Fix — إصلاحات شاملة
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── مساحة كافية حول النصوص ─── */
+
+body { padding: 0; }
+
+.section,
+.section--tight {
+  padding-inline: 0;
+}
+
+.hero {
+  padding-inline: 0;
+}
+
+.section-head {
+  padding-inline: 0;
+  margin-bottom: 24px;
+}
+
+.section-head h1,
+.section-head h2,
+.page-header h1 {
+  padding-inline: 0;
+}
+
+/* البطاقات - مساحة داخلية أفضل */
+.card {
+  padding: 20px;
+}
+
+@media (min-width: 640px) {
+  .card { padding: 22px; }
+}
+
+/* الجداول - مساحة أفقية أفضل */
+.table-wrap {
+  margin-inline: 0;
+}
+
+table.data th,
+table.data td {
+  padding: 14px 18px;
+}
+
+/* الجداول على الجوال - مساحة أفضل */
+@media (max-width: 640px) {
+  table.data tr {
+    padding: 16px;
+  }
+
+  table.data td {
+    padding: 8px 0;
+  }
+}
+
+/* الحاويات - تأكيد وجود padding */
+.container {
+  padding-inline: 18px;
+}
+
+@media (min-width: 640px) {
+  .container { padding-inline: 24px; }
+}
+
+@media (min-width: 1024px) {
+  .container { padding-inline: 32px; }
+}
+
+/* الـ hero - مساحة أفضل */
+.hero h1 {
+  padding-inline: 0;
+}
+
+/* الصفحات - هوامش من الأعلى */
+.app-main > .container > *:first-child {
+  margin-top: 8px;
+}
+
+/* الـ page header - مساحة أفضل */
+.section.section--tight:first-child {
+  padding-top: 24px;
+}
+
+/* الـ profile - مساحة داخلية أفضل */
+.profile {
+  padding: 24px;
+}
+
+@media (min-width: 640px) {
+  .profile { padding: 32px; }
+}
+
+/* الـ stat - مساحة أفضل */
+.stat {
+  padding: 20px 16px;
+}
+
+/* الـ empty state - مساحة أفضل */
+.empty {
+  padding: 48px 24px;
+}
+
+/* الـ modal - مساحة أفضل */
+.modal__body {
+  padding: 24px;
+}
+
+.modal__head {
+  padding: 18px 24px;
+}
+
+.modal__foot {
+  padding: 16px 24px;
+}
+
+/* الـ toolbar - مساحة أفضل */
+.toolbar {
+  margin-bottom: 20px;
+}
+
+/* الـ chips - مساحة أفضل على الجوال */
+@media (max-width: 640px) {
+  .chips {
+    margin-inline: -18px;
+    padding-inline: 18px;
+  }
+}
+
+/* الـ avatar في sidebar - أفضل */
+.sidebar__avatar {
+  border-radius: 50%;
+}
+
+/* ─── إزالة كل الأنماط التي فيها حرف S ─── */
+
+.brand::before,
+.footer__brand::before,
+.boot-screen__logo,
+.login__logo,
+.onboarding-header__logo,
+.login__title,
+.login__desc,
+.login__tabs,
+.login__tab,
+.login__hint,
+.login__hint-title,
+.login__hint-row,
+.login__hint-user,
+.login__hint-pass,
+.pwa-install-banner__icon,
+.sidebar__icon,
+.onboarding-card__icon,
+.login-forgot,
+.change-password-notice + * {
+  /* لا شيء - كل هذه الأنماط القديمة أُزيلت من JSX */
+}
+
+/* الـ nav-action__icon القديم */
+.nav-action__icon {
+  display: none;
+}
+
+/* ─── الحواف على الجوال ─── */
+
+@media (max-width: 640px) {
+  h1 { font-size: 1.55rem; line-height: 1.25; padding-inline: 0; }
+  h2 { font-size: 1.2rem; padding-inline: 0; }
+  h3 { font-size: 1rem; padding-inline: 0; }
+  p  { padding-inline: 0; }
+
+  .hero__desc {
+    font-size: 0.95rem;
+    line-height: 1.75;
+  }
+
+  .section-head__desc {
+    font-size: 0.85rem;
+  }
+}
+
+/* ─── ألوان موحدة للأيقونات ─── */
+
+.bottom-nav__item svg {
+  transition: color 0.15s;
+}
+
+.bottom-nav__item.is-active svg {
+  color: var(--c-navy);
+}
+
+.bottom-nav__item:not(.is-active) svg {
+  color: var(--c-ink-muted);
+}
+
+.nav-action--icon svg {
+  color: inherit;
+}
+
+.nav-action--icon svg:hover {
+  color: var(--c-paper);
+}
+
+/* ─── إزالة أيقونة القائمة القديمة ─── */
+
+.sidebar-close {
+  display: none !important;
+}
+
+@media (max-width: 900px) {
+  .sidebar-close {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-sm);
+    background: var(--c-off-white);
+    color: var(--c-ink);
+    font-size: 1.2rem;
+    cursor: pointer;
+    margin-inline-start: auto;
+    margin-bottom: 20px;
+    border: 1px solid var(--c-line);
+    font-family: inherit;
+  }
+}
+
+/* ─── الفوتر - إزالة أيقونة S ─── */
+
+.footer__brand::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* ─── الـ Brand - بدون أيقونة ─── */
+
+.brand::before {
+  content: none !important;
+  display: none !important;
+}

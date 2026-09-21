@@ -10,7 +10,6 @@ import type { Notification, ApprovalStep } from '@/types';
 interface NavItem {
   to: string;
   label: string;
-  icon: string;
   count?: number;
 }
 
@@ -21,61 +20,60 @@ interface SidebarProps {
 
 function buildAdminNav(pending: number): NavItem[] {
   return [
-    { to: '/admin', label: 'لوحة الإدارة', icon: '⚙️' },
-    { to: '/admin/analytics', label: 'التحليلات', icon: '📊' },
-    { to: '/admin/requests', label: 'الطلبات', icon: '📋', count: pending },
-    { to: '/admin/users', label: 'المستخدمون', icon: '👤' },
-    { to: '/admin/members', label: 'الأعضاء', icon: '👥' },
-    { to: '/admin/contributions', label: 'المشاركات', icon: '📝' },
-    { to: '/admin/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/admin/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/admin/warnings', label: 'التحذيرات', icon: '⚠️' },
-    { to: '/admin/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/admin/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/admin/notifications', label: 'إرسال إشعار', icon: '🔔' },
-    { to: '/admin/audit', label: 'سجل التغييرات', icon: '📜' },
+    { to: '/admin', label: 'لوحة الإدارة' },
+    { to: '/admin/analytics', label: 'التحليلات' },
+    { to: '/admin/requests', label: 'الطلبات', count: pending },
+    { to: '/admin/users', label: 'المستخدمون' },
+    { to: '/admin/members', label: 'الأعضاء' },
+    { to: '/admin/contributions', label: 'المشاركات' },
+    { to: '/admin/committees', label: 'اللجان' },
+    { to: '/admin/achievements', label: 'الإنجازات' },
+    { to: '/admin/warnings', label: 'التحذيرات' },
+    { to: '/admin/calendar', label: 'التقويم' },
+    { to: '/admin/conversations', label: 'المحادثات' },
+    { to: '/admin/notifications', label: 'إرسال إشعار' },
+    { to: '/admin/audit', label: 'سجل التغييرات' },
   ];
 }
 
 function buildManagerNav(pending: number): NavItem[] {
   return [
-    { to: '/dashboard', label: 'لوحة التحكم', icon: '🏠' },
-    { to: '/members', label: 'الأعضاء', icon: '👥' },
-    { to: '/requests', label: 'الطلبات', icon: '📋' },
-    { to: '/approvals', label: 'الموافقات', icon: '✅', count: pending },
-    { to: '/contributions', label: 'المشاركات', icon: '📝' },
-    { to: '/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/league', label: 'الليج', icon: '🥇' },
-    { to: '/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/warnings', label: 'التحذيرات', icon: '⚠️' },
-    { to: '/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/notifications', label: 'الإشعارات', icon: '🔔' },
-    { to: '/reports', label: 'التقارير', icon: '📈' },
+    { to: '/dashboard', label: 'لوحة التحكم' },
+    { to: '/members', label: 'الأعضاء' },
+    { to: '/requests', label: 'الطلبات' },
+    { to: '/approvals', label: 'الموافقات', count: pending },
+    { to: '/contributions', label: 'المشاركات' },
+    { to: '/committees', label: 'اللجان' },
+    { to: '/league', label: 'الليج' },
+    { to: '/achievements', label: 'الإنجازات' },
+    { to: '/warnings', label: 'التحذيرات' },
+    { to: '/conversations', label: 'المحادثات' },
+    { to: '/calendar', label: 'التقويم' },
+    { to: '/notifications', label: 'الإشعارات' },
+    { to: '/reports', label: 'التقارير' },
   ];
 }
 
 function buildMemberNav(): NavItem[] {
   return [
-    { to: '/dashboard', label: 'لوحة التحكم', icon: '🏠' },
-    { to: '/profile', label: 'ملفي الشخصي', icon: '👤' },
-    { to: '/my-contributions', label: 'مشاركاتي', icon: '📝' },
-    { to: '/requests/new', label: 'طلب جديد', icon: '➕' },
-    { to: '/my-requests', label: 'طلباتي', icon: '📋' },
-    { to: '/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/league', label: 'الليج', icon: '🥇' },
-    { to: '/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/notifications', label: 'الإشعارات', icon: '🔔' },
-    { to: '/governance', label: 'الحوكمة', icon: '📖' },
+    { to: '/dashboard', label: 'لوحة التحكم' },
+    { to: '/profile', label: 'ملفي الشخصي' },
+    { to: '/my-contributions', label: 'مشاركاتي' },
+    { to: '/requests/new', label: 'طلب جديد' },
+    { to: '/my-requests', label: 'طلباتي' },
+    { to: '/committees', label: 'اللجان' },
+    { to: '/league', label: 'الليج' },
+    { to: '/achievements', label: 'الإنجازات' },
+    { to: '/conversations', label: 'المحادثات' },
+    { to: '/calendar', label: 'التقويم' },
+    { to: '/notifications', label: 'الإشعارات' },
+    { to: '/governance', label: 'الحوكمة' },
   ];
 }
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const { user } = useAuth();
   const nav = useNavigate();
-  const { data: notifs } = useRealtimeCollection<Notification>('notifications');
   const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
   const [isMobile, setIsMobile] = useState(false);
 
@@ -116,11 +114,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
     if (isMobile) onClose();
   };
 
-  // استخدام notifs لتفادي unused warning (نحسب العدد لنستخدمها في nav)
-  const unreadCount = notifs.filter(
-    (n) => n.userId === user.uid && !n.read,
-  ).length;
-
   return (
     <>
       <div
@@ -147,28 +140,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           </div>
         </div>
 
-        {unreadCount > 0 ? (
-          <div
-            className="card no-click"
-            style={{
-              padding: 10,
-              marginBottom: 16,
-              background: 'var(--c-red-tint)',
-              borderColor: '#FCA5A5',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: '#991B1B',
-              }}
-            >
-              🔔 {unreadCount} إشعار غير مقروء
-            </div>
-          </div>
-        ) : null}
-
         <div className="sidebar__group">
           <div className="sidebar__title">
             {seesAllTeams(user) ? 'الإدارة' : 'القائمة'}
@@ -181,7 +152,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
               onClick={handleNavClick}
               className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}
             >
-              <span className="sidebar__icon" aria-hidden="true">{it.icon}</span>
               <span>{it.label}</span>
               {it.count && it.count > 0 ? (
                 <span className="sidebar__count">
@@ -199,7 +169,6 @@ export function Sidebar({ open, onClose }: SidebarProps) {
             className="sidebar__link sidebar__link--danger"
             onClick={handleLogout}
           >
-            <span className="sidebar__icon" aria-hidden="true">🚪</span>
             <span>تسجيل الخروج</span>
           </button>
         </div>
