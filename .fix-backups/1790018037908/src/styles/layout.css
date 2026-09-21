@@ -1,7 +1,3 @@
-/* ═══════════════════════════════════════════════════════════════
-   Layout — الفراغ على app-main (يوزع على كل الصفحات تلقائيًا)
-   ═══════════════════════════════════════════════════════════════ */
-
 .app-shell {
   display: flex;
   flex-direction: column;
@@ -11,58 +7,52 @@
   overflow-x: hidden;
 }
 
-/* ═══ الحل الجذري: الفراغ هنا مش في .container ═══ */
 .app-main {
   flex: 1;
   padding-bottom: var(--safe-bottom);
-  padding-inline: 20px;
   overflow-x: hidden;
+}
+
+/* ═══ أهم حاجة: الـ container عنده padding جانبي دائمًا ═══ */
+.container {
+  width: 100%;
+  max-width: 1240px;
+  margin-inline: auto;
+  padding-inline: 32px;
   box-sizing: border-box;
 }
 
-@media (min-width: 480px) {
-  .app-main { padding-inline: 24px; }
+@media (max-width: 900px) {
+  .container { padding-inline: 28px; }
 }
 
-@media (min-width: 640px) {
-  .app-main { padding-inline: 32px; }
+@media (max-width: 640px) {
+  .container { padding-inline: 24px; }
 }
 
-@media (min-width: 900px) {
-  .app-main { padding-inline: 44px; }
+@media (max-width: 420px) {
+  .container { padding-inline: 20px; }
 }
 
 @media (min-width: 1280px) {
-  .app-main { padding-inline: 64px; }
+  .container { padding-inline: 56px; }
 }
 
-@media (min-width: 1600px) {
-  .app-main { padding-inline: 96px; }
-}
-
-/* ═══ .container — الآن بدون padding جانبي (الفراغ على app-main) ═══ */
-.container {
-  width: 100%;
-  max-width: 1200px;
-  margin-inline: auto;
-  padding-inline: 0;
-  box-sizing: border-box;
-}
-
-/* ═══ لو حاجة محتاجة فراغ كامل ═══ */
-.container--full {
-  max-width: 100%;
+/* ═══ كل عنصر جوه container مش لازق ═══ */
+.container > * {
+  margin-inline: 0;
 }
 
 /* ═══ Sections ═══ */
 .section { padding-block: 32px; }
-.section--tight { padding-block: 22px; }
+.section--tight { padding-block: 20px; }
 
 @media (min-width: 640px) {
   .section { padding-block: 44px; }
-  .section--tight { padding-block: 26px; }
+  .section--tight { padding-block: 24px; }
 }
 
+/* ═══ Section head ═══ */
 .section-head {
   display: flex;
   flex-direction: column;
@@ -90,6 +80,7 @@
 }
 
 .section-head h2 { font-size: 1.4rem; font-weight: 800; }
+
 .section-head__desc {
   color: var(--c-ink-muted);
   font-size: 0.9rem;
@@ -113,15 +104,18 @@
 .grid--2 { grid-template-columns: 1fr; }
 @media (min-width: 768px) { .grid--2 { grid-template-columns: repeat(2, 1fr); } }
 
+/* ═══ Stack ═══ */
 .stack { display: flex; flex-direction: column; gap: 18px; }
 .stack--sm { gap: 12px; }
 .stack--lg { gap: 26px; }
 
+/* ═══ Row ═══ */
 .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .row--between { justify-content: space-between; }
 .row--gap-6 { gap: 6px; }
 .row--gap-16 { gap: 16px; }
 
+/* ═══ Utilities ═══ */
 .muted { color: var(--c-ink-muted); }
 .soft { color: var(--c-ink-soft); }
 .small { font-size: 0.82rem; }
@@ -142,9 +136,7 @@
 .mb-4 { margin-bottom: 16px; }
 
 .hide-mobile { display: none; }
-@media (min-width: 768px) { .hide-mobile { display: block; } .show-mobile { display: none !important; } }
-
-/* ═══ محادثات — بدون فراغ إضافي (الفراغ على app-main) ═══ */
-.chat-page-wrapper {
-  margin-inline: 0;
+@media (min-width: 768px) {
+  .hide-mobile { display: block; }
+  .show-mobile { display: none !important; }
 }
