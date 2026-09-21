@@ -1,0 +1,123 @@
+/* ═══════════════════════════════════════════════════════════════
+     Empty State
+     ═══════════════════════════════════════════════════════════════ */
+
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+    border: 1.5px dashed var(--c-line-mid);
+    border-radius: var(--radius);
+    color: var(--c-ink-muted);
+    background: var(--c-off-white);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .empty__icon {
+    font-size: 2.5rem;
+    opacity: 0.5;
+    line-height: 1;
+  }
+
+  .empty__title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: var(--c-ink);
+  }
+
+  .empty__message {
+    font-size: 0.88rem;
+    max-width: 40ch;
+    line-height: 1.7;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     Loading Screen
+     ═══════════════════════════════════════════════════════════════ */
+
+  .loading-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    min-height: 40vh;
+    color: var(--c-ink-muted);
+    font-size: 0.9rem;
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--c-line);
+    border-top-color: var(--c-red);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     Skeleton
+     ═══════════════════════════════════════════════════════════════ */
+
+  .skeleton {
+    background: linear-gradient(90deg, var(--c-line) 25%, #EDEFF5 50%, var(--c-line) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s infinite;
+    border-radius: var(--radius-sm);
+  }
+
+  .skeleton--text {
+    height: 14px;
+    margin: 8px 0;
+  }
+
+  .skeleton--title {
+    height: 20px;
+    width: 60%;
+    margin: 12px 0;
+  }
+
+  .skeleton--card {
+    height: 100px;
+    border-radius: var(--radius);
+  }
+
+  .skeleton--avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+  }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     404 / Not Found
+     ═══════════════════════════════════════════════════════════════ */
+
+  .notfound {
+    display: grid;
+    place-items: center;
+    text-align: center;
+    padding-block: 64px;
+    padding-inline: 20px;
+    min-height: 60vh;
+  }
+
+  .notfound__code {
+    font-family: var(--font-en);
+    font-size: clamp(4rem, 14vw, 8rem);
+    font-weight: 800;
+    color: var(--c-navy);
+    line-height: 1;
+    letter-spacing: -0.05em;
+  }
+  

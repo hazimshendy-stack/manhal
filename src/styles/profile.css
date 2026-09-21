@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════
+     Profile Card
+     ═══════════════════════════════════════════════════════════════ */
+
+  .profile {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    border: 1px solid var(--c-navy-2);
+    border-radius: var(--radius-lg);
+    background: linear-gradient(150deg, var(--c-navy), var(--c-navy-soft));
+    color: var(--c-paper);
+    box-shadow: var(--shadow);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .profile::before {
+    content: '';
+    position: absolute;
+    top: -50px;
+    inset-inline-end: -50px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(193, 39, 45, 0.25), transparent 70%);
+    pointer-events: none;
+  }
+
+  @media (min-width: 640px) {
+    .profile {
+      flex-direction: row;
+      align-items: flex-start;
+      padding: 28px;
+      gap: 28px;
+    }
+  }
+
+  .profile__main {
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .profile__name {
+    color: var(--c-paper);
+    font-weight: 900;
+    font-size: 1.6rem;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  @media (min-width: 640px) {
+    .profile__name { font-size: 2rem; }
+  }
+
+  .profile__role {
+    color: var(--c-red);
+    font-weight: 700;
+    margin-top: 6px;
+    font-size: 0.95rem;
+  }
+
+  .profile__bio {
+    margin-top: 16px;
+    color: var(--c-paper-soft);
+    max-width: 68ch;
+    font-size: 0.92rem;
+    line-height: 1.7;
+  }
+
+  .profile__side {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  @media (min-width: 640px) {
+    .profile__side {
+      grid-template-columns: 1fr;
+      min-width: 200px;
+      gap: 16px;
+    }
+  }
+
+  .kv {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .kv__k {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--c-paper-muted);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .kv__v {
+    font-family: var(--font-en);
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--c-paper);
+    line-height: 1.4;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     Profile — داخل بطاقة بيضاء
+     ═══════════════════════════════════════════════════════════════ */
+
+  .profile--light {
+    background: var(--c-white);
+    border-color: var(--c-line);
+    color: var(--c-ink);
+  }
+
+  .profile--light .profile__name { color: var(--c-ink); }
+  .profile--light .profile__role { color: var(--c-red); }
+  .profile--light .profile__bio { color: var(--c-ink-soft); }
+  .profile--light .kv__k { color: var(--c-ink-muted); }
+  .profile--light .kv__v { color: var(--c-ink); }
+  

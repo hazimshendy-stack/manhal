@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════════
+     Login Page — بسيط وأنيق بدون اسم موقع أو demo accounts
+     ═══════════════════════════════════════════════════════════════ */
+
+  .login-page {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    padding-top: calc(20px + var(--safe-top));
+    padding-bottom: calc(20px + var(--safe-bottom));
+    background:
+      radial-gradient(900px 500px at 20% 0%, rgba(193, 39, 45, 0.08), transparent 60%),
+      radial-gradient(700px 400px at 80% 100%, rgba(21, 26, 69, 0.10), transparent 60%),
+      var(--c-navy);
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--c-white);
+    border-radius: var(--radius-xl);
+    padding: 32px 24px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--c-line);
+    animation: login-slide 0.35s var(--ease);
+  }
+
+  @media (min-width: 640px) {
+    .login-card { padding: 40px 32px; }
+  }
+
+  @keyframes login-slide {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* ═══════════ Tabs ═══════════ */
+
+  .login-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    padding: 4px;
+    background: var(--c-off-white);
+    border-radius: var(--radius-sm);
+    margin-bottom: 24px;
+  }
+
+  .login-tab {
+    padding: 11px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--c-ink-muted);
+    cursor: pointer;
+    transition: all 0.15s var(--ease);
+  }
+
+  .login-tab.is-active {
+    background: var(--c-white);
+    color: var(--c-navy);
+    box-shadow: var(--shadow-xs);
+  }
+
+  /* ═══════════ Form ═══════════ */
+
+  .login-field {
+    margin-bottom: 16px;
+  }
+
+  .login-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--c-ink-soft);
+    margin-bottom: 6px;
+  }
+
+  .login-input {
+    width: 100%;
+    padding: 13px 16px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--c-line-mid);
+    background: var(--c-white);
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--c-ink);
+    outline: none;
+    transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+  }
+
+  .login-input:focus {
+    border-color: var(--c-navy);
+    box-shadow: 0 0 0 4px rgba(21, 26, 69, 0.08);
+  }
+
+  .login-submit {
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--radius-sm);
+    border: none;
+    background: var(--c-red);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.15s var(--ease);
+  }
+
+  .login-submit:hover:not(:disabled) {
+    background: var(--c-red-soft);
+  }
+
+  .login-submit:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  .login-submit:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .login-error {
+    background: var(--c-red-tint);
+    color: #991B1B;
+    border: 1px solid #FCA5A5;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .login-error::before {
+    content: '⚠';
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .login-success {
+    background: var(--c-green-soft);
+    color: var(--c-green-text);
+    border: 1px solid #86EFAC;
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .login-success::before {
+    content: '✓';
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .login-forgot {
+    display: block;
+    text-align: center;
+    margin-top: 16px;
+    font-size: 0.85rem;
+    color: var(--c-ink-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    transition: color 0.15s;
+  }
+
+  .login-forgot:hover {
+    color: var(--c-red);
+  }
+
+  /* ═══════════ Change Password Screen ═══════════ */
+
+  .change-password-notice {
+    background: var(--c-amber-soft);
+    border: 1px solid #FCD34D;
+    border-radius: var(--radius-sm);
+    padding: 14px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    color: var(--c-amber-text);
+    line-height: 1.6;
+  }
+
+  .change-password-notice strong {
+    display: block;
+    margin-bottom: 4px;
+    font-size: 0.9rem;
+  }
+  

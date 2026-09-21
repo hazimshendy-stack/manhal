@@ -1,0 +1,84 @@
+/* ═══════════════════════════════════════════════════════════════
+     Approval Chain
+     ═══════════════════════════════════════════════════════════════ */
+
+  .approval-chain {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .approval-step {
+    display: flex;
+    gap: 14px;
+    padding: 14px;
+    border-radius: var(--radius);
+    border: 1.5px solid var(--c-line);
+    background: var(--c-white);
+    align-items: flex-start;
+    transition: all 0.15s;
+  }
+
+  .approval-step--done {
+    border-color: #86EFAC;
+    background: var(--c-green-soft);
+  }
+
+  .approval-step--rejected {
+    border-color: #FCA5A5;
+    background: var(--c-red-tint);
+  }
+
+  .approval-step--pending {
+    border-color: #FCD34D;
+    background: var(--c-amber-soft);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.06);
+  }
+
+  .approval-step__index {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: var(--font-en);
+    font-weight: 800;
+    background: var(--c-navy);
+    color: #fff;
+    flex-shrink: 0;
+    font-size: 0.85rem;
+  }
+
+  .approval-step--done .approval-step__index { background: var(--c-green); }
+  .approval-step--rejected .approval-step__index { background: var(--c-red); }
+  .approval-step--pending .approval-step__index { background: var(--c-amber); }
+
+  .approval-step__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .approval-step__title {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--c-ink);
+  }
+
+  .approval-step__meta {
+    font-size: 0.78rem;
+    color: var(--c-ink-muted);
+    margin-top: 3px;
+    line-height: 1.5;
+  }
+
+  .approval-step__comment {
+    margin-top: 10px;
+    font-size: 0.84rem;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: var(--radius-sm);
+    color: var(--c-ink-soft);
+    border: 1px solid rgba(0, 0, 0, 0.04);
+    line-height: 1.6;
+  }
+  

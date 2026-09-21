@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════
+     Navbar — مبسّط: الاسم + دخول/خروج + إشعارات
+     ═══════════════════════════════════════════════════════════════ */
+
+  .navbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--navbar-h);
+    display: flex;
+    align-items: center;
+    background: var(--c-navy);
+    border-bottom: 1px solid var(--c-navy-2);
+  }
+
+  .navbar__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+  }
+
+  .brand {
+    font-family: var(--font-en);
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--c-paper);
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: opacity 0.15s;
+  }
+
+  .brand:hover { opacity: 0.85; }
+
+  .brand::before {
+    content: 'S';
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: linear-gradient(150deg, var(--c-red), var(--c-red-soft));
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 800;
+    box-shadow: var(--shadow-red);
+    flex-shrink: 0;
+  }
+
+  /* ═══════════ روابط اليمين (خروج/دخول/إشعارات) ═══════════ */
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-inline-start: auto;
+  }
+
+  .nav-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--c-paper-soft);
+    transition: all 0.15s var(--ease);
+    background: transparent;
+    border: 1px solid transparent;
+  }
+
+  .nav-action:hover {
+    background: var(--c-navy-2);
+    color: var(--c-paper);
+  }
+
+  .nav-action--primary {
+    background: var(--c-red);
+    color: #fff;
+    border-color: var(--c-red);
+  }
+
+  .nav-action--primary:hover {
+    background: var(--c-red-soft);
+    border-color: var(--c-red-soft);
+    color: #fff;
+  }
+
+  .nav-action--danger {
+    color: var(--c-red);
+    border-color: var(--c-red);
+  }
+
+  .nav-action--danger:hover {
+    background: var(--c-red);
+    color: #fff;
+  }
+
+  .nav-action--icon {
+    padding: 8px 10px;
+    position: relative;
+  }
+
+  .nav-action__icon {
+    font-size: 1.15rem;
+    line-height: 1;
+  }
+
+  .nav-action__badge {
+    position: absolute;
+    top: -2px;
+    inset-inline-end: -2px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: var(--c-red);
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: 800;
+    font-family: var(--font-en);
+    display: grid;
+    place-items: center;
+    border: 2px solid var(--c-navy);
+  }
+
+  /* ═══════════ Safe area للجوال ═══════════ */
+
+  @media (max-width: 900px) {
+    .navbar {
+      height: calc(var(--navbar-h) + var(--safe-top));
+      padding-top: var(--safe-top);
+    }
+
+    .brand { font-size: 1.05rem; }
+
+    .brand::before {
+      width: 26px;
+      height: 26px;
+      font-size: 0.85rem;
+    }
+
+    .nav-action {
+      padding: 8px 12px;
+      font-size: 0.82rem;
+    }
+  }
+  

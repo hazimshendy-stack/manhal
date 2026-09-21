@@ -1,0 +1,48 @@
+{
+  "name": "sbapiaryy — Resala STEM Sub Branches",
+  "short_name": "sbapiaryy",
+  "description": "المنصة الرسمية لمتابعة Resala STEM Sub Branches",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#151A45",
+  "theme_color": "#151A45",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "education", "social"],
+  "shortcuts": [
+    {
+      "name": "لوحة التحكم",
+      "short_name": "Dashboard",
+      "url": "./#/dashboard",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "الإشعارات",
+      "short_name": "Notifications",
+      "url": "./#/notifications",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "المحادثات",
+      "short_name": "Chats",
+      "url": "./#/conversations",
+      "icons": [{ "src": "./icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

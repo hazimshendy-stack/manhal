@@ -1,0 +1,51 @@
+import type { Notification } from '@/types';
+
+ export const notifications: Notification[] = [
+   {
+     id: 'N001',
+     userId: 'seed-u-001',
+     title: 'طلب نقل جديد بانتظارك',
+     message: 'زياد طارق طلب النقل من فريق المساعدين إلى فريق الأبطال.',
+     type: 'request',
+     date: '2026-05-01T10:00:00.000Z',
+     read: false,
+     route: '/requests/REQ001',
+     priority: 'high',
+     fromName: 'زياد طارق',
+   },
+   {
+     id: 'N002',
+     userId: 'seed-u-003',
+     title: 'طلب ترقية في المرحلة الثانية',
+     message: 'فريدة نبيل في المرحلة الثانية من طلب الترقية.',
+     type: 'approval',
+     date: '2026-04-28T14:00:00.000Z',
+     read: false,
+     route: '/requests/REQ002',
+     priority: 'normal',
+     fromName: 'فريدة نبيل',
+   },
+   {
+     id: 'N003',
+     userId: 'seed-u-009',
+     title: 'تم قبول مشاركتك',
+     message: 'تمت الموافقة على مشاركتك "مكتبة المكونات" (+100 نقطة).',
+     type: 'participation',
+     date: '2026-01-23T09:00:00.000Z',
+     read: true,
+     route: '/my-contributions',
+   },
+   {
+     id: 'N004',
+     userId: 'seed-u-002',
+     title: 'رسالة جديدة',
+     message: 'ليلى إبراهيم أرسلت لك رسالة في محادثة فريق الرسائل.',
+     type: 'message',
+     date: '2026-05-02T11:00:00.000Z',
+     read: false,
+     route: '/conversations',
+     priority: 'high',
+     fromName: 'ليلى إبراهيم',
+   },
+ ];
+ 

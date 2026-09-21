@@ -1,0 +1,95 @@
+/* ═══════════════════════════════════════════════════════════════
+     Badge — موحد ومتسق
+     ═══════════════════════════════════════════════════════════════ */
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-family: var(--font-en);
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    line-height: 1.4;
+    vertical-align: middle;
+    background: var(--c-line);
+    color: var(--c-ink-soft);
+    border: 1px solid var(--c-line-mid);
+    flex-shrink: 0;
+  }
+
+  .badge__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  /* ═══════════ Variants ═══════════ */
+
+  .badge--neutral {
+    background: var(--c-line);
+    color: var(--c-ink-soft);
+    border-color: var(--c-line-mid);
+  }
+
+  .badge--success {
+    background: var(--c-green-soft);
+    color: var(--c-green-text);
+    border-color: #86EFAC;
+  }
+
+  .badge--warning {
+    background: var(--c-amber-soft);
+    color: var(--c-amber-text);
+    border-color: #FCD34D;
+  }
+
+  .badge--danger {
+    background: var(--c-red-tint);
+    color: #991B1B;
+    border-color: #FCA5A5;
+  }
+
+  .badge--info {
+    background: var(--c-blue-soft);
+    color: var(--c-blue-text);
+    border-color: #93C5FD;
+  }
+
+  .badge--purple {
+    background: var(--c-purple-soft);
+    color: var(--c-purple-text);
+    border-color: #C4B5FD;
+  }
+
+  .badge--navy {
+    background: var(--c-navy);
+    color: #fff;
+    border-color: var(--c-navy);
+  }
+
+  .badge--red {
+    background: var(--c-red);
+    color: #fff;
+    border-color: var(--c-red);
+  }
+
+  /* ═══════════ داخل البطاقات الكحلية ═══════════ */
+
+  .card--navy .badge {
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.18);
+  }
+
+  .card--navy .badge--success { background: #166534; color: #fff; border-color: #16A34A; }
+  .card--navy .badge--warning { background: #92400E; color: #fff; border-color: #D97706; }
+  .card--navy .badge--danger  { background: #991B1B; color: #fff; border-color: #DC2626; }
+  .card--navy .badge--info    { background: #1E40AF; color: #fff; border-color: #2563EB; }
+  .card--navy .badge--red     { background: var(--c-red); color: #fff; border-color: var(--c-red); }
+  

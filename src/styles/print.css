@@ -1,0 +1,39 @@
+@media print {
+    .no-print,
+    .navbar,
+    .footer,
+    .sidebar,
+    .bottom-nav,
+    .toast-container,
+    .modal-backdrop,
+    .pwa-install-banner,
+    .onboarding-backdrop { display: none !important; }
+
+    body {
+      background: #fff;
+      color: #000;
+      font-size: 12pt;
+    }
+
+    .container {
+      max-width: 100%;
+      padding: 0;
+    }
+
+    .card,
+    .card--navy,
+    .stat {
+      background: #fff !important;
+      color: #000 !important;
+      border: 1px solid #000 !important;
+      box-shadow: none !important;
+      page-break-inside: avoid;
+    }
+
+    .badge {
+      border: 1px solid #000 !important;
+      color: #000 !important;
+      background: #fff !important;
+    }
+  }
+  
