@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
 import { createOne, updateOne, removeOne } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
 import { teams } from '@/data/teams';
 import { members } from '@/data/members';
 import { formatDate } from '@/lib/format';
@@ -19,7 +17,6 @@ import type { Achievement, TeamId } from '@/types';
 const EMPTY: Omit<Achievement, 'id'> = { title: '', description: '', date: new Date().toISOString().slice(0, 10), level: 'branch', teamIds: [], memberIds: [], memberNames: [], seasonId: 'S7' };
 
 export function AdminAchievementsPage() {
-  const { user: me } = useAuth();
   const { data, loading } = useCollection<Achievement>('achievements');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Achievement | null>(null);

@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
 import { createOne, updateOne, removeOne } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
 import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -18,7 +16,6 @@ import type { GovernanceDocument } from '@/types';
 const EMPTY: Omit<GovernanceDocument, 'id'> = { title: '', category: 'السياسات', description: '', content: '', version: '1.0', updatedAt: new Date().toISOString().slice(0, 10) };
 
 export function AdminGovernancePage() {
-  const { user: me } = useAuth();
   const { data, loading } = useCollection<GovernanceDocument>('governance');
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<GovernanceDocument | null>(null);

@@ -28,7 +28,7 @@ import {
      collectionName: string,
      data: T,
    ): Promise<string> {
-     const { id, ...rest } = data;
+     const { id } = data;
      if (id) {
        await setDoc(doc(db, collectionName, id), rest);
        return id;

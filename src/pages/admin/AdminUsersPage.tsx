@@ -3,7 +3,7 @@ import { useCollection } from '@/lib/useRealtimeCollection';
 import { useAuth } from '@/lib/useAuth';
 import { updateOne, removeOne } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
-import { adminCreateMember, type CreateMemberInput } from '@/lib/auth';
+import { adminCreateMember } from '@/lib/auth';
 import { members } from '@/data/members';
 import { teams } from '@/data/teams';
 import { committees } from '@/data/committees';

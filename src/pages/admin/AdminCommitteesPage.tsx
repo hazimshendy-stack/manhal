@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
 import { createOne, updateOne, removeOne } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -16,7 +14,6 @@ import type { Committee, Member } from '@/types';
 const EMPTY: Omit<Committee, 'id'> = { name: '', nameAr: '', description: '', color: '#151A45', icon: '' };
 
 export function AdminCommitteesPage() {
-  const { user: me } = useAuth();
   const { data: committees, loading } = useCollection<Committee>('committees');
   const { data: members } = useCollection<Member>('members');
   const [creating, setCreating] = useState(false);

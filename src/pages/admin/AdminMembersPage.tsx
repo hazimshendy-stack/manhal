@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
 import { createOne, updateOne, removeOne } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
 import { teams } from '@/data/teams';
 import { committees } from '@/data/committees';
 import { ROLE_LABEL } from '@/lib/permissions';
@@ -22,7 +20,6 @@ const ROLE_OPTS = Object.entries(ROLE_LABEL).map(([value, label]) => ({ value, l
 const EMPTY: Omit<Member, 'id'> = { name: '', role: 'MEMBER', teamIds: [], committeeIds: [], joinedSeason: 7, hours: 0, status: 'active', bio: '', email: '' };
 
 export function AdminMembersPage() {
-  const { user: me } = useAuth();
   const { data: list, loading } = useCollection<Member>('members');
   const { data: liveCommittees } = useCollection<{ id: string; nameAr: string }>('committees');
   const [editing, setEditing] = useState<Member | null>(null);
