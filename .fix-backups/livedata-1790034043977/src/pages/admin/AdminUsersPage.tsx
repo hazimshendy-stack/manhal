@@ -3,7 +3,9 @@ import { useCollection } from '@/lib/useRealtimeCollection';
 import { useAuth } from '@/lib/useAuth';
 import { updateOne, removeOne } from '@/lib/db';
 import { adminCreateMember } from '@/lib/auth';
+import { members } from '@/data/members';
 import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
 import { ROLE_LABEL } from '@/lib/permissions';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -14,7 +16,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormField, TextInput, Select, MultiSelect } from '@/components/ui/FormField';
 import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
-import type { AppUser, RoleId, TeamId, Member, Committee } from '@/types';
+import type { AppUser, RoleId, TeamId } from '@/types';
 
 const ROLE_OPTS: Array<{ value: RoleId; label: string }> = (Object.entries(ROLE_LABEL) as Array<[RoleId, string]>).map(([value, label]) => ({ value, label }));
 
@@ -28,9 +30,8 @@ function genPass(): string {
 export function AdminUsersPage() {
   const { user: me } = useAuth();
   const { data: users, loading } = useCollection<AppUser>('users');
-  const { data: liveMembers } = useCollection<Member>('members');
-  const { data: liveCommittees } = useCollection<Committee>('committees');
-
+  const { data: liveMembers } = useCollection<{ id: string; name: string }>('members');
+  const { data: liveCommittees } = useCollection<{ id: string; nameAr: string }>('committees');
   const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -42,77 +43,31 @@ export function AdminUsersPage() {
   const [committeeIds, setCommitteeIds] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [created, setCreated] = useState<{ email: string; password: string; name: string } | null>(null);
-
-  /* ═══ Live data ONLY — no static fallback ═══ */
-  const memberList = liveMembers.map((m) => ({ id: m.id, name: m.name }));
-  const committeeList = liveCommittees.map((c) => ({ id: c.id, nameAr: c.nameAr }));
-
-  const reset = () => {
-    setEmail(''); setPassword(genPass()); setName('');
-    setRole('MEMBER'); setTeamId('helpers'); setCommitteeIds([]); setBio('');
-  };
-
+  const memberList = liveMembers.length > 0 ? liveMembers : members.map((m) => ({ id: m.id, name: m.name }));
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : committees.map((c) => ({ id: c.id, nameAr: c.nameAr }));
+  const reset = () => { setEmail(''); setPassword(genPass()); setName(''); setRole('MEMBER'); setTeamId('helpers'); setCommitteeIds([]); setBio(''); };
   const create = async () => {
     if (!email.trim() || !name.trim()) { toast.error('Missing data'); return; }
     if (password.length < 6) { toast.error('Password too weak'); return; }
     setBusy(true);
     try {
-      await adminCreateMember({
-        email: email.trim(),
-        temporaryPassword: password,
-        name: name.trim(),
-        role,
-        teamIds: [teamId],
-        committeeIds,
-        bio: bio.trim() || undefined,
-      }, me?.uid ?? 'system');
+      await adminCreateMember({ email: email.trim(), temporaryPassword: password, name: name.trim(), role, teamIds: [teamId], committeeIds, bio: bio.trim() || undefined }, me?.uid ?? 'system');
       setCreated({ email: email.trim(), password, name: name.trim() });
       toast.success('Account created');
       reset();
       setOpen(false);
-    } catch (e) {
-      toast.error('Failed', e instanceof Error ? e.message : '');
-    } finally { setBusy(false); }
-  };
-
-  const chRole = async (uid: string, r: RoleId) => {
-    try { await updateOne('users', uid, { role: r }); toast.success('Updated'); }
-    catch { toast.error('Failed'); }
-  };
-  const chTeam = async (uid: string, t: TeamId) => {
-    try { await updateOne('users', uid, { teamId: t }); toast.success('Updated'); }
-    catch { toast.error('Failed'); }
-  };
-  const linkMember = async (uid: string, mid: string) => {
-    try {
-      await updateOne('users', uid, { memberId: mid || null });
-      if (mid) await updateOne('members', mid, { linkedUserId: uid });
-      toast.success('Linked');
-    } catch { toast.error('Failed'); }
-  };
-  const del = async () => {
-    if (!toDelete) return;
-    setBusy(true);
-    try {
-      await removeOne('users', toDelete);
-      toast.success('Deleted');
-      setToDelete(null);
-    } catch { toast.error('Failed'); }
+    } catch (e) { toast.error('Failed', e instanceof Error ? e.message : ''); }
     finally { setBusy(false); }
   };
-
+  const chRole = async (uid: string, r: RoleId) => { try { await updateOne('users', uid, { role: r }); toast.success('Updated'); } catch { toast.error('Failed'); } };
+  const chTeam = async (uid: string, t: TeamId) => { try { await updateOne('users', uid, { teamId: t }); toast.success('Updated'); } catch { toast.error('Failed'); } };
+  const linkMember = async (uid: string, mid: string) => { try { await updateOne('users', uid, { memberId: mid || null }); if (mid) await updateOne('members', mid, { linkedUserId: uid }); toast.success('Linked'); } catch { toast.error('Failed'); } };
+  const del = async () => { if (!toDelete) return; setBusy(true); try { await removeOne('users', toDelete); toast.success('Deleted'); setToDelete(null); } catch { toast.error('Failed'); } finally { setBusy(false); } };
   return (
     <div className="admin-page">
       <PageHeader eyebrow="Admin" title="Users" description="Create accounts, assign roles, and link members." />
-      <SectionHeader
-        eyebrow="List"
-        title={'Users (' + users.length + ')'}
-        action={<button type="button" className="btn btn--primary btn--sm" onClick={() => { reset(); setOpen(true); }}>+ New User</button>}
-      />
-
-      {loading ? <SkeletonList count={6} /> : users.length === 0 ? (
-        <EmptyState title="No users" message="Start by creating the first user." />
-      ) : (
+      <SectionHeader eyebrow="List" title={'Users (' + users.length + ')'} action={<button type="button" className="btn btn--primary btn--sm" onClick={() => { reset(); setOpen(true); }}>+ New User</button>} />
+      {loading ? <SkeletonList count={6} /> : users.length === 0 ? <EmptyState title="No users" message="Start by creating the first user." /> : (
         <div className="table-wrap">
           <table className="data">
             <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Team</th><th>Member</th><th>Actions</th></tr></thead>
@@ -141,16 +96,13 @@ export function AdminUsersPage() {
                       {memberList.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </td>
-                  <td data-label="Actions">
-                    <button type="button" className="btn btn--danger btn--xs" onClick={() => setToDelete(u.uid)}>Delete</button>
-                  </td>
+                  <td data-label="Actions"><button type="button" className="btn btn--danger btn--xs" onClick={() => setToDelete(u.uid)}>Delete</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-
       <Modal open={open} title="Create New User" onClose={() => setOpen(false)} wide
         footer={<><button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="btn btn--primary" onClick={create} disabled={busy}>{busy ? '...' : 'Create'}</button></>}>
         <FormField label="Full name" required><TextInput value={name} onChange={setName} placeholder="e.g. Ahmed Mohamed" /></FormField>
@@ -163,12 +115,11 @@ export function AdminUsersPage() {
         </FormField>
         <FormField label="Role" required><Select value={role} onChange={(v) => setRole(v as RoleId)} options={ROLE_OPTS} /></FormField>
         <FormField label="Team" required><Select value={teamId} onChange={(v) => setTeamId(v as TeamId)} options={teams.map((t) => ({ value: t.id, label: t.name }))} /></FormField>
-        <FormField label="Committees" hint={committeeList.length === 0 ? 'No committees yet' : undefined}>
+        <FormField label="Committees" hint={committeeList.length === 0 ? 'No committees — add them first' : undefined}>
           <MultiSelect values={committeeIds} onChange={setCommitteeIds} options={committeeList.map((c) => ({ value: c.id, label: c.nameAr }))} />
         </FormField>
         <FormField label="Short bio"><TextInput value={bio} onChange={setBio} placeholder="e.g. Frontend developer" /></FormField>
       </Modal>
-
       <Modal open={created !== null} title="✓ Account Created" onClose={() => setCreated(null)}
         footer={<button type="button" className="btn btn--primary" onClick={() => setCreated(null)}>Got it</button>}>
         <p style={{ marginBottom: 16 }}>Send these credentials to the member:</p>
@@ -178,7 +129,6 @@ export function AdminUsersPage() {
           <div style={{ wordBreak: 'break-all' }}><strong>Password:</strong> <span dir="ltr">{created?.password}</span></div>
         </div>
       </Modal>
-
       <ConfirmDialog open={toDelete !== null} title="Delete User" message="This cannot be undone." confirmLabel="Delete" danger busy={busy} onConfirm={del} onCancel={() => setToDelete(null)} />
     </div>
   );
