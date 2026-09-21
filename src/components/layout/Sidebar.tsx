@@ -5,7 +5,7 @@ import { logout } from '@/lib/auth';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
 import { cx, initials } from '@/lib/format';
-import type { Notification, ApprovalStep } from '@/types';
+import type { ApprovalStep } from '@/types';
 
 interface NavItem {
   to: string;

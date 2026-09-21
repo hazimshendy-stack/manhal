@@ -3,7 +3,6 @@ import { useCollection } from '@/lib/useRealtimeCollection';
 import { useAuth } from '@/lib/useAuth';
 import { createOne, updateOne, removeOne } from '@/lib/db';
 import { logAudit } from '@/lib/audit';
-import { teams } from '@/data/teams';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -11,7 +10,7 @@ import { SkeletonList } from '@/components/ui/Loading';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormField, TextInput, TextArea, Select } from '@/components/ui/FormField';
-import { toast } from '@/components/ui/toast-or-fallback';
+import { toast } from '@/components/ui/Toast';
 import type { Committee, Member } from '@/types';
 
 const EMPTY: Omit<Committee, 'id'> = {
@@ -99,6 +98,7 @@ export function AdminCommitteesPage() {
     setBusy(true);
     try {
       await removeOne('committees', toDelete.id);
+
       // إزالة اللجنة من كل الأعضاء
       for (const m of members) {
         if (m.committeeIds.includes(toDelete.id)) {
@@ -106,6 +106,7 @@ export function AdminCommitteesPage() {
           await updateOne('members', m.id, { committeeIds: newIds });
         }
       }
+
       await logAudit(me, 'DELETE_COMMITTEE', 'Committee', toDelete.id, toDelete.nameAr);
       toast.success('تم الحذف');
       setToDelete(null);
@@ -188,7 +189,10 @@ export function AdminCommitteesPage() {
                   {memberCount} عضو
                 </div>
 
-                <div className="row mt-4" style={{ gap: 6, justifyContent: 'flex-end' }}>
+                <div
+                  className="row mt-4"
+                  style={{ gap: 6, justifyContent: 'flex-end' }}
+                >
                   <button
                     type="button"
                     className="btn btn--ghost btn--xs"
