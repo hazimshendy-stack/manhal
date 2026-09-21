@@ -1,57 +1,51 @@
 /* ═══════════════════════════════════════════════════════════════
-   Service Worker — Auto-Update
-   Build: mubus8ps-5kv780
+   Service Worker — Auto-Update vmubuon2i-0bz1nj
    ═══════════════════════════════════════════════════════════════ */
 
-const BUILD_ID = 'mubus8ps-5kv780';
+const BUILD_ID = 'mubuon2i-0bz1nj';
 const CACHE_NAME = 'sbapiaryy-' + BUILD_ID;
 const RUNTIME_CACHE = 'sbapiaryy-runtime-' + BUILD_ID;
+
 const PRECACHE_URLS = ['./', './index.html', './manifest.json', './favicon.svg'];
 
-/* Install — immediate activation */
 self.addEventListener('install', (event) => {
+  console.log('[SW] Installing build', BUILD_ID);
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS).catch(() => {}))
   );
 });
 
-/* Activate — clear old caches + notify clients */
 self.addEventListener('activate', (event) => {
-  event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(
-      keys.filter((k) => k !== CACHE_NAME && k !== RUNTIME_CACHE).map((k) => caches.delete(k))
-    );
-    await self.clients.claim();
-    const clients = await self.clients.matchAll({ type: 'window' });
-    clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED', buildId: BUILD_ID }));
-  })());
+  console.log('[SW] Activating build', BUILD_ID);
+  event.waitUntil(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
+        keys.filter((k) => k !== CACHE_NAME && k !== RUNTIME_CACHE)
+          .map((k) => { console.log('[SW] Deleting:', k); return caches.delete(k); })
+      );
+      await self.clients.claim();
+      const clients = await self.clients.matchAll({ type: 'window' });
+      clients.forEach((client) => client.postMessage({ type: 'SW_UPDATED', buildId: BUILD_ID }));
+    })()
+  );
 });
 
-/* Fetch — network-first for app files */
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
   if (request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
   if (url.hostname.includes('firebase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) return;
 
-  // version.json — always fresh
   if (url.pathname.endsWith('/version.json')) {
     event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => caches.match(request)));
     return;
   }
 
-  const isAppFile =
-    request.destination === 'document' ||
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    url.pathname.endsWith('.html') ||
-    url.pathname.endsWith('.js') ||
-    url.pathname.endsWith('.css') ||
-    url.pathname.endsWith('.json');
+  const isAppFile = request.destination === 'document' || request.destination === 'script' || request.destination === 'style'
+    || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json');
 
   if (isAppFile) {
     event.respondWith(

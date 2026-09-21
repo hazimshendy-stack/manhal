@@ -13,7 +13,6 @@ createRoot(container).render(
   </StrictMode>,
 );
 
-/* Auto-Update — start after render */
 initAutoUpdate().catch((err) => {
-  console.warn('[AutoUpdate] Failed:', err);
+  console.warn('[AutoUpdate] Failed to initialize:', err);
 });

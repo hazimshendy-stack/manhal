@@ -13,8 +13,12 @@ export default defineConfig({
     sourcemap: false,
     target: 'es2020',
     cssCodeSplit: true,
+    // مهم: hash في أسماء الملفات عشان كل build يبقى مختلف
     rollupOptions: {
       output: {
+        entryFileNames: 'assets/[name]-[hash]-mubumven-oldswy.js',
+        chunkFileNames: 'assets/[name]-[hash]-mubumven-oldswy.js',
+        assetFileNames: 'assets/[name]-[hash]-mubumven-oldswy[extname]',
         manualChunks: {
           firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           react: ['react', 'react-dom', 'react-router-dom'],
