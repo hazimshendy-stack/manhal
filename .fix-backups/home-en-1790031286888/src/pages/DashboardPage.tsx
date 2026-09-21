@@ -38,8 +38,9 @@ export function DashboardPage() {
     return (
       <div className="container">
         <EmptyState
-          title="Sign in required"
-          message="Sign in to access your dashboard."
+          icon="🔒"
+          title="يجب تسجيل الدخول"
+          message="سجّل دخولك للوصول إلى لوحة التحكم."
         />
       </div>
     );
@@ -86,30 +87,30 @@ export function DashboardPage() {
   return (
     <>
       <div className="section section--tight">
-        <div className="section-head__eyebrow">Welcome back</div>
+        <div className="section-head__eyebrow">أهلاً بك</div>
         <h1>{user.displayName}</h1>
       </div>
 
       {isManager(user) ? (
         <section className="section--tight">
           <StatRow>
-            <Stat value={allMembers.length} label="Members" />
-            <Stat value={teams.length} label="Teams" />
+            <Stat value={allMembers.length} label="الأعضاء" />
+            <Stat value={teams.length} label="الفرق" />
             <Stat
               value={pendingRequestsCount}
-              label="Pending Requests"
+              label="طلبات قيد المعالجة"
               variant="red"
             />
-            <Stat value={totalOrgPoints} label="Total Points" />
+            <Stat value={totalOrgPoints} label="مجموع النقاط" />
           </StatRow>
         </section>
       ) : (
         <section className="section--tight">
           <StatRow>
-            <Stat value={myPoints} label="My Points" variant="red" />
-            <Stat value={myHours} label="My Hours" />
-            <Stat value={myContribs.length} label="My Contributions" />
-            <Stat value={myRequests.length} label="My Requests" />
+            <Stat value={myPoints} label="نقاطي" variant="red" />
+            <Stat value={myHours} label="ساعاتي" />
+            <Stat value={myContribs.length} label="مشاركاتي" />
+            <Stat value={myRequests.length} label="طلباتي" />
           </StatRow>
         </section>
       )}
@@ -118,10 +119,13 @@ export function DashboardPage() {
         <section className="section--tight">
           <div className="row" style={{ gap: 10 }}>
             <Link to="/requests/new" className="btn btn--primary btn--sm">
-              + New Request
+              + طلب جديد
             </Link>
-            <Link to="/my-contributions" className="btn btn--ghost btn--sm">
-              Log Contribution
+            <Link
+              to="/my-contributions"
+              className="btn btn--ghost btn--sm"
+            >
+              تسجيل مشاركة
             </Link>
           </div>
         </section>
@@ -130,11 +134,11 @@ export function DashboardPage() {
       {isManager(user) && myPendingApprovals.length > 0 ? (
         <section className="section">
           <SectionHeader
-            eyebrow="Awaiting your decision"
-            title="Pending Approvals"
+            eyebrow="بانتظار قرارك"
+            title="الموافقات المعلّقة"
             action={
               <Link to="/approvals" className="btn btn--ghost btn--sm">
-                View All
+                الكل
               </Link>
             }
           />
@@ -143,16 +147,20 @@ export function DashboardPage() {
               const req = requests.find((r) => r.id === a.requestId);
               if (!req) return null;
               return (
-                <Link key={a.id} to={'/requests/' + req.id} className="card">
+                <Link
+                  key={a.id}
+                  to={'/requests/' + req.id}
+                  className="card"
+                >
                   <div className="row row--between">
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div className="card__title">{req.title}</div>
                       <div className="card__meta">
-                        {req.requesterName} · Step {a.order}
+                        {req.requesterName} · مرحلة {a.order}
                       </div>
                     </div>
                     <Badge variant="warning" dot>
-                      Awaiting
+                      بانتظارك
                     </Badge>
                   </div>
                 </Link>
@@ -165,11 +173,11 @@ export function DashboardPage() {
       {myNotifs.length > 0 ? (
         <section className="section">
           <SectionHeader
-            eyebrow="Latest updates"
-            title="Notifications"
+            eyebrow="آخر التحديثات"
+            title="الإشعارات"
             action={
               <Link to="/notifications" className="btn btn--ghost btn--sm">
-                View All
+                الكل
               </Link>
             }
           />
@@ -192,7 +200,7 @@ export function DashboardPage() {
                   </div>
                   {!n.read ? (
                     <Badge variant="red" dot>
-                      New
+                      جديد
                     </Badge>
                   ) : null}
                 </div>
@@ -204,11 +212,11 @@ export function DashboardPage() {
 
       <section className="section">
         <SectionHeader
-          eyebrow="Ranking"
-          title="Top Members"
+          eyebrow="الترتيب"
+          title="أعلى الأعضاء"
           action={
             <Link to="/league" className="btn btn--ghost btn--sm">
-              Full Leaderboard
+              الليج الكامل
             </Link>
           }
         />
@@ -217,9 +225,9 @@ export function DashboardPage() {
             <thead>
               <tr>
                 <th>#</th>
-                <th>Member</th>
-                <th>Hours</th>
-                <th>Points</th>
+                <th>العضو</th>
+                <th>الساعات</th>
+                <th>النقاط</th>
               </tr>
             </thead>
             <tbody>
@@ -231,11 +239,11 @@ export function DashboardPage() {
                   <tr key={m.id}>
                     <td
                       className={'rank rank--' + (i + 1 <= 3 ? i + 1 : '')}
-                      data-label="Rank"
+                      data-label="الترتيب"
                     >
                       {i + 1}
                     </td>
-                    <td data-label="Member">
+                    <td data-label="العضو">
                       <Link
                         to={'/members/' + m.id}
                         style={{
@@ -248,10 +256,13 @@ export function DashboardPage() {
                         <span style={{ fontWeight: 700 }}>{m.name}</span>
                       </Link>
                     </td>
-                    <td style={{ fontFamily: 'var(--font-en)' }} data-label="Hours">
+                    <td
+                      style={{ fontFamily: 'var(--font-en)' }}
+                      data-label="الساعات"
+                    >
                       {m.hours}
                     </td>
-                    <td className="points" data-label="Points">
+                    <td className="points" data-label="النقاط">
                       {hoursToPoints(m.hours)}
                     </td>
                   </tr>
@@ -264,11 +275,11 @@ export function DashboardPage() {
       {upcomingEvents.length > 0 ? (
         <section className="section">
           <SectionHeader
-            eyebrow="Coming up"
-            title="Upcoming Events"
+            eyebrow="قريبًا"
+            title="الأحداث القادمة"
             action={
               <Link to="/calendar" className="btn btn--ghost btn--sm">
-                Calendar
+                التقويم
               </Link>
             }
           />
@@ -282,14 +293,14 @@ export function DashboardPage() {
 
       {myMember ? (
         <section className="section">
-          <SectionHeader eyebrow="My Info" title="My Account" />
+          <SectionHeader eyebrow="معلوماتي" title="حسابي" />
           <div className="card no-click">
             <div className="kv">
-              <span className="kv__k">Name</span>
+              <span className="kv__k">الاسم</span>
               <span className="kv__v">{myMember.name}</span>
             </div>
             <div className="kv mt-3">
-              <span className="kv__k">Team</span>
+              <span className="kv__k">الفريق</span>
               <span className="kv__v">
                 {user.teamId
                   ? teams.find((t) => t.id === user.teamId)?.name
@@ -298,7 +309,7 @@ export function DashboardPage() {
             </div>
             {user.committeeIds.length > 0 ? (
               <div className="kv mt-3">
-                <span className="kv__k">Committees</span>
+                <span className="kv__k">اللجان</span>
                 <span className="kv__v">
                   {committees
                     .filter((c) => user.committeeIds.includes(c.id))
@@ -308,15 +319,18 @@ export function DashboardPage() {
               </div>
             ) : null}
             <div className="kv mt-3">
-              <span className="kv__k">Joined</span>
+              <span className="kv__k">تاريخ الانضمام</span>
               <span className="kv__v">{formatDate(user.createdAt)}</span>
             </div>
             <div className="row mt-4" style={{ gap: 10 }}>
               <Link to="/profile" className="btn btn--ghost btn--sm">
-                My Profile
+                ملفي الشخصي
               </Link>
-              <Link to="/my-contributions" className="btn btn--ghost btn--sm">
-                My Contributions
+              <Link
+                to="/my-contributions"
+                className="btn btn--ghost btn--sm"
+              >
+                مشاركاتي
               </Link>
             </div>
           </div>
