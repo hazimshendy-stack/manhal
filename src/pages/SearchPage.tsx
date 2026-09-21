@@ -1,11 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Badge } from '@/components/ui/Badge';
+
+
 import type { Member, Contribution, Achievement, CalendarEvent } from '@/types';
 
 interface SearchResult {

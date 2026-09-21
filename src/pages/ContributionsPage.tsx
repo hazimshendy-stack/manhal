@@ -1,14 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { seesAllTeams } from '@/lib/permissions';
-import { teams } from '@/data/teams';
-import { ContributionRow } from '@/components/contribution/ContributionRow';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { cx } from '@/lib/format';
+
+
 import type { Contribution, ContributionStatus, TeamId } from '@/types';
 
 const STATUSES: Array<ContributionStatus | 'all'> = ['all', 'pending', 'approved', 'rejected'];

@@ -1,10 +1,5 @@
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Badge } from '@/components/ui/Badge';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { formatDate } from '@/lib/format';
+
+
 import type { GovernanceDocument } from '@/types';
 
 export function GovernancePage() {

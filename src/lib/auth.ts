@@ -1,13 +1,5 @@
-import {
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  sendPasswordResetEmail,
-  updatePassword,
-  type User,
-} from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from './firebase';
+
+
 import type { AppUser, RoleId, TeamId, Member } from '@/types';
 
 /* ═══════════════════════════════════════════════════════════════

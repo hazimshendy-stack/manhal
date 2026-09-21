@@ -1,11 +1,5 @@
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { updateOne } from '@/lib/db';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { NotificationItem } from '@/components/notification/NotificationItem';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { toast } from '@/components/ui/Toast';
+
+
 import type { Notification } from '@/types';
 
 export function NotificationsPage() {

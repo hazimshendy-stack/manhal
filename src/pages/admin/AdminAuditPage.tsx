@@ -1,10 +1,5 @@
-import { useCollection } from '@/lib/useRealtimeCollection';
+
 import type { AuditRecord } from '@/types';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { formatDateTime } from '@/lib/format';
 
 export function AdminAuditPage() {
   const { data, loading } = useCollection<AuditRecord>('audit');

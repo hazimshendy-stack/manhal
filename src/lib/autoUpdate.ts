@@ -6,8 +6,6 @@
    - Also checks: on tab focus, on network restore
    ═══════════════════════════════════════════════════════════════ */
 
-import { toast } from '@/components/ui/Toast';
-
 const CHECK_INTERVAL_MS = 60_000;
 const VERSION_URL = './version.json';
 const LOCAL_VERSION_KEY = 'sbapiaryy-local-version';

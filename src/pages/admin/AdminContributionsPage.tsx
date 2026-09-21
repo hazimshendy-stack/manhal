@@ -1,108 +1,208 @@
-import { useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { updateOne, removeOne } from '@/lib/db';
-import { logAudit } from '@/lib/audit';
-import { notifyUser } from '@/lib/notifications';
-import { teams } from '@/data/teams';
-import { hoursToPoints, formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { toast } from '@/components/ui/Toast';
-import { cx } from '@/lib/format';
-import type { Contribution, ContributionStatus } from '@/types';
 
-const STATUS_LABEL: Record<string, string> = { all: 'All', pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
+
+import type { Contribution, ContributionStatus, Committee } from '@/types';
+
+const STATUS_LABEL: Record<string, string> = {
+  all: 'All',
+  pending: 'Pending',
+  in_review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+function getStageNumber(c: Contribution): 1 | 2 | 3 | 4 {
+  const s = c.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  if (c.status === 'approved' || c.status === 'rejected') return 4;
+  return 1;
+}
 
 export function AdminContributionsPage() {
   const { user: me } = useAuth();
   const { data, loading } = useCollection<Contribution>('contributions');
-  const [status, setStatus] = useState<ContributionStatus | 'all'>('pending');
-  const [toDelete, setToDelete] = useState<Contribution | null>(null);
+  const { data: liveCommittees } = useCollection<Committee>('committees');
+  const [status, setStatus] = useState<ContributionStatus | 'all'>('all');
+  const [actionContrib, setActionContrib] = useState<Contribution | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [pointsInput, setPointsInput] = useState<number>(0);
+  const [comment, setComment] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const filtered = data.filter((c) => status === 'all' || c.status === status).sort((a, b) => (a.date < b.date ? 1 : -1));
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : defaultCommittees;
 
-  const approve = async (c: Contribution) => {
-    try {
-      await updateOne('contributions', c.id, { status: 'approved' });
-      await logAudit(me, 'APPROVE_CONTRIBUTION', 'Contribution', c.id, c.title);
-      await notifyUser(c.createdBy, 'Contribution approved', '"' + c.title + '" — +' + hoursToPoints(c.hours) + ' points', 'participation', '/my-contributions', 'normal', me?.displayName);
-      toast.success('Approved');
-    } catch { toast.error('Failed'); }
+  const filtered = data
+    .filter((c) => status === 'all' || c.status === status)
+    .filter((c) => canReviewContribution(me, c) || c.createdBy === me?.uid)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  const openAction = (c: Contribution, type: 'approve' | 'reject') => {
+    setActionContrib(c);
+    setActionType(type);
+    setComment('');
+    setPointsInput(c.points || 0);
   };
-  const reject = async (c: Contribution) => {
-    try {
-      await updateOne('contributions', c.id, { status: 'rejected' });
-      await logAudit(me, 'REJECT_CONTRIBUTION', 'Contribution', c.id, c.title);
-      await notifyUser(c.createdBy, 'Contribution rejected', '"' + c.title + '"', 'participation', '/my-contributions', 'high', me?.displayName);
-      toast.success('Rejected');
-    } catch { toast.error('Failed'); }
+
+  const closeAction = () => {
+    setActionContrib(null);
+    setActionType(null);
+    setComment('');
+    setPointsInput(0);
   };
-  const handleDelete = async () => {
-    if (!toDelete) return;
+
+  const doApprove = async () => {
+    if (!me || !actionContrib) return;
+    const stageInfo = getContributionStage(me, actionContrib);
     setBusy(true);
     try {
-      await removeOne('contributions', toDelete.id);
-      await logAudit(me, 'DELETE_CONTRIBUTION', 'Contribution', toDelete.id, toDelete.title);
-      toast.success('Deleted');
-      setToDelete(null);
-    } catch { toast.error('Failed'); }
-    finally { setBusy(false); }
+      await approveContributionStage(
+        actionContrib,
+        me,
+        stageInfo.assignPoints ? pointsInput : undefined,
+        comment,
+      );
+      toast.success('Approved');
+      closeAction();
+    } catch (e) {
+      toast.error('Failed', e instanceof Error ? e.message : '');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doReject = async () => {
+    if (!me || !actionContrib) return;
+    if (!comment.trim()) { toast.error('Reason is required'); return; }
+    setBusy(true);
+    try {
+      await rejectContributionStage(actionContrib, me, comment);
+      toast.success('Rejected');
+      closeAction();
+    } catch (e) {
+      toast.error('Failed', e instanceof Error ? e.message : '');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <div className="admin-page">
-      <PageHeader eyebrow="Admin" title="Contributions" description="Approve or reject member contributions." />
+      <PageHeader eyebrow="Admin" title="Contributions" description="Review and approve contributions. Points assigned by committee HR." />
+
       <div className="chips mb-4">
-        {(['pending', 'approved', 'rejected', 'all'] as const).map((s) => (
-          <button key={s} type="button" className={cx('chip', status === s && 'is-active')} onClick={() => setStatus(s)}>{STATUS_LABEL[s]}</button>
+        {(['all', 'pending', 'in_review', 'approved', 'rejected'] as const).map((s) => (
+          <button key={s} type="button" className={cx('chip', status === s && 'is-active')} onClick={() => setStatus(s)}>
+            {STATUS_LABEL[s]}
+          </button>
         ))}
       </div>
+
       <SectionHeader eyebrow="List" title={'Contributions (' + filtered.length + ')'} />
+
       {loading ? <SkeletonList count={5} /> : filtered.length === 0 ? (
         <EmptyState title="No contributions" message="No contributions match the filter." />
       ) : (
         <div className="stack">
           {filtered.map((c) => {
             const team = teams.find((t) => t.id === c.teamId);
+            const committee = committeeList.find((x) => x.id === c.committeeId);
+            const stageInfo = getContributionStage(me, c);
+            const canAct = stageInfo.canApprove && (c.status === 'pending' || c.status === 'in_review');
+            const stageNum = getStageNumber(c);
+
             return (
               <div key={c.id} className="card no-click">
                 <div className="row row--between">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="card__title">{c.title}</div>
-                    <div className="card__meta">{c.memberName} · {team?.name} · {formatDate(c.date)}</div>
+                    <div className="card__meta">
+                      {c.memberName} · {team?.name} · {committee?.nameAr || c.committeeId} · {formatDate(c.date)}
+                    </div>
                   </div>
-                  <Badge variant={c.status === 'approved' ? 'success' : c.status === 'pending' ? 'warning' : 'danger'}>
-                    {c.status === 'approved' ? 'Approved' : c.status === 'pending' ? 'Pending' : 'Rejected'}
+                  <Badge
+                    variant={
+                      c.status === 'approved' ? 'success'
+                        : c.status === 'pending' ? 'info'
+                        : c.status === 'in_review' ? 'warning'
+                        : 'danger'
+                    }
+                  >
+                    {c.status === 'approved' ? 'Approved'
+                      : c.status === 'pending' ? 'Stage 1'
+                      : c.status === 'in_review' ? 'Stage ' + stageNum
+                      : 'Rejected'}
                   </Badge>
                 </div>
+
                 <p className="small soft mt-2">{c.description}</p>
-                <div className="row mt-3" style={{ gap: 10, justifyContent: 'space-between' }}>
-                  <div style={{ display: 'flex', gap: 12, fontSize: '0.9rem' }}>
-                    <span>{c.hours} <span className="muted">hours</span></span>
-                    <span className="points">{hoursToPoints(c.hours)} points</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {c.status === 'pending' ? (
-                      <>
-                        <button type="button" className="btn btn--success btn--sm" onClick={() => approve(c)}>✓ Approve</button>
-                        <button type="button" className="btn btn--outline-danger btn--sm" onClick={() => reject(c)}>✕ Reject</button>
-                      </>
-                    ) : null}
-                    <button type="button" className="btn btn--ghost btn--sm" onClick={() => setToDelete(c)}>Delete</button>
-                  </div>
+
+                <div className="row mt-3" style={{ gap: 12 }}>
+                  <span className="small">{c.hours} hours</span>
+                  {c.points > 0 ? <span className="points">{c.points} points</span> : <span className="muted small">Points pending</span>}
                 </div>
+
+                {canAct ? (
+                  <div className="row mt-3" style={{ gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid var(--c-line)' }}>
+                    <button type="button" className="btn btn--success btn--sm" onClick={() => openAction(c, 'approve')}>
+                      ✓ {stageInfo.assignPoints ? 'Approve & Assign Points' : 'Approve'}
+                    </button>
+                    <button type="button" className="btn btn--outline-danger btn--sm" onClick={() => openAction(c, 'reject')}>
+                      ✕ Reject
+                    </button>
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </div>
       )}
-      <ConfirmDialog open={toDelete !== null} title="Delete Contribution" message={'Delete "' + (toDelete?.title || '') + '"?'} confirmLabel="Delete" danger busy={busy} onConfirm={handleDelete} onCancel={() => setToDelete(null)} />
+
+      <Modal
+        open={actionType === 'approve' && actionContrib !== null}
+        title={actionContrib && getContributionStage(me, actionContrib).assignPoints ? 'Approve & Assign Points' : 'Approve Contribution'}
+        onClose={closeAction}
+        footer={
+          <>
+            <button type="button" className="btn btn--ghost" onClick={closeAction}>Cancel</button>
+            <button type="button" className="btn btn--success" onClick={doApprove} disabled={busy}>
+              {busy ? '...' : 'Approve'}
+            </button>
+          </>
+        }
+      >
+        {actionContrib && getContributionStage(me, actionContrib).assignPoints ? (
+          <>
+            <p className="small muted mb-3">
+              Assign the points this contribution deserves. You can be fair — even if hours are equal, quality matters.
+            </p>
+            <FormField label="Points to assign" required>
+              <NumberInput value={pointsInput} onChange={setPointsInput} min={0} max={1000} />
+            </FormField>
+          </>
+        ) : (
+          <p className="small muted mb-3">Confirm your approval for this stage.</p>
+        )}
+        <FormField label="Comment (optional)">
+          <TextArea value={comment} onChange={setComment} rows={2} />
+        </FormField>
+      </Modal>
+
+      <Modal
+        open={actionType === 'reject' && actionContrib !== null}
+        title="Reject Contribution"
+        onClose={closeAction}
+        footer={
+          <>
+            <button type="button" className="btn btn--ghost" onClick={closeAction}>Cancel</button>
+            <button type="button" className="btn btn--danger" onClick={doReject} disabled={busy}>
+              {busy ? '...' : 'Confirm Reject'}
+            </button>
+          </>
+        }
+      >
+        <FormField label="Rejection reason" required>
+          <TextArea value={comment} onChange={setComment} rows={3} placeholder="Explain the reason..." />
+        </FormField>
+      </Modal>
     </div>
   );
 }

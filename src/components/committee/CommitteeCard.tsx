@@ -1,6 +1,5 @@
 import type { Committee } from '@/types';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { Badge } from '@/components/ui/Badge';
+
 import type { Member } from '@/types';
 
 interface CommitteeCardProps { committee: Committee; }

@@ -1,11 +1,5 @@
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { committees as defaultCommittees } from '@/data/committees';
-import { hoursToPoints } from '@/lib/format';
-import { CommitteeCard } from '@/components/committee/CommitteeCard';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { Loading } from '@/components/ui/Loading';
+
+
 import type { Committee, Member } from '@/types';
 
 export function CommitteesPage() {

@@ -1,9 +1,5 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/lib/useAuth';
-import { logout } from '@/lib/auth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { site } from '@/data';
-import { IconBell } from '@/components/ui/Icons';
+
+
 import type { Notification } from '@/types';
 
 interface NavbarProps { onMenuToggle?: () => void; }

@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react';
-   import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-   import { Navbar } from './Navbar';
-   import { BottomNav } from './BottomNav';
-   import { Sidebar } from './Sidebar';
-   import { Footer } from './Footer';
-   import { useAuth } from '@/lib/useAuth';
-   import { initPwa } from '@/lib/pwa';
+
+   
+   
+   
+   
+   
+   
+   
 
    export function Layout() {
      const { pathname } = useLocation();

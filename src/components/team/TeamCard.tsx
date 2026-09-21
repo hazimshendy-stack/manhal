@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom';
+
 import type { Team } from '@/types';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { hoursToPoints } from '@/lib/format';
+
 import type { Member } from '@/types';
 
 interface TeamCardProps { team: Team; rank?: number; }

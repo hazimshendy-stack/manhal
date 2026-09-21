@@ -1,4 +1,4 @@
-import { Modal } from './Modal';
+
 
    interface ConfirmDialogProps {
      open: boolean;

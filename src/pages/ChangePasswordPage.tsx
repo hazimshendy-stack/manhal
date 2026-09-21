@@ -1,9 +1,4 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/lib/useAuth';
-import { changePassword, logout } from '@/lib/auth';
-import { toast } from '@/components/ui/Toast';
-import { Loading } from '@/components/ui/Loading';
+
 
 export function ChangePasswordPage() {
   const nav = useNavigate();

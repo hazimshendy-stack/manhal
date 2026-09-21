@@ -1,21 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getOne } from '@/lib/db';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { ROLE_LABEL } from '@/lib/permissions';
-import { hoursToPoints, formatDate } from '@/lib/format';
-import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { MemberStatusBadge } from '@/components/member/MemberStatusBadge';
-import { ContributionRow } from '@/components/contribution/ContributionRow';
-import { TimelineList } from '@/components/timeline/TimelineList';
-import { Loading } from '@/components/ui/Loading';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { NotFoundPage } from './NotFoundPage';
+
+
 import type { Member, Contribution, WarningRecord, TimelineEvent } from '@/types';
 
 export function MemberProfilePage() {

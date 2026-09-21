@@ -1,8 +1,4 @@
 import type { Contribution } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { formatDate, hoursToPoints } from '@/lib/format';
 
 interface ContributionRowProps {
   contribution: Contribution;

@@ -1,10 +1,5 @@
-import { site, activeSeason, seasons } from '@/data';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { formatDate, hoursToPoints } from '@/lib/format';
+
+
 import type { Member } from '@/types';
 
 export function AboutPage() {

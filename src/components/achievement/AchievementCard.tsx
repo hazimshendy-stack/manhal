@@ -1,7 +1,4 @@
 import type { Achievement } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { teams } from '@/data/teams';
-import { formatDate } from '@/lib/format';
 
 interface AchievementCardProps { achievement: Achievement; }
 

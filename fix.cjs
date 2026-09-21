@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 /**
- * fix.cjs — Live Data + Clear Notifications
- * - Dashboard: 100% live from Firestore (no static fallback)
- * - Admin panel: live counts only
- * - Members page: live only
- * - Clear old notifications option
+ * fix.cjs — New Hierarchy & Manual Points System (CLEAN REWRITE)
+ * - 4-stage contribution approval
+ * - Manual points assigned by Committee HR
+ * - Rankings: committee, team, global
+ * - Committee required for every member
+ * - Safe guards for old data
  */
 
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
-const readline = require("readline");
 
 const ROOT = process.cwd();
 const C = {
@@ -31,21 +31,1287 @@ const F = (p, c) => {
   files[p.replace(/\\/g, "/")] = c.replace(/^\n/, "");
 };
 
-function ask(q) {
-  const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout,
-  });
-  return new Promise((res) =>
-    rl.question(q, (a) => {
-      rl.close();
-      res(a.trim().toLowerCase());
-    })
-  );
+/* ═══════════════════════════════════════════════════════════════
+   1) types/index.ts
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/types/index.ts",
+  `export type RoleId =
+  | 'HEAD' | 'VICE'
+  | 'HEAD_HR'
+  | 'PRESIDENT' | 'VICE_PRESIDENT'
+  | 'HR'
+  | 'COMMITTEE_HR'
+  | 'MEMBER' | 'VIEWER';
+
+export type TeamId = 'helpers' | 'heroes' | 'coders' | 'enviros' | 'messages' | 'masar' | 'rstc';
+
+export type RequestType = 'TRANSFER' | 'PROMOTION' | 'RESIGNATION' | 'COMPLAINT' | 'SUGGESTION' | 'LEAVE';
+export type RequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
+export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
+export type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+export type ContributionStatus = 'pending' | 'in_review' | 'approved' | 'rejected';
+export type ConversationType = 'private' | 'team' | 'general';
+
+export type NotificationType =
+  | 'approval' | 'request' | 'participation' | 'achievement'
+  | 'system' | 'warning' | 'message';
+
+export interface AppUser {
+  uid: string;
+  email: string;
+  displayName: string;
+  role: RoleId;
+  teamId: TeamId | null;
+  committeeIds: string[];
+  memberId: string | null;
+  createdAt: string;
+  emailVerified?: boolean;
+  mustChangePassword?: boolean;
+  createdByAdmin?: string;
 }
 
+export interface Role {
+  id: RoleId;
+  name: string;
+  nameEn: string;
+  level: number;
+}
+
+export interface Team {
+  id: TeamId;
+  name: string;
+  nameAr: string;
+  description: string;
+  color: string;
+}
+
+export interface Committee {
+  id: string;
+  name: string;
+  nameAr: string;
+  description: string;
+  color: string;
+  icon: string;
+  teamId?: TeamId | null;
+}
+
+export interface Member {
+  id: string;
+  name: string;
+  role: RoleId;
+  teamIds: TeamId[];
+  committeeIds: string[];
+  joinedSeason: number;
+  hours: number;
+  points?: number;
+  status: 'active' | 'inactive' | 'suspended';
+  bio?: string;
+  email?: string;
+  linkedUserId?: string;
+}
+
+export interface ContributionApproval {
+  stage: 1 | 2 | 3;
+  status: 'pending' | 'approved' | 'rejected' | 'skipped';
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedByRole?: string;
+  approvedAt?: string;
+  comment?: string;
+}
+
+export interface Contribution {
+  id: string;
+  memberId: string;
+  memberName: string;
+  teamId: TeamId;
+  committeeId: string;
+  category: string;
+  title: string;
+  description: string;
+  date: string;
+  hours: number;
+  points: number;
+  status: ContributionStatus;
+  seasonId: string;
+  createdBy: string;
+  approvals?: ContributionApproval[];
+  currentStage?: 1 | 2 | 3 | 4;
+}
+
+export interface ApprovalStep {
+  id: string;
+  requestId: string;
+  order: number;
+  requiredRole: RoleId;
+  requiredTeamId: TeamId | null;
+  approverUid?: string;
+  approverName?: string;
+  status: ApprovalStatus;
+  comment?: string;
+  actionDate?: string;
+}
+
+export interface RequestRecord {
+  id: string;
+  type: RequestType;
+  requesterUid: string;
+  requesterMemberId: string;
+  requesterName: string;
+  subjectMemberId?: string;
+  fromTeamId?: TeamId;
+  toTeamId?: TeamId;
+  title: string;
+  description: string;
+  status: RequestStatus;
+  currentStepOrder: number;
+  priority: Priority;
+  submittedAt: string;
+  updatedAt: string;
+  seasonId: string;
+}
+
+export interface WarningRecord {
+  id: string;
+  memberId: string;
+  memberName: string;
+  type: 'VERBAL' | 'WRITTEN' | 'FINAL';
+  reason: string;
+  severity: 'LOW' | 'MEDIUM' | 'HIGH';
+  issuedByMemberId: string;
+  issuedByName: string;
+  issuedAt: string;
+  status: 'active' | 'resolved';
+  notes?: string;
+}
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  date: string;
+  level: 'branch' | 'national' | 'international';
+  teamIds: TeamId[];
+  memberIds: string[];
+  memberNames: string[];
+  seasonId: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  type: NotificationType;
+  date: string;
+  read: boolean;
+  route?: string;
+  priority?: 'low' | 'normal' | 'high';
+  fromName?: string;
+}
+
+export interface Conversation {
+  id: string;
+  type: ConversationType;
+  title: string;
+  participantUids: string[];
+  teamId?: TeamId;
+  lastMessageAt: string;
+  lastMessageText?: string;
+  lastMessageSender?: string;
+  unreadCounts?: Record<string, number>;
+  createdBy?: string;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderUid: string;
+  senderName: string;
+  text: string;
+  sentAt: string;
+  readBy?: string[];
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  description?: string;
+  date: string;
+  time?: string;
+  endTime?: string;
+  teamId?: TeamId | null;
+  isPublic: boolean;
+  type: 'meeting' | 'event' | 'deadline' | 'workshop';
+  location?: string;
+  participantUids?: string[];
+  seasonId: string;
+  createdBy: string;
+  createdByName: string;
+}
+
+export interface TimelineEvent {
+  id: string;
+  memberId?: string;
+  memberName?: string;
+  teamId?: TeamId;
+  type: 'join' | 'contribution' | 'promotion' | 'transfer' | 'achievement' | 'warning' | 'request' | 'approval';
+  title: string;
+  description?: string;
+  date: string;
+  relatedId?: string;
+}
+
+export interface AuditRecord {
+  id: string;
+  actorUid: string;
+  actorName: string;
+  action: string;
+  entity: string;
+  entityId: string;
+  date: string;
+  description: string;
+}
+
+export interface GovernanceDocument {
+  id: string;
+  title: string;
+  category: string;
+  description: string;
+  content: string;
+  version: string;
+  updatedAt: string;
+}
+
+export interface SiteConfig {
+  name: string;
+  tagline: string;
+  description: string;
+  organization: string;
+  email: string;
+}
+
+export interface OnboardingCard {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  accentColor: string;
+  order: number;
+}
+
+export interface Season {
+  id: string;
+  label: string;
+  labelEn: string;
+  start: string;
+  end: string;
+  isActive: boolean;
+  theme: string;
+}
+`
+);
+
 /* ═══════════════════════════════════════════════════════════════
-   1) DashboardPage — 100% LIVE
+   2) committeePermissions.ts
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/lib/committeePermissions.ts",
+  `import type { AppUser, Contribution } from '@/types';
+import { isAdmin } from './permissions';
+
+function safeArray<T>(arr: T[] | undefined | null): T[] {
+  return Array.isArray(arr) ? arr : [];
+}
+
+function hasCommittee(user: AppUser | null, committeeId: string): boolean {
+  if (!user) return false;
+  return safeArray(user.committeeIds).includes(committeeId);
+}
+
+export function isCommitteeHR(user: AppUser | null, committeeId: string): boolean {
+  if (!user) return false;
+  if (!committeeId) return false;
+  if (user.role !== 'HR' && user.role !== 'COMMITTEE_HR') return false;
+  return hasCommittee(user, committeeId);
+}
+
+export function isTeamHR(user: AppUser | null, teamId: string): boolean {
+  if (!user) return false;
+  if (user.role !== 'HR' && user.role !== 'HEAD_HR') return false;
+  if (user.role === 'HEAD_HR') return true;
+  return user.teamId === teamId;
+}
+
+export function isTeamHead(user: AppUser | null, teamId: string): boolean {
+  if (!user) return false;
+  if (user.role !== 'PRESIDENT') return false;
+  return user.teamId === teamId;
+}
+
+export function isTeamHeadHR(user: AppUser | null, teamId: string): boolean {
+  if (!user) return false;
+  if (user.role === 'PRESIDENT' || user.role === 'VICE_PRESIDENT') return user.teamId === teamId;
+  if (user.role === 'HR') return user.teamId === teamId;
+  return false;
+}
+
+export function isGlobalHR(user: AppUser | null): boolean {
+  if (!user) return false;
+  return user.role === 'HEAD_HR';
+}
+
+export function isSubBranchesHead(user: AppUser | null): boolean {
+  if (!user) return false;
+  return user.role === 'HEAD' || user.role === 'VICE';
+}
+
+export interface StageInfo {
+  stage: 1 | 2 | 3 | 4;
+  label: string;
+  canApprove: boolean;
+  assignPoints: boolean;
+}
+
+function getCurrentStage(contribution: Contribution): 1 | 2 | 3 | 4 {
+  const s = contribution.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  // Fallback for old contributions
+  if (contribution.status === 'approved') return 4;
+  if (contribution.status === 'rejected') return 4;
+  return 1;
+}
+
+export function getContributionStage(user: AppUser | null, contribution: Contribution): StageInfo {
+  const stage = getCurrentStage(contribution);
+
+  if (!user) {
+    return { stage, label: 'Unknown', canApprove: false, assignPoints: false };
+  }
+
+  if (stage === 1) {
+    return {
+      stage: 1,
+      label: 'Committee HR Approval',
+      canApprove: isCommitteeHR(user, contribution.committeeId || '') || isAdmin(user),
+      assignPoints: true,
+    };
+  }
+
+  if (stage === 2) {
+    return {
+      stage: 2,
+      label: 'Team Head HR / Team Head Approval',
+      canApprove: isTeamHeadHR(user, contribution.teamId) || isTeamHead(user, contribution.teamId) || isAdmin(user),
+      assignPoints: false,
+    };
+  }
+
+  if (stage === 3) {
+    return {
+      stage: 3,
+      label: 'Global Review',
+      canApprove: isGlobalHR(user) || isSubBranchesHead(user) || isAdmin(user),
+      assignPoints: false,
+    };
+  }
+
+  return {
+    stage: 4,
+    label: 'Completed',
+    canApprove: false,
+    assignPoints: false,
+  };
+}
+
+export function canReviewContribution(user: AppUser | null, contribution: Contribution): boolean {
+  if (!user) return false;
+  if (isAdmin(user)) return true;
+
+  const stage = getCurrentStage(contribution);
+
+  if (stage === 1) return isCommitteeHR(user, contribution.committeeId || '');
+  if (stage === 2) return isTeamHeadHR(user, contribution.teamId) || isTeamHead(user, contribution.teamId);
+  if (stage === 3) return isGlobalHR(user) || isSubBranchesHead(user);
+  return false;
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   3) contributionApprovals.ts
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/lib/contributionApprovals.ts",
+  `import { updateOne, getOne, now } from './db';
+import { notifyUser } from './notifications';
+import { logAudit } from './audit';
+import type { Contribution, ContributionApproval, AppUser } from '@/types';
+
+function getCurrentStage(contribution: Contribution): 1 | 2 | 3 | 4 {
+  const s = contribution.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  if (contribution.status === 'approved' || contribution.status === 'rejected') return 4;
+  return 1;
+}
+
+function getApprovals(contribution: Contribution): ContributionApproval[] {
+  return Array.isArray(contribution.approvals) ? [...contribution.approvals] : [
+    { stage: 1, status: 'pending' },
+    { stage: 2, status: 'pending' },
+    { stage: 3, status: 'pending' },
+  ];
+}
+
+export async function approveContributionStage(
+  contribution: Contribution,
+  user: AppUser,
+  points?: number,
+  comment?: string,
+): Promise<void> {
+  const nowStr = now();
+  const stage = getCurrentStage(contribution);
+
+  if (stage < 1 || stage > 3) {
+    throw new Error('Invalid stage');
+  }
+
+  const approvals = getApprovals(contribution);
+  const existingIndex = approvals.findIndex((a) => a.stage === stage);
+
+  const newApproval: ContributionApproval = {
+    stage: stage as 1 | 2 | 3,
+    status: 'approved',
+    approvedBy: user.uid,
+    approvedByName: user.displayName,
+    approvedByRole: user.role,
+    approvedAt: nowStr,
+    comment: comment?.trim() || undefined,
+  };
+
+  if (existingIndex >= 0) {
+    approvals[existingIndex] = newApproval;
+  } else {
+    approvals.push(newApproval);
+  }
+
+  let updatedPoints = contribution.points || 0;
+
+  if (stage === 1) {
+    if (typeof points !== 'number') {
+      throw new Error('Points must be assigned at stage 1');
+    }
+    updatedPoints = points;
+  }
+
+  if (stage === 3) {
+    await updateOne('contributions', contribution.id, {
+      approvals,
+      points: updatedPoints,
+      status: 'approved',
+      currentStage: 4,
+    });
+
+    if (updatedPoints > 0) {
+      const member = await getOne<{ points?: number; hours?: number }>('members', contribution.memberId);
+      if (member) {
+        await updateOne('members', contribution.memberId, {
+          points: (member.points || 0) + updatedPoints,
+          hours: (member.hours || 0) + (contribution.hours || 0),
+        });
+      }
+    }
+
+    await notifyUser(
+      contribution.createdBy,
+      'Contribution approved',
+      '"' + contribution.title + '" — +' + updatedPoints + ' points',
+      'participation',
+      '/my-contributions',
+      'high',
+      user.displayName,
+    );
+
+    await logAudit(user, 'APPROVE_CONTRIBUTION_FINAL', 'Contribution', contribution.id, contribution.title);
+  } else {
+    const nextStage = (stage + 1) as 2 | 3;
+    await updateOne('contributions', contribution.id, {
+      approvals,
+      points: updatedPoints,
+      status: 'in_review',
+      currentStage: nextStage,
+    });
+
+    await notifyUser(
+      contribution.createdBy,
+      'Contribution progressed',
+      '"' + contribution.title + '" — stage ' + nextStage + ' of 3',
+      'approval',
+      '/my-contributions',
+      'normal',
+      user.displayName,
+    );
+
+    await logAudit(user, 'APPROVE_CONTRIBUTION_STAGE', 'Contribution', contribution.id, 'Stage ' + stage);
+  }
+}
+
+export async function rejectContributionStage(
+  contribution: Contribution,
+  user: AppUser,
+  comment: string,
+): Promise<void> {
+  if (!comment.trim()) throw new Error('Rejection reason is required');
+
+  const stage = getCurrentStage(contribution);
+  const approvals = getApprovals(contribution);
+  const existingIndex = approvals.findIndex((a) => a.stage === stage);
+
+  const newApproval: ContributionApproval = {
+    stage: stage as 1 | 2 | 3,
+    status: 'rejected',
+    approvedBy: user.uid,
+    approvedByName: user.displayName,
+    approvedByRole: user.role,
+    approvedAt: now(),
+    comment: comment.trim(),
+  };
+
+  if (existingIndex >= 0) {
+    approvals[existingIndex] = newApproval;
+  } else {
+    approvals.push(newApproval);
+  }
+
+  for (let s = stage + 1; s <= 3; s++) {
+    if (!approvals.some((a) => a.stage === s)) {
+      approvals.push({ stage: s as 1 | 2 | 3, status: 'skipped' });
+    }
+  }
+
+  await updateOne('contributions', contribution.id, {
+    approvals,
+    status: 'rejected',
+  });
+
+  await notifyUser(
+    contribution.createdBy,
+    'Contribution rejected',
+    '"' + contribution.title + '" — Reason: ' + comment,
+    'participation',
+    '/my-contributions',
+    'high',
+    user.displayName,
+  );
+
+  await logAudit(user, 'REJECT_CONTRIBUTION', 'Contribution', contribution.id, comment);
+}
+
+export function newContributionApprovals(): ContributionApproval[] {
+  return [
+    { stage: 1, status: 'pending' },
+    { stage: 2, status: 'pending' },
+    { stage: 3, status: 'pending' },
+  ];
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   4) rankings.ts
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/lib/rankings.ts",
+  `import type { Member, Contribution, TeamId } from '@/types';
+
+function approvedPoints(c: Contribution): number {
+  return typeof c.points === 'number' ? c.points : 0;
+}
+
+function approvedHours(c: Contribution): number {
+  return typeof c.hours === 'number' ? c.hours : 0;
+}
+
+export function getMemberPoints(memberId: string, contributions: Contribution[]): number {
+  return contributions
+    .filter((c) => c.memberId === memberId && c.status === 'approved')
+    .reduce((sum, c) => sum + approvedPoints(c), 0);
+}
+
+export function getMemberHours(memberId: string, contributions: Contribution[]): number {
+  return contributions
+    .filter((c) => c.memberId === memberId && c.status === 'approved')
+    .reduce((sum, c) => sum + approvedHours(c), 0);
+}
+
+export interface RankEntry {
+  member: Member;
+  points: number;
+  hours: number;
+  rank: number;
+}
+
+export function getGlobalRanking(members: Member[], contributions: Contribution[]): RankEntry[] {
+  const eligible = members.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
+  const withPoints = eligible.map((m) => ({
+    member: m,
+    points: getMemberPoints(m.id, contributions),
+    hours: getMemberHours(m.id, contributions),
+  }));
+  withPoints.sort((a, b) => b.points - a.points);
+  return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+export function getTeamRanking(
+  members: Member[],
+  contributions: Contribution[],
+  teamId: TeamId,
+): RankEntry[] {
+  const teamMembers = members.filter((m) => Array.isArray(m.teamIds) && m.teamIds.includes(teamId));
+  const eligible = teamMembers.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
+  const withPoints = eligible.map((m) => ({
+    member: m,
+    points: getMemberPoints(m.id, contributions),
+    hours: getMemberHours(m.id, contributions),
+  }));
+  withPoints.sort((a, b) => b.points - a.points);
+  return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+export function getCommitteeRanking(
+  members: Member[],
+  contributions: Contribution[],
+  committeeId: string,
+): RankEntry[] {
+  const committeeMembers = members.filter((m) => Array.isArray(m.committeeIds) && m.committeeIds.includes(committeeId));
+  const eligible = committeeMembers.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
+  const withPoints = eligible.map((m) => ({
+    member: m,
+    points: contributions
+      .filter((c) => c.memberId === m.id && c.committeeId === committeeId && c.status === 'approved')
+      .reduce((sum, c) => sum + approvedPoints(c), 0),
+    hours: contributions
+      .filter((c) => c.memberId === m.id && c.committeeId === committeeId && c.status === 'approved')
+      .reduce((sum, c) => sum + approvedHours(c), 0),
+  }));
+  withPoints.sort((a, b) => b.points - a.points);
+  return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
+}
+
+export function getTeamTotalPoints(members: Member[], contributions: Contribution[], teamId: TeamId): number {
+  const teamMembers = members.filter((m) => Array.isArray(m.teamIds) && m.teamIds.includes(teamId));
+  const teamMemberIds = new Set(teamMembers.map((m) => m.id));
+  return contributions
+    .filter((c) => teamMemberIds.has(c.memberId) && c.status === 'approved')
+    .reduce((sum, c) => sum + approvedPoints(c), 0);
+}
+
+export function getCommitteeTotalPoints(members: Member[], contributions: Contribution[], committeeId: string): number {
+  const cm = members.filter((m) => Array.isArray(m.committeeIds) && m.committeeIds.includes(committeeId));
+  const cmIds = new Set(cm.map((m) => m.id));
+  return contributions
+    .filter((c) => cmIds.has(c.memberId) && c.committeeId === committeeId && c.status === 'approved')
+    .reduce((sum, c) => sum + approvedPoints(c), 0);
+}
+
+export interface UserRanks {
+  global: { rank: number; total: number; points: number } | null;
+  team: { rank: number; total: number; points: number; teamId: TeamId } | null;
+  committees: Array<{ committeeId: string; rank: number; total: number; points: number }>;
+}
+
+export function getUserRanks(userMemberId: string | null, members: Member[], contributions: Contribution[]): UserRanks {
+  if (!userMemberId) return { global: null, team: null, committees: [] };
+
+  const member = members.find((m) => m.id === userMemberId);
+  if (!member) return { global: null, team: null, committees: [] };
+
+  const global = getGlobalRanking(members, contributions);
+  const globalEntry = global.find((e) => e.member.id === userMemberId);
+
+  let teamData: UserRanks['team'] = null;
+  const teamIds = Array.isArray(member.teamIds) ? member.teamIds : [];
+  if (teamIds.length > 0) {
+    const tid = teamIds[0];
+    const teamRank = getTeamRanking(members, contributions, tid);
+    const tEntry = teamRank.find((e) => e.member.id === userMemberId);
+    if (tEntry) {
+      teamData = { rank: tEntry.rank, total: teamRank.length, points: tEntry.points, teamId: tid };
+    }
+  }
+
+  const committeeData: UserRanks['committees'] = [];
+  const committeeIds = Array.isArray(member.committeeIds) ? member.committeeIds : [];
+  for (const cid of committeeIds) {
+    const committeeRank = getCommitteeRanking(members, contributions, cid);
+    const cEntry = committeeRank.find((e) => e.member.id === userMemberId);
+    if (cEntry) {
+      committeeData.push({ committeeId: cid, rank: cEntry.rank, total: committeeRank.length, points: cEntry.points });
+    }
+  }
+
+  return {
+    global: globalEntry ? { rank: globalEntry.rank, total: global.length, points: globalEntry.points } : null,
+    team: teamData,
+    committees: committeeData,
+  };
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   5) MyContributionsPage.tsx
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/pages/MyContributionsPage.tsx",
+  `import { useState } from 'react';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { createOne, newId, today } from '@/lib/db';
+import { logAudit } from '@/lib/audit';
+import { notifyTeamManagers } from '@/lib/notifications';
+import { newContributionApprovals } from '@/lib/contributionApprovals';
+import { teams } from '@/data/teams';
+import { committees as defaultCommittees } from '@/data/committees';
+import { formatDate } from '@/lib/format';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Loading';
+import { Modal } from '@/components/ui/Modal';
+import { FormField, TextInput, NumberInput, TextArea, Select } from '@/components/ui/FormField';
+import { toast } from '@/components/ui/Toast';
+import type { Contribution, TeamId, AppUser, Committee } from '@/types';
+
+const STAGE_LABEL: Record<number, string> = {
+  1: 'Committee HR',
+  2: 'Team Head',
+  3: 'Global Review',
+  4: 'Approved',
+};
+
+function getStage(c: Contribution): 1 | 2 | 3 | 4 {
+  const s = c.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  if (c.status === 'approved' || c.status === 'rejected') return 4;
+  return 1;
+}
+
+export function MyContributionsPage() {
+  const { user } = useAuth();
+  const { data: contributions, loading } = useRealtimeCollection<Contribution>('contributions');
+  const { data: users } = useRealtimeCollection<AppUser>('users');
+  const { data: liveCommittees } = useRealtimeCollection<Committee>('committees');
+
+  const [open, setOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [title, setTitle] = useState('');
+  const [desc, setDesc] = useState('');
+  const [hours, setHours] = useState(1);
+  const [teamId, setTeamId] = useState<TeamId>((user?.teamId as TeamId) || 'helpers');
+  const [committeeId, setCommitteeId] = useState<string>((user?.committeeIds && user.committeeIds[0]) || '');
+  const [category, setCategory] = useState('General');
+
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : defaultCommittees;
+
+  if (!user?.memberId) {
+    return (
+      <div className="container">
+        <EmptyState title="No member linked" message="Your account is not linked to a member." />
+      </div>
+    );
+  }
+
+  const userCommittees = Array.isArray(user.committeeIds) ? user.committeeIds : [];
+
+  if (userCommittees.length === 0) {
+    return (
+      <div className="container">
+        <EmptyState
+          title="No committee assigned"
+          message="You must be a member of at least one committee to log contributions. Contact your admin."
+        />
+      </div>
+    );
+  }
+
+  const myContribs = contributions
+    .filter((c) => c.memberId === user.memberId)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  const approved = myContribs.filter((c) => c.status === 'approved');
+  const totalPoints = approved.reduce((s, c) => s + (c.points || 0), 0);
+  const totalHours = approved.reduce((s, c) => s + c.hours, 0);
+  const pending = myContribs.filter((c) => c.status === 'pending' || c.status === 'in_review').length;
+
+  const reset = () => {
+    setTitle('');
+    setDesc('');
+    setHours(1);
+    setCategory('General');
+  };
+
+  const submit = async () => {
+    if (!title.trim() || !desc.trim()) {
+      toast.error('Title and description are required');
+      return;
+    }
+    if (hours <= 0) {
+      toast.error('Hours must be positive');
+      return;
+    }
+    if (!committeeId) {
+      toast.error('Committee is required');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const contrib: Contribution = {
+        id: newId('C'),
+        memberId: user.memberId!,
+        memberName: user.displayName,
+        teamId,
+        committeeId,
+        category,
+        title: title.trim(),
+        description: desc.trim(),
+        date: today(),
+        hours,
+        points: 0,
+        status: 'pending',
+        seasonId: 'S7',
+        createdBy: user.uid,
+        approvals: newContributionApprovals(),
+        currentStage: 1,
+      };
+
+      await createOne('contributions', contrib);
+      await logAudit(user, 'CREATE_CONTRIBUTION', 'Contribution', contrib.id, 'Log contribution');
+
+      await notifyTeamManagers(
+        users,
+        teamId,
+        'New contribution awaiting approval',
+        user.displayName + ' logged "' + contrib.title + '"',
+        'participation',
+        '/admin/contributions',
+        'normal',
+        user.displayName,
+      );
+
+      toast.success('Submitted', 'Awaiting committee HR approval');
+      setOpen(false);
+      reset();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to submit';
+      toast.error('Failed to submit', msg);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="container">
+      <PageHeader
+        eyebrow="My Contributions"
+        title="My Contributions"
+        description="Log your contributions. Committee HR assigns points."
+      >
+        <button type="button" className="btn btn--primary mt-4" onClick={() => setOpen(true)}>
+          + Log Contribution
+        </button>
+      </PageHeader>
+
+      <section className="section--tight">
+        <StatRow>
+          <Stat value={totalPoints} label="Points" variant="red" />
+          <Stat value={totalHours} label="Hours" />
+          <Stat value={myContribs.length} label="Contributions" />
+          <Stat value={pending} label="Pending" />
+        </StatRow>
+      </section>
+
+      <section className="section">
+        <SectionHeader eyebrow="History" title="All Contributions" />
+        {loading ? (
+          <SkeletonList count={5} />
+        ) : myContribs.length === 0 ? (
+          <EmptyState
+            title="No contributions yet"
+            message="Log your first contribution to earn points."
+            action={
+              <button type="button" className="btn btn--primary" onClick={() => setOpen(true)}>
+                + Log First Contribution
+              </button>
+            }
+          />
+        ) : (
+          <div className="stack">
+            {myContribs.map((c) => {
+              const team = teams.find((t) => t.id === c.teamId);
+              const committee = committeeList.find((x) => x.id === c.committeeId);
+              const stage = getStage(c);
+              const approvals = Array.isArray(c.approvals) ? c.approvals : [];
+              return (
+                <div key={c.id} className="card no-click">
+                  <div className="row row--between">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="card__title">{c.title}</div>
+                      <div className="card__meta">
+                        {team?.name} · {committee?.nameAr || c.committeeId} · {formatDate(c.date)}
+                      </div>
+                    </div>
+                    <Badge
+                      variant={
+                        c.status === 'approved' ? 'success'
+                          : c.status === 'pending' ? 'info'
+                          : c.status === 'in_review' ? 'warning'
+                          : 'danger'
+                      }
+                    >
+                      {c.status === 'approved' ? 'Approved'
+                        : c.status === 'pending' ? 'Pending'
+                        : c.status === 'in_review' ? 'In Review (' + stage + '/3)'
+                        : 'Rejected'}
+                    </Badge>
+                  </div>
+
+                  <p className="small soft mt-2">{c.description}</p>
+
+                  <div className="row mt-3" style={{ gap: 10, justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', gap: 16, fontSize: '0.92rem' }}>
+                      <span>{c.hours} <span className="muted">hours</span></span>
+                      {c.status === 'approved' ? (
+                        <span className="points">{c.points} points</span>
+                      ) : (
+                        <span className="muted">Points pending</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {c.status !== 'approved' && c.status !== 'rejected' ? (
+                    <div className="mt-3" style={{ paddingTop: 12, borderTop: '1px solid var(--c-line)' }}>
+                      <div className="tiny muted" style={{ marginBottom: 8 }}>Approval Progress</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {[1, 2, 3].map((s) => {
+                          const apr = approvals.find((a) => a.stage === s);
+                          const isActive = stage === s;
+                          const isDone = apr?.status === 'approved';
+                          const isRejected = apr?.status === 'rejected';
+                          return (
+                            <span
+                              key={s}
+                              className={'badge ' + (isDone ? 'badge--success' : isRejected ? 'badge--danger' : isActive ? 'badge--warning' : 'badge--neutral')}
+                            >
+                              {s}. {STAGE_LABEL[s]}
+                              {isDone ? ' ✓' : ''}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <Modal
+        open={open}
+        title="Log New Contribution"
+        onClose={() => setOpen(false)}
+        wide
+        footer={
+          <>
+            <button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>Cancel</button>
+            <button type="button" className="btn btn--primary" onClick={submit} disabled={busy}>
+              {busy ? '...' : 'Submit'}
+            </button>
+          </>
+        }
+      >
+        <FormField label="Title" required>
+          <TextInput value={title} onChange={setTitle} placeholder="Contribution title" />
+        </FormField>
+
+        <FormField label="Description" required>
+          <TextArea value={desc} onChange={setDesc} placeholder="What did you do?" rows={3} />
+        </FormField>
+
+        <FormField label="Team" required>
+          <Select
+            value={teamId}
+            onChange={(v) => setTeamId(v as TeamId)}
+            options={teams.map((t) => ({ value: t.id, label: t.name }))}
+          />
+        </FormField>
+
+        <FormField label="Committee" required hint="Points will be assigned by the committee HR">
+          <Select
+            value={committeeId}
+            onChange={setCommitteeId}
+            options={[
+              { value: '', label: '— Select committee —' },
+              ...committeeList
+                .filter((c) => userCommittees.includes(c.id))
+                .map((c) => ({ value: c.id, label: c.nameAr })),
+            ]}
+          />
+        </FormField>
+
+        <FormField label="Category">
+          <TextInput value={category} onChange={setCategory} />
+        </FormField>
+
+        <FormField label="Hours" required hint="Approximate hours (committee HR will assign points)">
+          <NumberInput value={hours} onChange={setHours} min={0.5} max={200} step={0.5} />
+        </FormField>
+      </Modal>
+    </div>
+  );
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   6) AdminContributionsPage.tsx
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/pages/admin/AdminContributionsPage.tsx",
+  `import { useState } from 'react';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { useAuth } from '@/lib/useAuth';
+import { teams } from '@/data/teams';
+import { committees as defaultCommittees } from '@/data/committees';
+import { formatDate } from '@/lib/format';
+import { approveContributionStage, rejectContributionStage } from '@/lib/contributionApprovals';
+import { getContributionStage, canReviewContribution } from '@/lib/committeePermissions';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Loading';
+import { Modal } from '@/components/ui/Modal';
+import { FormField, TextArea, NumberInput } from '@/components/ui/FormField';
+import { toast } from '@/components/ui/Toast';
+import { cx } from '@/lib/format';
+import type { Contribution, ContributionStatus, Committee } from '@/types';
+
+const STATUS_LABEL: Record<string, string> = {
+  all: 'All',
+  pending: 'Pending',
+  in_review: 'In Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+};
+
+function getStageNumber(c: Contribution): 1 | 2 | 3 | 4 {
+  const s = c.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  if (c.status === 'approved' || c.status === 'rejected') return 4;
+  return 1;
+}
+
+export function AdminContributionsPage() {
+  const { user: me } = useAuth();
+  const { data, loading } = useCollection<Contribution>('contributions');
+  const { data: liveCommittees } = useCollection<Committee>('committees');
+  const [status, setStatus] = useState<ContributionStatus | 'all'>('all');
+  const [actionContrib, setActionContrib] = useState<Contribution | null>(null);
+  const [actionType, setActionType] = useState<'approve' | 'reject' | null>(null);
+  const [pointsInput, setPointsInput] = useState<number>(0);
+  const [comment, setComment] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : defaultCommittees;
+
+  const filtered = data
+    .filter((c) => status === 'all' || c.status === status)
+    .filter((c) => canReviewContribution(me, c) || c.createdBy === me?.uid)
+    .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+  const openAction = (c: Contribution, type: 'approve' | 'reject') => {
+    setActionContrib(c);
+    setActionType(type);
+    setComment('');
+    setPointsInput(c.points || 0);
+  };
+
+  const closeAction = () => {
+    setActionContrib(null);
+    setActionType(null);
+    setComment('');
+    setPointsInput(0);
+  };
+
+  const doApprove = async () => {
+    if (!me || !actionContrib) return;
+    const stageInfo = getContributionStage(me, actionContrib);
+    setBusy(true);
+    try {
+      await approveContributionStage(
+        actionContrib,
+        me,
+        stageInfo.assignPoints ? pointsInput : undefined,
+        comment,
+      );
+      toast.success('Approved');
+      closeAction();
+    } catch (e) {
+      toast.error('Failed', e instanceof Error ? e.message : '');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doReject = async () => {
+    if (!me || !actionContrib) return;
+    if (!comment.trim()) { toast.error('Reason is required'); return; }
+    setBusy(true);
+    try {
+      await rejectContributionStage(actionContrib, me, comment);
+      toast.success('Rejected');
+      closeAction();
+    } catch (e) {
+      toast.error('Failed', e instanceof Error ? e.message : '');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="admin-page">
+      <PageHeader eyebrow="Admin" title="Contributions" description="Review and approve contributions. Points assigned by committee HR." />
+
+      <div className="chips mb-4">
+        {(['all', 'pending', 'in_review', 'approved', 'rejected'] as const).map((s) => (
+          <button key={s} type="button" className={cx('chip', status === s && 'is-active')} onClick={() => setStatus(s)}>
+            {STATUS_LABEL[s]}
+          </button>
+        ))}
+      </div>
+
+      <SectionHeader eyebrow="List" title={'Contributions (' + filtered.length + ')'} />
+
+      {loading ? <SkeletonList count={5} /> : filtered.length === 0 ? (
+        <EmptyState title="No contributions" message="No contributions match the filter." />
+      ) : (
+        <div className="stack">
+          {filtered.map((c) => {
+            const team = teams.find((t) => t.id === c.teamId);
+            const committee = committeeList.find((x) => x.id === c.committeeId);
+            const stageInfo = getContributionStage(me, c);
+            const canAct = stageInfo.canApprove && (c.status === 'pending' || c.status === 'in_review');
+            const stageNum = getStageNumber(c);
+
+            return (
+              <div key={c.id} className="card no-click">
+                <div className="row row--between">
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="card__title">{c.title}</div>
+                    <div className="card__meta">
+                      {c.memberName} · {team?.name} · {committee?.nameAr || c.committeeId} · {formatDate(c.date)}
+                    </div>
+                  </div>
+                  <Badge
+                    variant={
+                      c.status === 'approved' ? 'success'
+                        : c.status === 'pending' ? 'info'
+                        : c.status === 'in_review' ? 'warning'
+                        : 'danger'
+                    }
+                  >
+                    {c.status === 'approved' ? 'Approved'
+                      : c.status === 'pending' ? 'Stage 1'
+                      : c.status === 'in_review' ? 'Stage ' + stageNum
+                      : 'Rejected'}
+                  </Badge>
+                </div>
+
+                <p className="small soft mt-2">{c.description}</p>
+
+                <div className="row mt-3" style={{ gap: 12 }}>
+                  <span className="small">{c.hours} hours</span>
+                  {c.points > 0 ? <span className="points">{c.points} points</span> : <span className="muted small">Points pending</span>}
+                </div>
+
+                {canAct ? (
+                  <div className="row mt-3" style={{ gap: 8, justifyContent: 'flex-end', paddingTop: 12, borderTop: '1px solid var(--c-line)' }}>
+                    <button type="button" className="btn btn--success btn--sm" onClick={() => openAction(c, 'approve')}>
+                      ✓ {stageInfo.assignPoints ? 'Approve & Assign Points' : 'Approve'}
+                    </button>
+                    <button type="button" className="btn btn--outline-danger btn--sm" onClick={() => openAction(c, 'reject')}>
+                      ✕ Reject
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Modal
+        open={actionType === 'approve' && actionContrib !== null}
+        title={actionContrib && getContributionStage(me, actionContrib).assignPoints ? 'Approve & Assign Points' : 'Approve Contribution'}
+        onClose={closeAction}
+        footer={
+          <>
+            <button type="button" className="btn btn--ghost" onClick={closeAction}>Cancel</button>
+            <button type="button" className="btn btn--success" onClick={doApprove} disabled={busy}>
+              {busy ? '...' : 'Approve'}
+            </button>
+          </>
+        }
+      >
+        {actionContrib && getContributionStage(me, actionContrib).assignPoints ? (
+          <>
+            <p className="small muted mb-3">
+              Assign the points this contribution deserves. You can be fair — even if hours are equal, quality matters.
+            </p>
+            <FormField label="Points to assign" required>
+              <NumberInput value={pointsInput} onChange={setPointsInput} min={0} max={1000} />
+            </FormField>
+          </>
+        ) : (
+          <p className="small muted mb-3">Confirm your approval for this stage.</p>
+        )}
+        <FormField label="Comment (optional)">
+          <TextArea value={comment} onChange={setComment} rows={2} />
+        </FormField>
+      </Modal>
+
+      <Modal
+        open={actionType === 'reject' && actionContrib !== null}
+        title="Reject Contribution"
+        onClose={closeAction}
+        footer={
+          <>
+            <button type="button" className="btn btn--ghost" onClick={closeAction}>Cancel</button>
+            <button type="button" className="btn btn--danger" onClick={doReject} disabled={busy}>
+              {busy ? '...' : 'Confirm Reject'}
+            </button>
+          </>
+        }
+      >
+        <FormField label="Rejection reason" required>
+          <TextArea value={comment} onChange={setComment} rows={3} placeholder="Explain the reason..." />
+        </FormField>
+      </Modal>
+    </div>
+  );
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   7) DashboardPage.tsx — with user ranks
    ═══════════════════════════════════════════════════════════════ */
 F(
   "src/pages/DashboardPage.tsx",
@@ -53,38 +1319,31 @@ F(
 import { useAuth } from '@/lib/useAuth';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
+import { committees as defaultCommittees } from '@/data/committees';
 import { isManager, seesAllTeams, canApproveStep } from '@/lib/permissions';
-import { hoursToPoints, formatDate } from '@/lib/format';
+import { getMemberPoints, getMemberHours, getUserRanks } from '@/lib/rankings';
+import { formatDate } from '@/lib/format';
 import { Stat, StatRow } from '@/components/ui/Stat';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Badge } from '@/components/ui/Badge';
-import { Avatar } from '@/components/ui/Avatar';
-import { EventCard } from '@/components/calendar/EventCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
 import type {
-  Notification,
-  RequestRecord,
-  Contribution,
-  ApprovalStep,
-  CalendarEvent,
-  Member,
+  Notification, RequestRecord, Contribution, ApprovalStep,
+  CalendarEvent, Member, Committee,
 } from '@/types';
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const { data: members, loading: l1 } = useRealtimeCollection<Member>('members');
+  const { data: contributions, loading: l2 } = useRealtimeCollection<Contribution>('contributions');
+  const { data: notifs, loading: l3 } = useRealtimeCollection<Notification>('notifications');
+  const { data: requests, loading: l4 } = useRealtimeCollection<RequestRecord>('requests');
+  const { data: approvals, loading: l5 } = useRealtimeCollection<ApprovalStep>('approvals');
+  const { data: events, loading: l6 } = useRealtimeCollection<CalendarEvent>('calendar');
+  const { data: liveCommittees } = useRealtimeCollection<Committee>('committees');
 
-  /* ═══ 100% LIVE DATA — no static fallback ═══ */
-  const { data: members, loading: loadingMembers } = useRealtimeCollection<Member>('members');
-  const { data: notifs, loading: loadingNotifs } = useRealtimeCollection<Notification>('notifications');
-  const { data: requests, loading: loadingRequests } = useRealtimeCollection<RequestRecord>('requests');
-  const { data: contributions, loading: loadingContribs } = useRealtimeCollection<Contribution>('contributions');
-  const { data: approvals, loading: loadingApprovals } = useRealtimeCollection<ApprovalStep>('approvals');
-  const { data: events, loading: loadingEvents } = useRealtimeCollection<CalendarEvent>('calendar');
-
-  const isLoading = loadingMembers || loadingNotifs || loadingRequests ||
-                    loadingContribs || loadingApprovals || loadingEvents;
+  const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
 
   if (!user) {
     return (
@@ -95,54 +1354,28 @@ export function DashboardPage() {
   }
 
   if (isLoading) {
-    return (
-      <div className="container">
-        <Loading fullHeight message="Loading dashboard..." />
-      </div>
-    );
+    return <div className="container"><Loading fullHeight message="Loading dashboard..." /></div>;
   }
 
-  /* ═══ Use LIVE members only — never static ═══ */
-  const allMembers = members;
-  const myMember = user.memberId ? allMembers.find((m) => m.id === user.memberId) : null;
-
+  const myMember = user.memberId ? members.find((m) => m.id === user.memberId) : null;
+  const myPoints = user.memberId ? getMemberPoints(user.memberId, contributions) : 0;
+  const myHours = user.memberId ? getMemberHours(user.memberId, contributions) : 0;
   const myContribs = contributions.filter((c) => c.memberId === user.memberId);
-  const approvedContribs = myContribs.filter((c) => c.status === 'approved');
-  const myHours = approvedContribs.reduce((s, c) => s + c.hours, 0);
-  const myPoints = hoursToPoints(myHours);
-
   const myRequests = requests.filter((r) => r.requesterUid === user.uid);
 
-  const myNotifs = notifs
-    .filter((n) => n.userId === user.uid)
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, 5);
-
-  const myPendingApprovals = approvals.filter(
-    (a) => a.status === 'PENDING' && canApproveStep(user, a),
-  );
-
+  const myNotifs = notifs.filter((n) => n.userId === user.uid).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5);
+  const myPendingApprovals = approvals.filter((a) => a.status === 'PENDING' && canApproveStep(user, a));
   const upcomingEvents = events
     .filter((e) => e.date >= new Date().toISOString().slice(0, 10))
     .filter((e) => e.isPublic || e.teamId === user.teamId || seesAllTeams(user))
     .sort((a, b) => (a.date > b.date ? 1 : -1))
     .slice(0, 3);
 
-  const totalOrgPoints = allMembers.reduce(
-    (s, m) => s + hoursToPoints(m.hours || 0),
-    0,
-  );
+  const pendingRequestsCount = requests.filter((r) => r.status === 'PENDING' || r.status === 'IN_REVIEW').length;
+  const totalOrgPoints = members.reduce((s, m) => s + getMemberPoints(m.id, contributions), 0);
 
-  const pendingRequestsCount = requests.filter(
-    (r) => r.status === 'PENDING' || r.status === 'IN_REVIEW',
-  ).length;
-
-  /* ═══ Top members — from LIVE data only ═══ */
-  const topMembers = [...allMembers]
-    .filter((m) => m.role !== 'HEAD' && m.role !== 'VICE')
-    .sort((a, b) => hoursToPoints(b.hours || 0) - hoursToPoints(a.hours || 0))
-    .slice(0, 5)
-    .map((m, i) => ({ member: m, rank: i + 1 }));
+  const myRanks = getUserRanks(user.memberId, members, contributions);
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : defaultCommittees;
 
   return (
     <>
@@ -154,7 +1387,7 @@ export function DashboardPage() {
       {isManager(user) ? (
         <section className="section--tight">
           <StatRow>
-            <Stat value={allMembers.length} label="Members" />
+            <Stat value={members.length} label="Members" />
             <Stat value={teams.length} label="Teams" />
             <Stat value={pendingRequestsCount} label="Pending Requests" variant="red" />
             <Stat value={totalOrgPoints} label="Total Points" />
@@ -171,6 +1404,48 @@ export function DashboardPage() {
         </section>
       )}
 
+      {myRanks.global || myRanks.team || myRanks.committees.length > 0 ? (
+        <section className="section">
+          <SectionHeader eyebrow="My Ranking" title="Where I Stand" />
+          <div className="grid grid--2">
+            {myRanks.global ? (
+              <div className="card no-click">
+                <div className="row row--between">
+                  <div className="card__title">Global Ranking</div>
+                  <Badge variant="red">#{myRanks.global.rank}</Badge>
+                </div>
+                <div className="card__meta">Out of {myRanks.global.total} members · {myRanks.global.points} points</div>
+              </div>
+            ) : null}
+
+            {myRanks.team ? (
+              <div className="card no-click">
+                <div className="row row--between">
+                  <div className="card__title">Team Ranking</div>
+                  <Badge variant="navy">#{myRanks.team.rank}</Badge>
+                </div>
+                <div className="card__meta">
+                  {teams.find((t) => t.id === myRanks.team!.teamId)?.name} · out of {myRanks.team.total} · {myRanks.team.points} points
+                </div>
+              </div>
+            ) : null}
+
+            {myRanks.committees.map((cr) => {
+              const c = committeeList.find((x) => x.id === cr.committeeId);
+              return (
+                <div key={cr.committeeId} className="card no-click">
+                  <div className="row row--between">
+                    <div className="card__title">{c?.nameAr || cr.committeeId} Committee</div>
+                    <Badge variant="info">#{cr.rank}</Badge>
+                  </div>
+                  <div className="card__meta">Out of {cr.total} · {cr.points} points</div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+
       {user.role === 'MEMBER' ? (
         <section className="section--tight">
           <div className="row" style={{ gap: 10 }}>
@@ -182,11 +1457,7 @@ export function DashboardPage() {
 
       {isManager(user) && myPendingApprovals.length > 0 ? (
         <section className="section">
-          <SectionHeader
-            eyebrow="Awaiting your decision"
-            title="Pending Approvals"
-            action={<Link to="/approvals" className="btn btn--ghost btn--sm">View All</Link>}
-          />
+          <SectionHeader eyebrow="Awaiting your decision" title="Pending Approvals" action={<Link to="/approvals" className="btn btn--ghost btn--sm">View All</Link>} />
           <div className="stack">
             {myPendingApprovals.slice(0, 4).map((a) => {
               const req = requests.find((r) => r.id === a.requestId);
@@ -209,19 +1480,10 @@ export function DashboardPage() {
 
       {myNotifs.length > 0 ? (
         <section className="section">
-          <SectionHeader
-            eyebrow="Latest updates"
-            title="Notifications"
-            action={<Link to="/notifications" className="btn btn--ghost btn--sm">View All</Link>}
-          />
+          <SectionHeader eyebrow="Latest updates" title="Notifications" action={<Link to="/notifications" className="btn btn--ghost btn--sm">View All</Link>} />
           <div className="stack">
             {myNotifs.map((n) => (
-              <Link
-                key={n.id}
-                to={n.route || '/notifications'}
-                className="card"
-                style={!n.read ? { borderColor: '#FCA5A5', background: '#FFFBFC' } : undefined}
-              >
+              <Link key={n.id} to={n.route || '/notifications'} className="card" style={!n.read ? { borderColor: '#FCA5A5', background: '#FFFBFC' } : undefined}>
                 <div className="row row--between">
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="card__title">{n.title}</div>
@@ -235,57 +1497,16 @@ export function DashboardPage() {
         </section>
       ) : null}
 
-      <section className="section">
-        <SectionHeader
-          eyebrow="Ranking"
-          title="Top Members"
-          action={<Link to="/league" className="btn btn--ghost btn--sm">Full Leaderboard</Link>}
-        />
-        {topMembers.length === 0 ? (
-          <EmptyState
-            title="No members"
-            message="No members yet. Add members from the admin panel."
-          />
-        ) : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Member</th>
-                  <th>Hours</th>
-                  <th>Points</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topMembers.map((e) => (
-                  <tr key={e.member.id}>
-                    <td className={'rank rank--' + (e.rank <= 3 ? e.rank : '')} data-label="Rank">{e.rank}</td>
-                    <td data-label="Member">
-                      <Link to={'/members/' + e.member.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <Avatar name={e.member.name} size={30} variant="navy" />
-                        <span style={{ fontWeight: 700 }}>{e.member.name}</span>
-                      </Link>
-                    </td>
-                    <td style={{ fontFamily: 'var(--font-en)' }} data-label="Hours">{e.member.hours || 0}</td>
-                    <td className="points" data-label="Points">{hoursToPoints(e.member.hours || 0)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
       {upcomingEvents.length > 0 ? (
         <section className="section">
-          <SectionHeader
-            eyebrow="Coming up"
-            title="Upcoming Events"
-            action={<Link to="/calendar" className="btn btn--ghost btn--sm">Calendar</Link>}
-          />
+          <SectionHeader eyebrow="Coming up" title="Upcoming Events" action={<Link to="/calendar" className="btn btn--ghost btn--sm">Calendar</Link>} />
           <div className="stack">
-            {upcomingEvents.map((e) => <EventCard key={e.id} event={e} />)}
+            {upcomingEvents.map((e) => (
+              <div key={e.id} className="card no-click">
+                <div className="card__title">{e.title}</div>
+                <div className="card__meta">{formatDate(e.date)}</div>
+              </div>
+            ))}
           </div>
         </section>
       ) : null}
@@ -299,22 +1520,15 @@ export function DashboardPage() {
               <span className="kv__k">Team</span>
               <span className="kv__v">{user.teamId ? teams.find((t) => t.id === user.teamId)?.name : '—'}</span>
             </div>
-            {user.committeeIds.length > 0 ? (
+            {Array.isArray(user.committeeIds) && user.committeeIds.length > 0 ? (
               <div className="kv mt-3">
                 <span className="kv__k">Committees</span>
                 <span className="kv__v">
-                  {committees.filter((c) => user.committeeIds.includes(c.id)).map((c) => c.nameAr).join(' · ')}
+                  {committeeList.filter((c) => user.committeeIds.includes(c.id)).map((c) => c.nameAr).join(' · ')}
                 </span>
               </div>
             ) : null}
-            <div className="kv mt-3">
-              <span className="kv__k">Joined</span>
-              <span className="kv__v">{formatDate(user.createdAt)}</span>
-            </div>
-            <div className="row mt-4" style={{ gap: 10 }}>
-              <Link to="/profile" className="btn btn--ghost btn--sm">My Profile</Link>
-              <Link to="/my-contributions" className="btn btn--ghost btn--sm">My Contributions</Link>
-            </div>
+            <div className="kv mt-3"><span className="kv__k">Joined</span><span className="kv__v">{formatDate(user.createdAt)}</span></div>
           </div>
         </section>
       ) : null}
@@ -325,430 +1539,163 @@ export function DashboardPage() {
 );
 
 /* ═══════════════════════════════════════════════════════════════
-   2) AdminHomePage — 100% LIVE
+   8) Firestore Rules
    ═══════════════════════════════════════════════════════════════ */
 F(
-  "src/pages/admin/AdminHomePage.tsx",
-  `import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { seedAll, type SeedResult } from '@/lib/seed';
-import { hoursToPoints } from '@/lib/format';
-import { useState } from 'react';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Loading } from '@/components/ui/Loading';
-import { toast } from '@/components/ui/Toast';
-import type {
-  AppUser,
-  RequestRecord,
-  Contribution,
-  Notification,
-  Member,
-  Committee,
-} from '@/types';
+  "firestore.rules",
+  `rules_version = '2';
 
-interface AdminCard {
-  to: string;
-  title: string;
-  count?: number;
-  description: string;
-}
+service cloud.firestore {
+  match /databases/{database}/documents {
 
-export function AdminHomePage() {
-  const { user } = useAuth();
-
-  /* ═══ 100% LIVE DATA ═══ */
-  const { data: users, loading: l1 } = useRealtimeCollection<AppUser>('users');
-  const { data: members, loading: l2 } = useRealtimeCollection<Member>('members');
-  const { data: requests, loading: l3 } = useRealtimeCollection<RequestRecord>('requests');
-  const { data: contributions, loading: l4 } = useRealtimeCollection<Contribution>('contributions');
-  const { data: notifs, loading: l5 } = useRealtimeCollection<Notification>('notifications');
-  const { data: committees, loading: l6 } = useRealtimeCollection<Committee>('committees');
-
-  const [seeding, setSeeding] = useState(false);
-  const [result, setResult] = useState<SeedResult | null>(null);
-
-  const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
-
-  /* ═══ Live counts ═══ */
-  const usersCount = users.length;
-  const membersCount = members.length;
-  const pendingReq = requests.filter((r) => r.status === 'PENDING' || r.status === 'IN_REVIEW').length;
-  const pendingContribs = contributions.filter((c) => c.status === 'pending').length;
-  const notifsCount = notifs.length;
-  const committeesCount = committees.length;
-  const totalPoints = members.reduce((s, m) => s + hoursToPoints(m.hours || 0), 0);
-
-  const onSeed = async () => {
-    if (!window.confirm('This will upload seed data to Firestore. Continue?')) return;
-    setSeeding(true);
-    try {
-      const r = await seedAll();
-      setResult(r);
-      toast.success('Data uploaded');
-    } catch (err) {
-      toast.error('Upload failed', err instanceof Error ? err.message : '');
-    } finally {
-      setSeeding(false);
+    function isSignedIn() {
+      return request.auth != null;
     }
-  };
 
-  const cards: AdminCard[] = [
-    { to: '/admin/analytics', title: 'Analytics', description: 'Overview of all statistics' },
-    { to: '/admin/requests', title: 'Requests', count: pendingReq, description: 'Manage all requests' },
-    { to: '/admin/users', title: 'Users', count: usersCount, description: 'Accounts and roles' },
-    { to: '/admin/members', title: 'Members', count: membersCount, description: 'Manage member data' },
-    { to: '/admin/contributions', title: 'Contributions', count: pendingContribs, description: 'Approve member contributions' },
-    { to: '/admin/committees', title: 'Committees', count: committeesCount, description: 'Manage committees' },
-    { to: '/admin/achievements', title: 'Achievements', description: 'Manage achievements' },
-    { to: '/admin/warnings', title: 'Warnings', description: 'Issue and track warnings' },
-    { to: '/admin/calendar', title: 'Calendar', description: 'Manage events' },
-    { to: '/admin/conversations', title: 'Conversations', description: 'Manage chats' },
-    { to: '/admin/notifications', title: 'Send Notification', count: notifsCount, description: 'Send bulk notifications' },
-    { to: '/admin/governance', title: 'Governance', description: 'Policies and documents' },
-    { to: '/admin/audit', title: 'Audit Log', description: 'Track all admin actions' },
-  ];
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
 
-  if (isLoading) {
-    return (
-      <div className="admin-page">
-        <Loading fullHeight message="Loading admin panel..." />
-      </div>
-    );
-  }
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
 
-  return (
-    <div className="admin-page">
-      <section className="admin-welcome">
-        <div className="admin-welcome__eyebrow">Admin Panel</div>
-        <h1 className="admin-welcome__name">Welcome, {user?.displayName || 'Admin'}</h1>
-        <p className="admin-welcome__subtitle">
-          Full control over content, members, and requests. Everything from one place.
-        </p>
-      </section>
+    function userRole() {
+      return userDoc().role;
+    }
 
-      <section className="admin-stats">
-        <div className="stat">
-          <div className="stat__value">{usersCount}</div>
-          <div className="stat__label">Users</div>
-        </div>
-        <div className="stat">
-          <div className="stat__value">{membersCount}</div>
-          <div className="stat__label">Members</div>
-        </div>
-        <div className={'stat' + (pendingReq > 0 ? ' stat--red' : '')}>
-          <div className="stat__value">{pendingReq}</div>
-          <div className="stat__label">Pending Requests</div>
-        </div>
-        <div className={'stat' + (pendingContribs > 0 ? ' stat--amber' : '')}>
-          <div className="stat__value">{pendingContribs}</div>
-          <div className="stat__label">Pending Contributions</div>
-        </div>
-        <div className="stat">
-          <div className="stat__value">{totalPoints}</div>
-          <div className="stat__label">Total Points</div>
-        </div>
-        <div className="stat">
-          <div className="stat__value">{notifsCount}</div>
-          <div className="stat__label">Notifications</div>
-        </div>
-      </section>
+    function userTeam() {
+      return userDoc().teamId;
+    }
 
-      <section className="admin-seed">
-        <div className="admin-seed__head">
-          <div>
-            <div className="admin-seed__title">Upload Seed Data</div>
-            <div className="admin-seed__desc">One-time only — if Firestore is empty.</div>
-          </div>
-          <button type="button" className="btn btn--primary" onClick={onSeed} disabled={seeding}>
-            {seeding ? 'Uploading...' : 'Upload Data'}
-          </button>
-        </div>
-        {result ? (
-          <div className="admin-seed__result">
-            ✓ Uploaded — Members: {result.members} · Teams: {result.teams} ·
-            Contributions: {result.contributions} · Requests: {result.requests}
-          </div>
-        ) : null}
-      </section>
+    function userCommittees() {
+      return userDoc().committeeIds;
+    }
 
-      <section style={{ marginTop: 32 }}>
-        <SectionHeader eyebrow="Sections" title="Quick Links" />
-        <div className="admin-cards">
-          {cards.map((c) => (
-            <Link key={c.to} to={c.to} className="admin-card">
-              <div className="admin-card__head">
-                <div className="admin-card__title">{c.title}</div>
-                {c.count !== undefined && c.count > 0 ? (
-                  <span className="admin-card__count">{c.count > 99 ? '99+' : c.count}</span>
-                ) : null}
-              </div>
-              <div className="admin-card__desc">{c.description}</div>
-            </Link>
-          ))}
-        </div>
-      </section>
-    </div>
-  );
-}
-`
-);
+    function isAdmin() {
+      return isSignedIn() && userDocExists() && userRole() in ['HEAD', 'VICE'];
+    }
 
-/* ═══════════════════════════════════════════════════════════════
-   3) Clear Notifications utility
-   ═══════════════════════════════════════════════════════════════ */
-F(
-  "src/lib/clearData.ts",
-  `/**
- * Utility to clear old/wrong data
- * Use from admin panel or console
- */
+    function isGlobalHR() {
+      return isSignedIn() && userDocExists() && userRole() == 'HEAD_HR';
+    }
 
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from './firebase';
+    function isManager() {
+      return isSignedIn() && userDocExists() && userRole() in ['HEAD', 'VICE', 'HEAD_HR', 'PRESIDENT', 'VICE_PRESIDENT', 'HR'];
+    }
 
-/**
- * Clear ALL notifications
- */
-export async function clearAllNotifications(): Promise<number> {
-  const snap = await getDocs(collection(db, 'notifications'));
-  let count = 0;
-  for (const d of snap.docs) {
-    await deleteDoc(doc(db, 'notifications', d.id));
-    count++;
-  }
-  return count;
-}
+    function isTeamHead(teamId) {
+      return isSignedIn() && userDocExists() && userRole() == 'PRESIDENT' && userTeam() == teamId;
+    }
 
-/**
- * Clear all notifications for a specific user
- */
-export async function clearUserNotifications(userId: string): Promise<number> {
-  const snap = await getDocs(collection(db, 'notifications'));
-  let count = 0;
-  for (const d of snap.docs) {
-    if (d.data().userId === userId) {
-      await deleteDoc(doc(db, 'notifications', d.id));
-      count++;
+    function isCommitteeHR(committeeId) {
+      return isSignedIn() && userDocExists() && userRole() in ['HR', 'COMMITTEE_HR'] && committeeId in userCommittees();
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin() || request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /committees/{committeeId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /contributions/{contributionId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if isAdmin()
+        || isGlobalHR()
+        || (isManager() && (userTeam() == resource.data.teamId))
+        || (isCommitteeHR(resource.data.committeeId));
+
+      allow delete: if isAdmin();
+    }
+
+    match /warnings/{warningId} {
+      allow read: if isManager() || (isSignedIn() && resource.data.memberId == userDoc().memberId);
+      allow create, update: if isAdmin() || isManager();
+      allow delete: if isAdmin();
+    }
+
+    match /achievements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isManager());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /conversations/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /messages/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.senderUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /calendar/{id} {
+      allow read: if true;
+      allow write: if isManager();
+    }
+
+    match /governance/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    match /requests/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isManager();
+      allow delete: if isAdmin();
+    }
+
+    match /approvals/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isManager();
     }
   }
-  return count;
-}
-
-/**
- * Clear ALL audit records
- */
-export async function clearAllAudit(): Promise<number> {
-  const snap = await getDocs(collection(db, 'audit'));
-  let count = 0;
-  for (const d of snap.docs) {
-    await deleteDoc(doc(db, 'audit', d.id));
-    count++;
-  }
-  return count;
 }
 `
 );
 
 /* ═══════════════════════════════════════════════════════════════
-   4) Add clear button to AdminHomePage — done above
-   ═══════════════════════════════════════════════════════════════ */
-
-/* ═══════════════════════════════════════════════════════════════
-   5) Fix AdminUsersPage — use live members only
-   ═══════════════════════════════════════════════════════════════ */
-F(
-  "src/pages/admin/AdminUsersPage.tsx",
-  `import { useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { updateOne, removeOne } from '@/lib/db';
-import { adminCreateMember } from '@/lib/auth';
-import { teams } from '@/data/teams';
-import { ROLE_LABEL } from '@/lib/permissions';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { Modal } from '@/components/ui/Modal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FormField, TextInput, Select, MultiSelect } from '@/components/ui/FormField';
-import { Badge } from '@/components/ui/Badge';
-import { toast } from '@/components/ui/Toast';
-import type { AppUser, RoleId, TeamId, Member, Committee } from '@/types';
-
-const ROLE_OPTS: Array<{ value: RoleId; label: string }> = (Object.entries(ROLE_LABEL) as Array<[RoleId, string]>).map(([value, label]) => ({ value, label }));
-
-function genPass(): string {
-  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  let p = '';
-  for (let i = 0; i < 10; i += 1) p += c.charAt(Math.floor(Math.random() * c.length));
-  return p + '@1';
-}
-
-export function AdminUsersPage() {
-  const { user: me } = useAuth();
-  const { data: users, loading } = useCollection<AppUser>('users');
-  const { data: liveMembers } = useCollection<Member>('members');
-  const { data: liveCommittees } = useCollection<Committee>('committees');
-
-  const [open, setOpen] = useState(false);
-  const [toDelete, setToDelete] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(genPass());
-  const [name, setName] = useState('');
-  const [role, setRole] = useState<RoleId>('MEMBER');
-  const [teamId, setTeamId] = useState<TeamId>('helpers');
-  const [committeeIds, setCommitteeIds] = useState<string[]>([]);
-  const [bio, setBio] = useState('');
-  const [created, setCreated] = useState<{ email: string; password: string; name: string } | null>(null);
-
-  /* ═══ Live data ONLY — no static fallback ═══ */
-  const memberList = liveMembers.map((m) => ({ id: m.id, name: m.name }));
-  const committeeList = liveCommittees.map((c) => ({ id: c.id, nameAr: c.nameAr }));
-
-  const reset = () => {
-    setEmail(''); setPassword(genPass()); setName('');
-    setRole('MEMBER'); setTeamId('helpers'); setCommitteeIds([]); setBio('');
-  };
-
-  const create = async () => {
-    if (!email.trim() || !name.trim()) { toast.error('Missing data'); return; }
-    if (password.length < 6) { toast.error('Password too weak'); return; }
-    setBusy(true);
-    try {
-      await adminCreateMember({
-        email: email.trim(),
-        temporaryPassword: password,
-        name: name.trim(),
-        role,
-        teamIds: [teamId],
-        committeeIds,
-        bio: bio.trim() || undefined,
-      }, me?.uid ?? 'system');
-      setCreated({ email: email.trim(), password, name: name.trim() });
-      toast.success('Account created');
-      reset();
-      setOpen(false);
-    } catch (e) {
-      toast.error('Failed', e instanceof Error ? e.message : '');
-    } finally { setBusy(false); }
-  };
-
-  const chRole = async (uid: string, r: RoleId) => {
-    try { await updateOne('users', uid, { role: r }); toast.success('Updated'); }
-    catch { toast.error('Failed'); }
-  };
-  const chTeam = async (uid: string, t: TeamId) => {
-    try { await updateOne('users', uid, { teamId: t }); toast.success('Updated'); }
-    catch { toast.error('Failed'); }
-  };
-  const linkMember = async (uid: string, mid: string) => {
-    try {
-      await updateOne('users', uid, { memberId: mid || null });
-      if (mid) await updateOne('members', mid, { linkedUserId: uid });
-      toast.success('Linked');
-    } catch { toast.error('Failed'); }
-  };
-  const del = async () => {
-    if (!toDelete) return;
-    setBusy(true);
-    try {
-      await removeOne('users', toDelete);
-      toast.success('Deleted');
-      setToDelete(null);
-    } catch { toast.error('Failed'); }
-    finally { setBusy(false); }
-  };
-
-  return (
-    <div className="admin-page">
-      <PageHeader eyebrow="Admin" title="Users" description="Create accounts, assign roles, and link members." />
-      <SectionHeader
-        eyebrow="List"
-        title={'Users (' + users.length + ')'}
-        action={<button type="button" className="btn btn--primary btn--sm" onClick={() => { reset(); setOpen(true); }}>+ New User</button>}
-      />
-
-      {loading ? <SkeletonList count={6} /> : users.length === 0 ? (
-        <EmptyState title="No users" message="Start by creating the first user." />
-      ) : (
-        <div className="table-wrap">
-          <table className="data">
-            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Team</th><th>Member</th><th>Actions</th></tr></thead>
-            <tbody>
-              {users.map((u) => (
-                <tr key={u.uid}>
-                  <td data-label="Name" style={{ fontWeight: 700 }}>
-                    {u.displayName}
-                    {u.mustChangePassword ? <Badge variant="warning" className="mt-2">New</Badge> : null}
-                  </td>
-                  <td className="muted small" data-label="Email" dir="ltr">{u.email}</td>
-                  <td data-label="Role">
-                    <select className="input" value={u.role} onChange={(e) => chRole(u.uid, e.target.value as RoleId)} style={{ minWidth: 150 }}>
-                      {ROLE_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-                    </select>
-                  </td>
-                  <td data-label="Team">
-                    <select className="input" value={u.teamId ?? ''} onChange={(e) => chTeam(u.uid, e.target.value as TeamId)} style={{ minWidth: 130 }}>
-                      <option value="">— None —</option>
-                      {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
-                  </td>
-                  <td data-label="Member">
-                    <select className="input" value={u.memberId ?? ''} onChange={(e) => linkMember(u.uid, e.target.value)} style={{ minWidth: 150 }}>
-                      <option value="">— Not linked —</option>
-                      {memberList.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                    </select>
-                  </td>
-                  <td data-label="Actions">
-                    <button type="button" className="btn btn--danger btn--xs" onClick={() => setToDelete(u.uid)}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      <Modal open={open} title="Create New User" onClose={() => setOpen(false)} wide
-        footer={<><button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>Cancel</button><button type="button" className="btn btn--primary" onClick={create} disabled={busy}>{busy ? '...' : 'Create'}</button></>}>
-        <FormField label="Full name" required><TextInput value={name} onChange={setName} placeholder="e.g. Ahmed Mohamed" /></FormField>
-        <FormField label="Email" required><TextInput value={email} onChange={setEmail} type="email" placeholder="name@resala-stem.org" /></FormField>
-        <FormField label="Temporary password" required hint="Will be required to change on first login">
-          <div style={{ display: 'flex', gap: 8 }}>
-            <TextInput value={password} onChange={setPassword} type="text" />
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPassword(genPass())}>Generate</button>
-          </div>
-        </FormField>
-        <FormField label="Role" required><Select value={role} onChange={(v) => setRole(v as RoleId)} options={ROLE_OPTS} /></FormField>
-        <FormField label="Team" required><Select value={teamId} onChange={(v) => setTeamId(v as TeamId)} options={teams.map((t) => ({ value: t.id, label: t.name }))} /></FormField>
-        <FormField label="Committees" hint={committeeList.length === 0 ? 'No committees yet' : undefined}>
-          <MultiSelect values={committeeIds} onChange={setCommitteeIds} options={committeeList.map((c) => ({ value: c.id, label: c.nameAr }))} />
-        </FormField>
-        <FormField label="Short bio"><TextInput value={bio} onChange={setBio} placeholder="e.g. Frontend developer" /></FormField>
-      </Modal>
-
-      <Modal open={created !== null} title="✓ Account Created" onClose={() => setCreated(null)}
-        footer={<button type="button" className="btn btn--primary" onClick={() => setCreated(null)}>Got it</button>}>
-        <p style={{ marginBottom: 16 }}>Send these credentials to the member:</p>
-        <div style={{ background: 'var(--c-off-white)', border: '1px solid var(--c-line)', borderRadius: 10, padding: 16, lineHeight: 2 }}>
-          <div><strong>Name:</strong> {created?.name}</div>
-          <div style={{ wordBreak: 'break-all' }}><strong>Email:</strong> <span dir="ltr">{created?.email}</span></div>
-          <div style={{ wordBreak: 'break-all' }}><strong>Password:</strong> <span dir="ltr">{created?.password}</span></div>
-        </div>
-      </Modal>
-
-      <ConfirmDialog open={toDelete !== null} title="Delete User" message="This cannot be undone." confirmLabel="Delete" danger busy={busy} onConfirm={del} onCancel={() => setToDelete(null)} />
-    </div>
-  );
-}
-`
-);
-
-/* ═══════════════════════════════════════════════════════════════
-   6) Auto-fix engine
+   9) Auto-Fix engine
    ═══════════════════════════════════════════════════════════════ */
 
 function walkDir(dir, exts) {
@@ -777,11 +1724,11 @@ function autoFixFile(filePath) {
       if (clean.startsWith("type ")) clean = clean.slice(5).trim();
       if (clean.includes(" as ")) clean = clean.split(" as ")[1].trim();
       const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`\\b${escaped}\\b`).test(bodyWithoutImports);
+      return new RegExp("\\\\b" + escaped + "\\\\b").test(bodyWithoutImports);
     });
     if (used.length === 0) return "";
     if (used.length === names.length) return match;
-    return `import { ${used.join(", ")} } from '${source}';`;
+    return "import { " + used.join(", ") + " } from '" + source + "';";
   });
   content = content.replace(/\n{3,}/g, "\n\n");
   if (content !== original) {
@@ -792,43 +1739,43 @@ function autoFixFile(filePath) {
 }
 
 function runAutoFix() {
-  console.log(`${C.b}▶ AUTO-FIX${C.r}\n`);
+  console.log(C.b + "▶ AUTO-FIX" + C.r + "\n");
   const allFiles = walkDir(path.join(ROOT, "src"), [".ts", ".tsx"]);
   let fixed = 0;
   for (const f of allFiles) {
     if (autoFixFile(f)) {
       console.log(
-        `${C.g}✓${C.r} ${path.relative(ROOT, f).replace(/\\/g, "/")}`
+        C.g + "✓" + C.r + " " + path.relative(ROOT, f).replace(/\\/g, "/")
       );
       fixed++;
     }
   }
-  if (fixed === 0) console.log(`${C.d}No unused imports${C.r}`);
-  else console.log(`\n${C.g}Fixed ${fixed} file(s)${C.r}`);
+  if (fixed === 0) console.log(C.d + "No unused imports" + C.r);
+  else console.log("\n" + C.g + "Fixed " + fixed + " file(s)" + C.r);
   console.log("");
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   7) Main
+   10) Main
    ═══════════════════════════════════════════════════════════════ */
 
-async function main() {
+function main() {
   console.log("");
   console.log(
-    `${C.b}${C.m}╔══════════════════════════════════════════════════════╗${C.r}`
+    C.b + C.m + "╔══════════════════════════════════════════════════════╗" + C.r
   );
   console.log(
-    `${C.b}${C.m}║  fix.cjs — Live Data + Clear Old Notifications       ║${C.r}`
+    C.b + C.m + "║  fix.cjs — New Hierarchy + Manual Points + 4-Stage   ║" + C.r
   );
   console.log(
-    `${C.b}${C.m}╚══════════════════════════════════════════════════════╝${C.r}`
+    C.b + C.m + "╚══════════════════════════════════════════════════════╝" + C.r
   );
   console.log("");
 
   const bkDir = path.join(
     ROOT,
     ".fix-backups",
-    "livedata-" + Date.now().toString()
+    "hierarchy-" + Date.now().toString()
   );
   fs.mkdirSync(bkDir, { recursive: true });
 
@@ -842,57 +1789,83 @@ async function main() {
     }
     fs.mkdirSync(path.dirname(abs), { recursive: true });
     fs.writeFileSync(abs, content, "utf8");
-    console.log(`${C.g}✓${C.r} ${rel}`);
+    console.log(C.g + "✓" + C.r + " " + rel);
     count++;
   }
 
-  console.log(`\n${C.b}═══ Files: ${count} ═══${C.r}\n`);
+  console.log("\n" + C.b + "═══ Files: " + count + " ═══" + C.r + "\n");
 
   runAutoFix();
 
   // Safe build
   const pkgPath = path.join(ROOT, "package.json");
   if (fs.existsSync(pkgPath)) {
-    const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-    if (pkg.scripts && pkg.scripts.build && pkg.scripts.build.includes("tsc")) {
-      pkg.scripts.build = "vite build";
-      pkg.scripts.typecheck = "tsc --noEmit";
-      fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
-      console.log(`${C.g}✓${C.r} package.json — safe build\n`);
+    try {
+      const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
+      if (
+        pkg.scripts &&
+        pkg.scripts.build &&
+        pkg.scripts.build.includes("tsc")
+      ) {
+        pkg.scripts.build = "vite build";
+        pkg.scripts.typecheck = "tsc --noEmit";
+        fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+        console.log(C.g + "✓" + C.r + " package.json — safe build\n");
+      }
+    } catch (e) {
+      console.log(C.y + "⚠ package.json error: " + e.message + C.r);
     }
   }
 
-  console.log(`${C.b}▶ Commit + Push${C.r}\n`);
+  console.log(C.b + "▶ Commit + Push" + C.r + "\n");
   try {
     sh("git add -A");
     let hasChanges = true;
     try {
       execSync("git diff --staged --quiet", { cwd: ROOT, stdio: "pipe" });
       hasChanges = false;
-    } catch {
-      /* */
+    } catch (e) {
+      /* has changes */
     }
+
     if (!hasChanges) {
-      console.log(`${C.y}ℹ No changes${C.r}\n`);
+      console.log(C.y + "ℹ No changes" + C.r + "\n");
       process.exit(0);
     }
 
     sh(
-      'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "fix: live data on dashboard + admin, no static fallback"'
+      'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "feat: new hierarchy + manual points + 4-stage contribution approval"'
     );
-    console.log(`\n${C.g}✓ commit${C.r}`);
+    console.log("\n" + C.g + "✓ commit" + C.r);
 
     sh("git push origin main --force");
-    console.log(`\n${C.g}${C.b}✓ Pushed${C.r}`);
-    console.log(`${C.y}⏱️  Wait 4-7 min → Ctrl+Shift+R${C.r}\n`);
-  } catch {
-    console.log(`\n${C.red}✗ Push failed${C.r}`);
-    console.log(`  ${C.c}git push origin main --force${C.r}\n`);
+    console.log("\n" + C.g + C.b + "✓ Pushed" + C.r);
+    console.log(C.y + "⏱️  Wait 4-7 min → Ctrl+Shift+R" + C.r + "\n");
+  } catch (e) {
+    console.log("\n" + C.red + "✗ Push failed" + C.r);
+    console.log("  " + C.c + "git push origin main --force" + C.r + "\n");
     process.exit(1);
   }
+
+  /* ═══ Summary ═══ */
+  console.log("");
+  console.log(C.b + C.m + "═══ NEXT STEPS ═══" + C.r + "\n");
+  console.log(C.y + "1) Publish Firestore Rules:" + C.r);
+  console.log(
+    "   Firebase Console → Firestore → Rules → paste from firestore.rules → Publish"
+  );
+  console.log("");
+  console.log(C.y + "2) Set yourself as first HEAD:" + C.r);
+  console.log('   Firestore → users → [your-uid] → role: "HEAD"');
+  console.log("");
+  console.log(C.y + "3) Add at least one committee for each member:" + C.r);
+  console.log("   From /admin/users → link member to committee");
+  console.log("");
+  console.log(C.y + "4) Old contributions:" + C.r);
+  console.log(
+    "   They will still work — the code has safe guards for missing fields."
+  );
+  console.log("");
 }
 
-main().catch((err) => {
-  console.error(err);
-  process.exit(1);
-});
+main();

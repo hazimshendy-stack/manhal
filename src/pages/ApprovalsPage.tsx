@@ -1,14 +1,5 @@
-import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { canApproveStep, ROLE_LABEL } from '@/lib/permissions';
-import { teams } from '@/data/teams';
-import { formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
+
+
 import type { ApprovalStep, RequestRecord } from '@/types';
 
 export function ApprovalsPage() {

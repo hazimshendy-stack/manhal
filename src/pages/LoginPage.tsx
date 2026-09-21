@@ -1,6 +1,4 @@
-import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login } from '@/lib/auth';
+
 
 export function LoginPage() {
   const nav = useNavigate();

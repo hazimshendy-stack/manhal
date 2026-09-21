@@ -1,5 +1,4 @@
 import type { CalendarEvent } from '@/types';
-import { getArabicMonth, getDaysInMonth, getFirstWeekdayOfMonth } from '@/lib/format';
 
 interface CalendarGridProps {
   year: number; month: number; events: CalendarEvent[];

@@ -1,15 +1,5 @@
-import { Link } from 'react-router-dom';
-import { site, activeSeason } from '@/data';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { teams } from '@/data/teams';
-import { hoursToPoints } from '@/lib/format';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { TeamCard } from '@/components/team/TeamCard';
-import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
-import { Loading } from '@/components/ui/Loading';
-import { EmptyState } from '@/components/ui/EmptyState';
+
+
 import type { Member, Contribution } from '@/types';
 
 export function HomePage() {

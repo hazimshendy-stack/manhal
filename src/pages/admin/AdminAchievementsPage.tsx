@@ -1,17 +1,5 @@
-import { useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { createOne, updateOne, removeOne } from '@/lib/db';
-import { teams } from '@/data/teams';
-import { members } from '@/data/members';
-import { formatDate } from '@/lib/format';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { Modal } from '@/components/ui/Modal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FormField, TextInput, TextArea, DateInput, MultiSelect } from '@/components/ui/FormField';
-import { toast } from '@/components/ui/Toast';
+
+
 import type { Achievement, TeamId } from '@/types';
 
 const EMPTY: Omit<Achievement, 'id'> = { title: '', description: '', date: new Date().toISOString().slice(0, 10), level: 'branch', teamIds: [], memberIds: [], memberNames: [], seasonId: 'S7' };

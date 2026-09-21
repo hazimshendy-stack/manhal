@@ -1,4 +1,4 @@
-import { committees } from '@/data/committees';
+
 
    interface CommitteeBadgeProps {
      committeeId: string;

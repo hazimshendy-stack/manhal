@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/Badge';
+
 import type { Member } from '@/types';
 
 export function MemberStatusBadge({ status }: { status: Member['status'] }) {

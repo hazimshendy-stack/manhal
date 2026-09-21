@@ -1,6 +1,4 @@
 import type { Conversation, AppUser } from '@/types';
-import { teams } from '@/data/teams';
-import { initials, relativeTime } from '@/lib/format';
 
 interface ConversationListProps {
   conversations: Conversation[];

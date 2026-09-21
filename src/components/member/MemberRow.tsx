@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom';
+
    import type { Member } from '@/types';
-   import { Avatar } from '@/components/ui/Avatar';
-   import { ROLE_LABEL } from '@/lib/permissions';
-   import { teams } from '@/data/teams';
-   import { hoursToPoints } from '@/lib/format';
+   
+   
+   
+   
 
    interface MemberRowProps {
      member: Member;

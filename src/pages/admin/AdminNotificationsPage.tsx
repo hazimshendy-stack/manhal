@@ -1,15 +1,5 @@
-import { useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { notifyUser, notifyUsers } from '@/lib/notifications';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { FormField, TextInput, TextArea, Select } from '@/components/ui/FormField';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { Badge } from '@/components/ui/Badge';
-import { toast } from '@/components/ui/Toast';
-import { relativeTime } from '@/lib/format';
+
+
 import type { AppUser, Notification } from '@/types';
 
 export function AdminNotificationsPage() {

@@ -1,15 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { createOne, updateOne, newId, now } from '@/lib/db';
-import { teams } from '@/data/teams';
-import { MessageBubble } from '@/components/chat/MessageBubble';
-import { Composer } from '@/components/chat/Composer';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Loading } from '@/components/ui/Loading';
-import { Modal } from '@/components/ui/Modal';
-import { toast } from '@/components/ui/Toast';
-import { relativeTime } from '@/lib/format';
+
+
 import type { Conversation, Message, AppUser, TeamId } from '@/types';
 
 /* ═══════════════════════════════════════════════════════════════

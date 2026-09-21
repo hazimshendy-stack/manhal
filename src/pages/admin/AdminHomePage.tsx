@@ -1,12 +1,5 @@
-import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useAuth } from '@/lib/useAuth';
-import { seedAll, type SeedResult } from '@/lib/seed';
-import { hoursToPoints } from '@/lib/format';
-import { useState } from 'react';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Loading } from '@/components/ui/Loading';
-import { toast } from '@/components/ui/Toast';
+
+
 import type {
   AppUser,
   RequestRecord,

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-   import { Navigate } from 'react-router-dom';
-   import { useAuth } from '@/lib/useAuth';
-   import { Loading } from '@/components/ui/Loading';
+   
+   
+   
    import type { RoleId } from '@/types';
 
    interface RequireAuthProps {

@@ -1,11 +1,5 @@
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { members } from '@/data/members';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { hoursToPoints } from '@/lib/format';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Loading } from '@/components/ui/Loading';
+
+
 import type { Member, Contribution, RequestRecord } from '@/types';
 
 const REQ_TYPE: Record<string, string> = { TRANSFER: 'Transfer', PROMOTION: 'Promotion', RESIGNATION: 'Resignation', COMPLAINT: 'Complaint', SUGGESTION: 'Suggestion', LEAVE: 'Leave' };

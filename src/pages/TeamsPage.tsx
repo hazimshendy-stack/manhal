@@ -1,10 +1,5 @@
-import { teams } from '@/data/teams';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { hoursToPoints } from '@/lib/format';
-import { TeamCard } from '@/components/team/TeamCard';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { Loading } from '@/components/ui/Loading';
+
+
 import type { Member } from '@/types';
 
 export function TeamsPage() {

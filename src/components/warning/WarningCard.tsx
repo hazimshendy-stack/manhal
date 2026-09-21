@@ -1,6 +1,6 @@
 import type { WarningRecord } from '@/types';
-   import { Badge } from '@/components/ui/Badge';
-   import { formatDate } from '@/lib/format';
+   
+   
 
    const TYPE_LABEL: Record<string, string> = {
      VERBAL: 'تحذير شفهي',

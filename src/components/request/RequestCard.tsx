@@ -1,7 +1,5 @@
-import { Link } from 'react-router-dom';
+
 import type { RequestRecord, RequestStatus } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { formatDate } from '@/lib/format';
 
 const TYPE_LABEL: Record<string, string> = {
   TRANSFER: 'Transfer', PROMOTION: 'Promotion', RESIGNATION: 'Resignation',

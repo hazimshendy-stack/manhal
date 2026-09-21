@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-import { onboardingCards, site } from '@/data';
-import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding';
+
 
 export function Onboarding() {
   const [visible, setVisible] = useState(false);

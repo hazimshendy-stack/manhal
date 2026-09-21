@@ -1,5 +1,4 @@
 import type { Message, AppUser } from '@/types';
-import { formatTime } from '@/lib/format';
 
 interface MessageBubbleProps {
   message: Message;

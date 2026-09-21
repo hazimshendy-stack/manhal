@@ -1,14 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { hoursToPoints, cx } from '@/lib/format';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { SkeletonList } from '@/components/ui/Loading';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Avatar } from '@/components/ui/Avatar';
+
+
 import type { Member, TeamId, RoleId } from '@/types';
 
 const EXCLUDED: RoleId[] = ['HEAD', 'VICE'];

@@ -1,15 +1,4 @@
-import { teams } from '@/data/teams';
-import { members } from '@/data/members';
-import { contributions } from '@/data/contributions';
-import { requests } from '@/data/requests';
-import { approvals } from '@/data/approvals';
-import { warnings } from '@/data/warnings';
-import { achievements } from '@/data/achievements';
-import { notifications } from '@/data/notifications';
-import { conversations, messages } from '@/data/conversations';
-import { calendarEvents } from '@/data/calendar';
-import { governanceDocuments } from '@/data/governance';
-import { createOne, listAll } from './db';
+
 
 export interface SeedResult {
   teams: number;

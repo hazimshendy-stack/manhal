@@ -3,9 +3,6 @@
  * Use from admin panel or console
  */
 
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { db } from './firebase';
-
 /**
  * Clear ALL notifications
  */

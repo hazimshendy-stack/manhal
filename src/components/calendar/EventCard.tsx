@@ -1,7 +1,4 @@
 import type { CalendarEvent } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { teams } from '@/data/teams';
-import { formatDate } from '@/lib/format';
 
 const TYPE_LABEL: Record<string, string> = {
   meeting: 'Meeting',

@@ -1,11 +1,4 @@
-import { useEffect, useState } from 'react';
-import {
-  collection,
-  onSnapshot,
-  query,
-  type QueryDocumentSnapshot,
-} from 'firebase/firestore';
-import { db } from './firebase';
+
 
 /**
  * Hook للاستماع الحقيقي (Real-time) لمجموعة Firestore

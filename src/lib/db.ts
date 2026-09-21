@@ -1,17 +1,4 @@
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  type DocumentData,
-} from 'firebase/firestore';
-import { db } from './firebase';
+
 
 export async function listAll<T>(collectionName: string): Promise<T[]> {
   const snap = await getDocs(collection(db, collectionName));

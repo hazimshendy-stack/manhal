@@ -1,0 +1,148 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userDocExists() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function userRole() {
+      return userDoc().role;
+    }
+
+    function userTeam() {
+      return userDoc().teamId;
+    }
+
+    function userCommittees() {
+      return userDoc().committeeIds;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDocExists() && userRole() in ['HEAD', 'VICE'];
+    }
+
+    function isGlobalHR() {
+      return isSignedIn() && userDocExists() && userRole() == 'HEAD_HR';
+    }
+
+    function isManager() {
+      return isSignedIn() && userDocExists() && userRole() in ['HEAD', 'VICE', 'HEAD_HR', 'PRESIDENT', 'VICE_PRESIDENT', 'HR'];
+    }
+
+    function isTeamHead(teamId) {
+      return isSignedIn() && userDocExists() && userRole() == 'PRESIDENT' && userTeam() == teamId;
+    }
+
+    function isCommitteeHR(committeeId) {
+      return isSignedIn() && userDocExists() && userRole() in ['HR', 'COMMITTEE_HR'] && committeeId in userCommittees();
+    }
+
+    match /users/{uid} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.auth.uid == uid;
+      allow update: if isAdmin() || request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
+    match /members/{memberId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    match /committees/{committeeId} {
+      allow read: if isSignedIn();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /contributions/{contributionId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+
+      allow update: if isAdmin()
+        || isGlobalHR()
+        || (isManager() && (userTeam() == resource.data.teamId))
+        || (isCommitteeHR(resource.data.committeeId));
+
+      allow delete: if isAdmin();
+    }
+
+    match /warnings/{warningId} {
+      allow read: if isManager() || (isSignedIn() && resource.data.memberId == userDoc().memberId);
+      allow create, update: if isAdmin() || isManager();
+      allow delete: if isAdmin();
+    }
+
+    match /achievements/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /notifications/{id} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isManager());
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /conversations/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /messages/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.senderUid == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /calendar/{id} {
+      allow read: if true;
+      allow write: if isManager();
+    }
+
+    match /governance/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /audit/{id} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn();
+    }
+
+    match /requests/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isManager();
+      allow delete: if isAdmin();
+    }
+
+    match /approvals/{id} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update, delete: if isManager();
+    }
+  }
+}

@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react';
-import { canInstallPwa, promptInstall, isStandalone, isIos } from '@/lib/pwa';
-import { toast } from '@/components/ui/Toast';
+
 
 const DISMISSED_KEY = 'sbapiaryy-pwa-dismissed-v2';
 const SHOW_AFTER_MS = 8000;

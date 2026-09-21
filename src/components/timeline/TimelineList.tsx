@@ -1,5 +1,4 @@
 import type { TimelineEvent } from '@/types';
-import { formatDate } from '@/lib/format';
 
 interface TimelineListProps { events: TimelineEvent[]; }
 

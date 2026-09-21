@@ -1,12 +1,5 @@
-import { useParams } from 'react-router-dom';
-import { teams } from '@/data/teams';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { hoursToPoints } from '@/lib/format';
-import { MemberCard } from '@/components/member/MemberCard';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { NotFoundPage } from './NotFoundPage';
+
+
 import type { Member, TeamId } from '@/types';
 
 export function TeamDetailPage() {

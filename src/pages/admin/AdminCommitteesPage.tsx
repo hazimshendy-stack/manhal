@@ -1,14 +1,5 @@
-import { useState } from 'react';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { createOne, updateOne, removeOne } from '@/lib/db';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonList } from '@/components/ui/Loading';
-import { Modal } from '@/components/ui/Modal';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { FormField, TextInput, TextArea, Select } from '@/components/ui/FormField';
-import { toast } from '@/components/ui/Toast';
+
+
 import type { Committee, Member } from '@/types';
 
 const EMPTY: Omit<Committee, 'id'> = { name: '', nameAr: '', description: '', color: '#151A45', icon: '' };

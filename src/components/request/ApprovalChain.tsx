@@ -1,7 +1,4 @@
 import type { ApprovalStep } from '@/types';
-import { ROLE_LABEL } from '@/lib/permissions';
-import { teams } from '@/data/teams';
-import { formatDate } from '@/lib/format';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Awaiting approval', APPROVED: 'Approved', REJECTED: 'Rejected', SKIPPED: 'Skipped',

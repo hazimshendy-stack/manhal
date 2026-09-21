@@ -1,8 +1,5 @@
-import { NavLink } from 'react-router-dom';
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { cx } from '@/lib/format';
-import { IconHome, IconMembers, IconChat, IconBell, IconAdmin } from '@/components/ui/Icons';
+
+
 import type { Notification } from '@/types';
 
 interface NavTab { to: string; label: string; Icon: (props: { size?: number }) => JSX.Element; badge?: number; }

@@ -1,9 +1,5 @@
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { AchievementCard } from '@/components/achievement/AchievementCard';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { SkeletonCard } from '@/components/ui/Loading';
-import { SectionHeader } from '@/components/ui/SectionHeader';
+
+
 import type { Achievement } from '@/types';
 
 export function AchievementsPage() {

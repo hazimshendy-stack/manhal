@@ -1,14 +1,5 @@
-import { useMemo, useState } from 'react';
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { seesAllTeams } from '@/lib/permissions';
-import { CalendarGrid } from '@/components/calendar/CalendarGrid';
-import { EventCard } from '@/components/calendar/EventCard';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Loading } from '@/components/ui/Loading';
-import { formatDate } from '@/lib/format';
+
+
 import type { CalendarEvent } from '@/types';
 
 export function CalendarPage() {

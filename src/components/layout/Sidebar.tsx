@@ -1,10 +1,5 @@
-import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/useAuth';
-import { logout } from '@/lib/auth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
-import { cx } from '@/lib/format';
+
+
 import type { ApprovalStep } from '@/types';
 
 interface NavItem { to: string; label: string; count?: number; }

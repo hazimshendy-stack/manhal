@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-   import { observeAuth } from './auth';
-   import { isAdmin, isManager, seesAllTeams } from './permissions';
+
+   
+   
    import type { AppUser } from '@/types';
 
    export interface AuthState {
