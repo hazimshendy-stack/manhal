@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 /**
- * fix.cjs — Real Desktop Experience
- * - Desktop: full-width responsive layout
- * - Same features as mobile (bottom nav, drawers, everything)
- * - Mobile: UNTOUCHED
- * - Removes the previous phone-frame approach
+ * fix.cjs — Bottom Nav on Desktop = exactly like Mobile
  */
 
 const fs = require("fs");
@@ -25,770 +21,198 @@ const C = {
 };
 const sh = (cmd) => execSync(cmd, { cwd: ROOT, stdio: "inherit" });
 
-const files = {};
-const F = (p, c) => {
-  files[p.replace(/\\/g, "/")] = c.replace(/^\n/, "");
-};
-
 /* ═══════════════════════════════════════════════════════════════
-   1) DELETETE the phone-frame file
+   نقرا الملف الحالي ونستبدل بلوك الـ bottom-nav فقط
    ═══════════════════════════════════════════════════════════════ */
 
-const oldFile = path.join(ROOT, "src/styles/desktop-mobile.css");
-if (fs.existsSync(oldFile)) {
-  fs.unlinkSync(oldFile);
-  console.log(`${C.g}✓${C.r} Removed old desktop-mobile.css (phone frame)`);
+const desktopPath = path.join(ROOT, "src/styles/desktop.css");
+
+if (!fs.existsSync(desktopPath)) {
+  console.log(`${C.red}✗ src/styles/desktop.css مش موجود${C.r}`);
+  console.log(`${C.y}شغّل fix.cjs القديم الأول، بعدين شغّل ده${C.r}`);
+  process.exit(1);
 }
 
-/* ═══════════════════════════════════════════════════════════════
-   2) NEW DESKTOP CSS — Real desktop, same features
-   ═══════════════════════════════════════════════════════════════ */
+const bkDir = path.join(
+  ROOT,
+  ".fix-backups",
+  "bottomnav-" + Date.now().toString()
+);
+fs.mkdirSync(bkDir, { recursive: true });
+fs.copyFileSync(desktopPath, path.join(bkDir, "desktop.css"));
 
-F(
-  "src/styles/desktop.css",
-  `/* ═══════════════════════════════════════════════════════════════
-   DESKTOP EXPERIENCE
-   - Real responsive layout for desktop
-   - Same features as mobile (bottom nav, drawers, modals)
-   - Mobile: ZERO changes (all rules below are desktop-only)
-   ═══════════════════════════════════════════════════════════════ */
+let content = fs.readFileSync(desktopPath, "utf8");
 
 /* ═══════════════════════════════════════════════════════════════
-   DESKTOP (min-width: 901px)
+   استبدل بلوك الـ bottom-nav القديم (العائم)
    ═══════════════════════════════════════════════════════════════ */
 
-@media (min-width: 901px) {
+// ابحث عن بداية ونهاية بلوك bottom-nav في media query (min-width: 901px)
+const startMarker = "BOTTOM NAV — Still visible on desktop";
+const endMarker = "SIDEBAR — Drawer, works on desktop too";
 
-  /* ─── Body ─── */
-  html, body {
-    background: var(--c-off-white);
-    overflow-x: hidden;
-  }
+const startIdx = content.indexOf(startMarker);
+const endIdx = content.indexOf(endMarker);
 
-  .app-shell {
-    min-height: 100vh;
-    background: var(--c-off-white);
-  }
-
-  .app-main {
-    padding-bottom: 20px;
-  }
-
-  /* ─── Container: full-width, comfortable ─── */
-  .container {
-    max-width: 1280px;
-    padding-inline: 32px;
-    margin-inline: auto;
-  }
-
-  @media (min-width: 1280px) {
-    .container { padding-inline: 48px; }
-  }
-
-  .app-main > *:not(.container) {
-    padding-inline: 32px;
-  }
-
-  @media (min-width: 1280px) {
-    .app-main > *:not(.container) { padding-inline: 48px; }
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     NAVBAR — Always visible, expanded
+if (startIdx === -1 || endIdx === -1) {
+  console.log(`${C.y}⚠ مقدرتش ألاقي البلوك — بحاول طريقة تانية${C.r}`);
+  // طريقة احتياطية: شيل أي block فيه .bottom-nav من desktop.css وضيف الجديد
+  content = content.replace(
+    /\/\*[^*]*BOTTOM NAV[^*]*\*\/[\s\S]*?(?=\/\*[^*]*SIDEBAR)/,
+    `/* ═══════════════════════════════════════════════════════════
+     BOTTOM NAV — Exactly like mobile
      ═══════════════════════════════════════════════════════════ */
 
-  .navbar {
-    height: 68px;
-    position: sticky;
-    top: 0;
-  }
+  `
+  );
+} else {
+  const beforeBlock = content.substring(0, startIdx - 15);
+  const afterBlock = content.substring(endIdx);
 
-  .navbar__inner {
-    padding-inline: 32px;
-    max-width: 1280px;
-    margin-inline: auto;
-  }
-
-  @media (min-width: 1280px) {
-    .navbar__inner { padding-inline: 48px; }
-  }
-
-  .brand {
-    font-size: 1.5rem;
-  }
-
-  .nav-action {
-    font-size: 1rem;
-    padding: 10px 20px;
-  }
-
-  .nav-action--icon {
-    min-width: 46px;
-    min-height: 46px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     BOTTOM NAV — Still visible on desktop (like mobile)
-     Same features, comfortable on desktop
+  const newBlock = `/* ═══════════════════════════════════════════════════════════
+     BOTTOM NAV — Exactly like mobile (full-width, at bottom)
      ═══════════════════════════════════════════════════════════ */
 
+  /* Override mobile styles completely */
   .bottom-nav {
-    display: flex;
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    right: auto;
-    transform: translateX(-50%);
-    width: 100%;
-    max-width: 560px;
-    z-index: 60;
-    height: 64px;
-    padding-bottom: 0;
-    background: var(--c-white);
-    border: 1px solid var(--c-line);
-    border-radius: var(--radius-full);
-    box-shadow: 0 12px 40px -8px rgba(21, 26, 69, 0.25);
-    overflow: hidden;
+    display: flex !important;
+    position: fixed !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: calc(var(--bottom-nav-h) + var(--safe-bottom)) !important;
+    padding-bottom: var(--safe-bottom) !important;
+    margin: 0 !important;
+    background: var(--c-white) !important;
+    border-top: 1px solid var(--c-line) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-bottom: none !important;
+    border-radius: 0 !important;
+    box-shadow: 0 -2px 12px rgba(21, 26, 69, 0.06) !important;
+    z-index: 60 !important;
+    overflow: visible !important;
   }
 
   .bottom-nav__inner {
-    padding-inline: 8px;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: space-around !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    padding-inline: 8px !important;
+    gap: 0 !important;
   }
 
   .bottom-nav__item {
-    padding: 8px 12px;
-    font-size: 0.78rem;
-    border-radius: var(--radius-sm);
-    transition: all 0.2s var(--ease);
+    flex: 1 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 10px 8px 8px !important;
+    color: var(--c-ink-muted) !important;
+    font-size: 0.78rem !important;
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    transition: color 0.15s !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    max-width: 140px !important;
   }
 
-  .bottom-nav__item:hover {
-    background: var(--c-off-white);
+  .bottom-nav__item:active {
+    background: var(--c-off-white) !important;
   }
 
   .bottom-nav__item.is-active {
-    color: var(--c-red);
+    color: var(--c-navy) !important;
+    background: transparent !important;
   }
 
   .bottom-nav__item.is-active::before {
-    background: var(--c-red);
+    content: '' !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: 28px !important;
+    height: 3px !important;
+    background: var(--c-navy) !important;
+    border-radius: 0 0 4px 4px !important;
+    display: block !important;
+  }
+
+  .bottom-nav__icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+    color: inherit !important;
   }
 
   .bottom-nav__icon svg {
-    width: 22px;
-    height: 22px;
+    width: 24px !important;
+    height: 24px !important;
+    display: block !important;
   }
 
-  /* Make room for floating bottom nav */
+  .bottom-nav__label {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    font-size: 0.78rem !important;
+  }
+
+  .bottom-nav__badge {
+    position: absolute !important;
+    top: 6px !important;
+    right: 50% !important;
+    margin-right: -22px !important;
+    min-width: 18px !important;
+    height: 18px !important;
+    padding: 0 5px !important;
+    border-radius: 999px !important;
+    background: var(--c-red) !important;
+    color: #fff !important;
+    font-size: 0.65rem !important;
+    display: grid !important;
+    place-items: center !important;
+    border: 2px solid var(--c-white) !important;
+  }
+
+  /* Make room for bottom nav */
   .app-main {
-    padding-bottom: 100px;
+    padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px) !important;
   }
 
   /* ═══════════════════════════════════════════════════════════
-     SIDEBAR — Drawer, works on desktop too
-     ═══════════════════════════════════════════════════════════ */
-
-  .sidebar {
-    position: fixed;
-    top: 0;
-    left: -340px;
-    width: 320px;
-    max-width: 90vw;
-    height: 100vh;
-    background: var(--c-white);
-    z-index: 9999;
-    padding: 24px 22px;
-    padding-top: calc(24px + var(--safe-top));
-    padding-bottom: calc(24px + var(--safe-bottom));
-    overflow-y: auto;
-    transition: left 0.3s var(--ease);
-    box-shadow: 12px 0 60px rgba(21, 26, 69, 0.25);
-    border-right: 1px solid var(--c-line);
-  }
-
-  .sidebar.is-open {
-    left: 0;
-  }
-
-  .sidebar-overlay {
-    display: block;
-    position: fixed;
-    inset: 0;
-    background: rgba(21, 26, 69, 0.55);
-    z-index: 9998;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.3s var(--ease);
-    backdrop-filter: blur(3px);
-  }
-
-  .sidebar-overlay.is-open {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .sidebar-close {
-    display: flex;
-  }
-
-  .dashboard-layout {
-    grid-template-columns: 1fr;
-    gap: 20px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     LAYOUT — Wider grids on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .grid {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  .grid--wide {
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 22px;
-  }
-
-  .grid--narrow {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 18px;
-  }
-
-  .grid--2 {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .home-teams-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 22px;
-  }
-
-  .home-stats {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 20px;
-  }
-
-  .stat-row {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 18px;
-  }
-
-  .admin-stats {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-  }
-
-  @media (min-width: 1280px) {
-    .admin-stats {
-      grid-template-columns: repeat(6, 1fr);
-    }
-  }
-
-  .admin-cards {
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 20px;
-  }
-
-  .league-podium {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     TABLES — Full width on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .table-wrap {
-    border: 1px solid var(--c-line);
-    border-radius: var(--radius);
-    overflow: hidden;
-    background: var(--c-white);
-    box-shadow: var(--shadow-xs);
-  }
-
-  table.data {
-    display: table;
-    width: 100%;
-    font-size: 0.94rem;
-  }
-
-  table.data thead {
-    display: table-header-group;
-  }
-
-  table.data tbody {
-    display: table-row-group;
-  }
-
-  table.data tr {
-    display: table-row;
-    background: transparent;
-    border: none;
-    border-radius: 0;
-    padding: 0;
-    margin-bottom: 0;
-    box-shadow: none;
-  }
-
-  table.data td {
-    display: table-cell;
-    padding: 16px 24px;
-    border-bottom: 1px solid var(--c-line);
-    text-align: start;
-    vertical-align: middle;
-  }
-
-  table.data td::before {
-    display: none;
-  }
-
-  table.data tr:last-child td {
-    border-bottom: none;
-  }
-
-  table.data tbody tr:hover {
-    background: var(--c-off-white);
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     LEAGUE TABLE — Full-width on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .league-table {
-    display: block;
-    background: var(--c-white);
-    border: 1px solid var(--c-line);
-    border-radius: var(--radius);
-    box-shadow: var(--shadow-xs);
-    overflow: hidden;
-  }
-
-  .league-table__head {
-    display: grid;
-    grid-template-columns: 72px 2.2fr 1.6fr 100px 100px;
-    gap: 16px;
-    padding: 16px 28px;
-    background: var(--c-navy);
-    color: #fff;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .league-table__row {
-    display: grid;
-    grid-template-columns: 72px 2.2fr 1.6fr 100px 100px;
-    gap: 16px;
-    padding: 16px 28px;
-    align-items: center;
-    background: transparent;
-    border: none;
-    border-bottom: 1px solid var(--c-line);
-    border-radius: 0;
-    box-shadow: none;
-    grid-template-areas: none;
-  }
-
-  .league-table__row:last-child {
-    border-bottom: none;
-  }
-
-  .league-table__row .col-rank {
-    grid-area: auto;
-    align-self: auto;
-  }
-
-  .league-table__row .col-name {
-    grid-area: auto;
-  }
-
-  .league-table__row .col-team {
-    grid-area: auto;
-  }
-
-  .league-table__row .col-points {
-    grid-area: auto;
-    text-align: start;
-    align-self: auto;
-  }
-
-  .league-table__row .col-hours {
-    grid-area: auto;
-    text-align: start;
-    font-size: 0.95rem;
-    color: var(--c-navy);
-  }
-
-  .league-table__row .col-points::after,
-  .league-table__row .col-hours::after {
-    content: none;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     CHAT — Two columns on desktop (like Messenger)
-     ═══════════════════════════════════════════════════════════ */
-
-  .chat-layout {
-    grid-template-columns: 340px 1fr;
-    height: calc(100vh - 140px);
-    max-height: 800px;
-    margin-inline: auto;
-    max-width: 1280px;
-  }
-
-  .chat-sidebar.is-hidden {
-    display: flex;
-  }
-
-  .chat-panel.is-hidden {
-    display: flex;
-  }
-
-  .chat-header__back {
-    display: none;
-  }
-
-  .chat-message {
-    max-width: 78%;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     MODAL — Centered on desktop (like native desktop apps)
-     ═══════════════════════════════════════════════════════════ */
-
-  .modal-backdrop {
-    align-items: center;
-    padding: 24px;
-  }
-
-  .modal {
-    max-width: 560px;
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
-    padding-bottom: 0;
-  }
-
-  .modal--wide {
-    max-width: 760px;
-  }
-
-  .modal__handle {
-    display: none;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     TOAST — Top-right corner (desktop convention)
-     ═══════════════════════════════════════════════════════════ */
-
-  .toast-container {
-    bottom: auto;
-    top: 90px;
-    right: 24px;
-    left: auto;
-    max-width: 400px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     PWA BANNER — Bottom-right corner
-     ═══════════════════════════════════════════════════════════ */
-
-  .pwa-install-banner {
-    left: auto;
-    right: 24px;
-    bottom: 100px;
-    max-width: 420px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     HERO — Wider on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .home-hero {
-    padding-block: 72px 56px;
-  }
-
-  .home-hero__title {
-    font-size: clamp(2.5rem, 4vw, 3.5rem);
-    max-width: 24ch;
-  }
-
-  .home-hero__desc {
-    font-size: 1.1rem;
-  }
-
-  .home-join-cta {
-    padding: 64px 48px;
-  }
-
-  .home-join-cta__title {
-    font-size: 2.25rem;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     SECTIONS — More generous spacing
-     ═══════════════════════════════════════════════════════════ */
-
-  .section {
-    padding-block: 56px;
-  }
-
-  .section--tight {
-    padding-block: 32px;
-  }
-
-  .section-head {
-    margin-bottom: 36px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     PROFILE — Side by side on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .profile {
-    flex-direction: row;
-    align-items: flex-start;
-    padding: 36px;
-    gap: 32px;
-  }
-
-  .profile__side {
-    grid-template-columns: 1fr;
-    min-width: 240px;
-    gap: 18px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     FOOTER — Hidden when bottom nav is visible
-     (mobile keeps footer above bottom nav)
+     FOOTER — stop padding above bottom nav
+     (bottom nav is now fixed at the very bottom)
      ═══════════════════════════════════════════════════════════ */
 
   .footer {
-    margin-top: 80px;
-    padding-block: 64px 48px;
-    padding-bottom: 140px;
+    padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 40px) !important;
   }
 
-  .footer__inner {
-    grid-template-columns: 2fr 3fr;
-    gap: 64px;
-  }
+  `;
 
-  .footer__links-col {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 40px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     ADMIN PAGE
-     ═══════════════════════════════════════════════════════════ */
-
-  .admin-page {
-    padding-block: 32px 80px;
-  }
-
-  .admin-welcome__name {
-    font-size: 2.4rem;
-  }
-
-  .admin-seed {
-    padding: 32px;
-    margin-block: 48px;
-  }
-
-  .admin-card {
-    padding: 28px;
-    min-height: 140px;
-  }
-
-  .admin-request-card {
-    padding: 28px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     ONBOARDING — Centered card on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .onboarding-backdrop {
-    padding: 48px 32px;
-  }
-
-  .onboarding-header__title {
-    font-size: 2.5rem;
-  }
-
-  .onboarding-body {
-    max-width: 1100px;
-  }
-
-  .onboarding-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 24px;
-  }
-
-  .onboarding-card {
-    padding: 32px 28px;
-  }
-
-  .onboarding-card__title {
-    font-size: 1.25rem;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     LOGIN — Wider card
-     ═══════════════════════════════════════════════════════════ */
-
-  .login-card {
-    max-width: 480px;
-    padding: 56px 48px;
-  }
-
-  /* ═══════════════════════════════════════════════════════════
-     CARD — More padding on desktop
-     ═══════════════════════════════════════════════════════════ */
-
-  .card {
-    padding: 26px;
-  }
-
-  .member-card {
-    padding: 24px;
-    min-height: 220px;
-  }
-
-  .team-card {
-    padding: 28px;
-  }
+  content = beforeBlock + newBlock + afterBlock;
 }
+
+fs.writeFileSync(desktopPath, content, "utf8");
+console.log(`${C.g}✓${C.r} src/styles/desktop.css — bottom nav updated`);
 
 /* ═══════════════════════════════════════════════════════════════
-   EXTRA LARGE (min-width: 1440px)
-   ═══════════════════════════════════════════════════════════════ */
-
-@media (min-width: 1440px) {
-  .container {
-    max-width: 1400px;
-    padding-inline: 64px;
-  }
-
-  .navbar__inner {
-    max-width: 1400px;
-    padding-inline: 64px;
-  }
-
-  .app-main > *:not(.container) {
-    padding-inline: 64px;
-  }
-}
-`
-);
-
-/* ═══════════════════════════════════════════════════════════════
-   3) global.css — swap imports
-   ═══════════════════════════════════════════════════════════════ */
-
-const globalPath = path.join(ROOT, "src/styles/global.css");
-if (fs.existsSync(globalPath)) {
-  let global = fs.readFileSync(globalPath, "utf8");
-  // شيل الاستيراد القديم
-  global = global.replace(
-    /@import\s+['"]\.\/desktop-mobile\.css['"];?\n?/g,
-    ""
-  );
-  // ضيف الجديد
-  if (!global.includes("desktop.css")) {
-    if (global.includes("v52-fix.css")) {
-      global = global.replace(
-        /@import\s+['"]\.\/v52-fix\.css['"];?/,
-        "@import './v52-fix.css';\n@import './desktop.css';"
-      );
-    } else {
-      global += "\n@import './desktop.css';\n";
-    }
-  }
-  fs.writeFileSync(globalPath, global, "utf8");
-  console.log(`${C.g}✓${C.r} global.css updated`);
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   4) AUTO-FIX
-   ═══════════════════════════════════════════════════════════════ */
-
-function walkDir(dir, exts) {
-  const out = [];
-  if (!fs.existsSync(dir)) return out;
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, e.name);
-    if (e.isDirectory()) out.push(...walkDir(full, exts));
-    else if (exts.some((ext) => e.name.endsWith(ext))) out.push(full);
-  }
-  return out;
-}
-
-function autoFixFile(filePath) {
-  let content = fs.readFileSync(filePath, "utf8");
-  const original = content;
-  const importRegex = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/g;
-  content = content.replace(importRegex, (match, imports, source) => {
-    const names = imports
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
-    const bodyWithoutImports = content.replace(importRegex, "");
-    const used = names.filter((name) => {
-      let clean = name;
-      if (clean.startsWith("type ")) clean = clean.slice(5).trim();
-      if (clean.includes(" as ")) clean = clean.split(" as ")[1].trim();
-      const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      return new RegExp(`\\b${escaped}\\b`).test(bodyWithoutImports);
-    });
-    if (used.length === 0) return "";
-    if (used.length === names.length) return match;
-    return `import { ${used.join(", ")} } from '${source}';`;
-  });
-  content = content.replace(/\n{3,}/g, "\n\n");
-  if (content !== original) {
-    fs.writeFileSync(filePath, content, "utf8");
-    return true;
-  }
-  return false;
-}
-
-function runAutoFix() {
-  console.log(`${C.b}▶ AUTO-FIX${C.r}\n`);
-  const allFiles = walkDir(path.join(ROOT, "src"), [".ts", ".tsx"]);
-  let fixed = 0;
-  for (const f of allFiles) {
-    if (autoFixFile(f)) {
-      console.log(
-        `${C.g}✓${C.r} ${path.relative(ROOT, f).replace(/\\/g, "/")}`
-      );
-      fixed++;
-    }
-  }
-  if (fixed === 0) console.log(`${C.d}No unused imports${C.r}`);
-  else console.log(`\n${C.g}Fixed ${fixed} file(s)${C.r}`);
-  console.log("");
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   5) SAFE BUILD
-   ═══════════════════════════════════════════════════════════════ */
-
-function makeBuildSafe() {
-  const pkgPath = path.join(ROOT, "package.json");
-  if (!fs.existsSync(pkgPath)) return;
-  const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf8"));
-  if (pkg.scripts && pkg.scripts.build && pkg.scripts.build.includes("tsc")) {
-    pkg.scripts.build = "vite build";
-    pkg.scripts.typecheck = "tsc --noEmit";
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
-    console.log(`${C.g}✓${C.r} package.json — safe build\n`);
-  }
-}
-
-/* ═══════════════════════════════════════════════════════════════
-   MAIN
+   Commit + Push
    ═══════════════════════════════════════════════════════════════ */
 
 console.log("");
@@ -796,44 +220,12 @@ console.log(
   `${C.b}${C.m}╔══════════════════════════════════════════════════════╗${C.r}`
 );
 console.log(
-  `${C.b}${C.m}║  fix.cjs — Real Desktop Experience                   ║${C.r}`
-);
-console.log(
-  `${C.b}${C.m}║  Desktop: full responsive + same features            ║${C.r}`
-);
-console.log(
-  `${C.b}${C.m}║  Mobile: untouched                                   ║${C.r}`
+  `${C.b}${C.m}║  Bottom Nav — Desktop = Mobile                       ║${C.r}`
 );
 console.log(
   `${C.b}${C.m}╚══════════════════════════════════════════════════════╝${C.r}`
 );
 console.log("");
-
-const bkDir = path.join(
-  ROOT,
-  ".fix-backups",
-  "desktop-real-" + Date.now().toString()
-);
-fs.mkdirSync(bkDir, { recursive: true });
-
-let count = 0;
-for (const [rel, content] of Object.entries(files)) {
-  const abs = path.join(ROOT, rel);
-  if (fs.existsSync(abs)) {
-    const dst = path.join(bkDir, rel);
-    fs.mkdirSync(path.dirname(dst), { recursive: true });
-    fs.copyFileSync(abs, dst);
-  }
-  fs.mkdirSync(path.dirname(abs), { recursive: true });
-  fs.writeFileSync(abs, content, "utf8");
-  console.log(`${C.g}✓${C.r} ${rel}`);
-  count++;
-}
-
-console.log(`\n${C.b}═══ Files: ${count} ═══${C.r}\n`);
-
-runAutoFix();
-makeBuildSafe();
 
 console.log(`${C.b}▶ Commit + Push${C.r}\n`);
 try {
@@ -851,7 +243,7 @@ try {
   }
 
   sh(
-    'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "feat: real desktop experience (same features as mobile)"'
+    'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "style: bottom nav on desktop = same as mobile"'
   );
   console.log(`\n${C.g}✓ commit${C.r}`);
 
