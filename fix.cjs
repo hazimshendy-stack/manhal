@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 /**
- * fix.cjs — يحل أخطاء TypeScript v5.1
- * شغّله: node fix.cjs
+ * fix.cjs v2 — يحل أخطاء useCollection + Type inference
  */
 
 const fs = require("fs");
@@ -12,358 +11,250 @@ const ROOT = __dirname;
 const files = {};
 
 /* ═══════════════════════════════════════════════════════════════
-   1. src/vite-env.d.ts — يحل Property 'env' does not exist
-   ═══════════════════════════════════════════════════════════════ */
-
-files["src/vite-env.d.ts"] = `/// <reference types="vite/client" />
-
-interface ImportMetaEnv {
-  readonly VITE_FIREBASE_API_KEY: string;
-  readonly VITE_FIREBASE_AUTH_DOMAIN: string;
-  readonly VITE_FIREBASE_PROJECT_ID: string;
-  readonly VITE_FIREBASE_STORAGE_BUCKET: string;
-  readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
-  readonly VITE_FIREBASE_APP_ID: string;
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv;
-}
-`;
-
-/* ═══════════════════════════════════════════════════════════════
-   2. src/components/layout/Sidebar.tsx — إزالة unread غير المستخدمة
+   الحل الجذري: أضف useCollection كـ alias في useRealtimeCollection
    ═══════════════════════════════════════════════════════════════ */
 
 files[
-  "src/components/layout/Sidebar.tsx"
-] = `import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/useAuth';
-import { logout } from '@/lib/auth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
-import { cx, initials } from '@/lib/format';
-import type { Notification, ApprovalStep } from '@/types';
+  "src/lib/useRealtimeCollection.ts"
+] = `import { useEffect, useState } from 'react';
+import {
+  collection,
+  onSnapshot,
+  query,
+  type QueryDocumentSnapshot,
+} from 'firebase/firestore';
+import { db } from './firebase';
 
-interface NavItem {
-  to: string;
-  label: string;
-  icon: string;
-  count?: number;
-}
-
-interface SidebarProps {
-  open: boolean;
-  onClose: () => void;
-}
-
-function buildAdminNav(pending: number): NavItem[] {
-  return [
-    { to: '/admin', label: 'لوحة الإدارة', icon: '⚙️' },
-    { to: '/admin/analytics', label: 'التحليلات', icon: '📊' },
-    { to: '/admin/requests', label: 'الطلبات', icon: '📋', count: pending },
-    { to: '/admin/users', label: 'المستخدمون', icon: '👤' },
-    { to: '/admin/members', label: 'الأعضاء', icon: '👥' },
-    { to: '/admin/contributions', label: 'المشاركات', icon: '📝' },
-    { to: '/admin/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/admin/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/admin/warnings', label: 'التحذيرات', icon: '⚠️' },
-    { to: '/admin/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/admin/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/admin/notifications', label: 'إرسال إشعار', icon: '🔔' },
-    { to: '/admin/audit', label: 'سجل التغييرات', icon: '📜' },
-  ];
-}
-
-function buildManagerNav(pending: number): NavItem[] {
-  return [
-    { to: '/dashboard', label: 'لوحة التحكم', icon: '🏠' },
-    { to: '/members', label: 'الأعضاء', icon: '👥' },
-    { to: '/requests', label: 'الطلبات', icon: '📋' },
-    { to: '/approvals', label: 'الموافقات', icon: '✅', count: pending },
-    { to: '/contributions', label: 'المشاركات', icon: '📝' },
-    { to: '/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/league', label: 'الليج', icon: '🥇' },
-    { to: '/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/warnings', label: 'التحذيرات', icon: '⚠️' },
-    { to: '/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/notifications', label: 'الإشعارات', icon: '🔔' },
-    { to: '/reports', label: 'التقارير', icon: '📈' },
-  ];
-}
-
-function buildMemberNav(): NavItem[] {
-  return [
-    { to: '/dashboard', label: 'لوحة التحكم', icon: '🏠' },
-    { to: '/profile', label: 'ملفي الشخصي', icon: '👤' },
-    { to: '/my-contributions', label: 'مشاركاتي', icon: '📝' },
-    { to: '/requests/new', label: 'طلب جديد', icon: '➕' },
-    { to: '/my-requests', label: 'طلباتي', icon: '📋' },
-    { to: '/committees', label: 'اللجان', icon: '🏛️' },
-    { to: '/league', label: 'الليج', icon: '🥇' },
-    { to: '/achievements', label: 'الإنجازات', icon: '🏆' },
-    { to: '/conversations', label: 'المحادثات', icon: '💬' },
-    { to: '/calendar', label: 'التقويم', icon: '📅' },
-    { to: '/notifications', label: 'الإشعارات', icon: '🔔' },
-    { to: '/governance', label: 'الحوكمة', icon: '📖' },
-  ];
-}
-
-export function Sidebar({ open, onClose }: SidebarProps) {
-  const { user } = useAuth();
-  const nav = useNavigate();
-  const { data: notifs } = useRealtimeCollection<Notification>('notifications');
-  const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
-  const [isMobile, setIsMobile] = useState(false);
+/**
+ * Hook للاستماع الحقيقي (Real-time) لمجموعة Firestore
+ * يستخدم onSnapshot ليتحدث فورًا عند أي تغيير
+ */
+export function useRealtimeCollection<T>(
+  collectionName: string,
+): { data: T[]; loading: boolean } {
+  const [data, setData] = useState<T[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const mq = window.matchMedia('(max-width: 900px)');
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
+    const q = query(collection(db, collectionName));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const items = snap.docs.map(
+          (d: QueryDocumentSnapshot) => ({ id: d.id, ...d.data() }),
+        ) as T[];
+        setData(items);
+        setLoading(false);
+      },
+      () => {
+        setData([]);
+        setLoading(false);
+      },
+    );
+    return () => unsub();
+  }, [collectionName]);
+
+  return { data, loading };
+}
+
+/**
+ * Alias للتوافق الخلفي — استخدام useCollection يعمل بنفس الطريقة
+ */
+export const useCollection = useRealtimeCollection;
+`;
+
+/* ═══════════════════════════════════════════════════════════════
+   إعادة كتابة الملفات التي بها أخطاء Type inference
+   ═══════════════════════════════════════════════════════════════ */
+
+files["src/pages/ApprovalsPage.tsx"] = `import { Link } from 'react-router-dom';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useAuth } from '@/lib/useAuth';
+import { canApproveStep, ROLE_LABEL } from '@/lib/permissions';
+import { teams } from '@/data/teams';
+import { formatDate } from '@/lib/format';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonList } from '@/components/ui/Loading';
+import type { ApprovalStep, RequestRecord } from '@/types';
+
+export function ApprovalsPage() {
+  const { user } = useAuth();
+  const { data: approvals, loading } = useRealtimeCollection<ApprovalStep>('approvals');
+  const { data: requests } = useRealtimeCollection<RequestRecord>('requests');
 
   if (!user) return null;
 
-  const pending = approvals.filter((a) => {
-    if (a.status !== 'PENDING') return false;
-    if (isAdmin(user)) return true;
-    if (a.requiredRole !== user.role) return false;
-    if (a.requiredTeamId !== null && a.requiredTeamId !== user.teamId) return false;
-    return true;
-  }).length;
+  const myPending: ApprovalStep[] = approvals.filter(
+    (a: ApprovalStep) => a.status === 'PENDING' && canApproveStep(user, a),
+  );
 
-  let items: NavItem[];
-  if (isAdmin(user)) {
-    items = buildAdminNav(pending);
-  } else if (user.role === 'MEMBER' || user.role === 'VIEWER') {
-    items = buildMemberNav();
-  } else {
-    items = buildManagerNav(pending);
-  }
+  const done: ApprovalStep[] = approvals
+    .filter((a: ApprovalStep) => a.status !== 'PENDING')
+    .filter((a: ApprovalStep) => a.approverUid === user.uid)
+    .sort((a: ApprovalStep, b: ApprovalStep) => {
+      if (!a.actionDate || !b.actionDate) return 0;
+      return a.actionDate < b.actionDate ? 1 : -1;
+    })
+    .slice(0, 15);
 
-  const handleLogout = async () => {
-    onClose();
-    await logout();
-    nav('/');
-  };
+  const reqOf = (id: string): RequestRecord | undefined =>
+    requests.find((r: RequestRecord) => r.id === id);
 
-  const handleNavClick = () => {
-    if (isMobile) onClose();
-  };
-
-  // استخدام notifs لتفادي unused warning (نحسب العدد لنستخدمها في nav)
-  const unreadCount = notifs.filter(
-    (n) => n.userId === user.uid && !n.read,
-  ).length;
-
-  return (
-    <>
-      <div
-        className={'sidebar-overlay' + (open ? ' is-open' : '')}
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <aside className={'sidebar no-print' + (open ? ' is-open' : '')}>
-        <button
-          type="button"
-          className="sidebar-close"
-          onClick={onClose}
-          aria-label="إغلاق القائمة"
-        >
-          ×
-        </button>
-
-        <div className="sidebar__user">
-          <div className="sidebar__avatar">{initials(user.displayName)}</div>
-          <div className="sidebar__user-info">
-            <div className="sidebar__user-name">{user.displayName}</div>
-            <div className="sidebar__user-role">{ROLE_LABEL[user.role]}</div>
-          </div>
-        </div>
-
-        {unreadCount > 0 ? (
-          <div
-            className="card no-click"
-            style={{
-              padding: 10,
-              marginBottom: 16,
-              background: 'var(--c-red-tint)',
-              borderColor: '#FCA5A5',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: '#991B1B',
-              }}
-            >
-              🔔 {unreadCount} إشعار غير مقروء
+  const renderStep = (a: ApprovalStep) => {
+    const req = reqOf(a.requestId);
+    const teamName = a.requiredTeamId
+      ? teams.find((t) => t.id === a.requiredTeamId)?.name
+      : null;
+    return (
+      <Link key={a.id} to={'/requests/' + a.requestId} className="card">
+        <div className="row row--between">
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div className="card__title">{req?.title ?? a.requestId}</div>
+            <div className="card__meta">
+              {ROLE_LABEL[a.requiredRole]}
+              {teamName ? ' — ' + teamName : ''}
+              {' · مرحلة ' + a.order}
             </div>
           </div>
-        ) : null}
+          <Badge variant="warning" dot>
+            بانتظارك
+          </Badge>
+        </div>
+      </Link>
+    );
+  };
 
-        <div className="sidebar__group">
-          <div className="sidebar__title">
-            {seesAllTeams(user) ? 'الإدارة' : 'القائمة'}
+  return (
+    <div className="container">
+      <PageHeader
+        eyebrow="سير العمل"
+        title="الموافقات"
+        description="المراحل التي تنتظر قرارك."
+      />
+
+      <section className="section">
+        <SectionHeader
+          eyebrow="بانتظارك"
+          title={'موافقاتك (' + myPending.length + ')'}
+        />
+        {loading ? (
+          <SkeletonList count={3} />
+        ) : myPending.length === 0 ? (
+          <EmptyState
+            icon="✅"
+            title="لا شيء بانتظارك"
+            message="جميع الموافقات المطلوبة منك تم إنجازها."
+          />
+        ) : (
+          <div className="stack">{myPending.map(renderStep)}</div>
+        )}
+      </section>
+
+      {done.length > 0 ? (
+        <section className="section">
+          <SectionHeader eyebrow="منتهية" title="قراراتك السابقة" />
+          <div className="table-wrap">
+            <table className="data">
+              <thead>
+                <tr>
+                  <th>الطلب</th>
+                  <th>المرحلة</th>
+                  <th>الحالة</th>
+                  <th>التاريخ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {done.map((a: ApprovalStep) => (
+                  <tr key={a.id}>
+                    <td data-label="الطلب">
+                      <Link to={'/requests/' + a.requestId}>{a.requestId}</Link>
+                    </td>
+                    <td data-label="المرحلة">{a.order}</td>
+                    <td data-label="الحالة">
+                      {a.status === 'APPROVED' ? (
+                        <Badge variant="success">موافق</Badge>
+                      ) : a.status === 'REJECTED' ? (
+                        <Badge variant="danger">مرفوض</Badge>
+                      ) : (
+                        <Badge variant="neutral">تم تخطيه</Badge>
+                      )}
+                    </td>
+                    <td className="muted small" data-label="التاريخ">
+                      {a.actionDate ? formatDate(a.actionDate) : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          {items.map((it) => (
-            <NavLink
-              key={it.to}
-              to={it.to}
-              end={it.to === '/dashboard' || it.to === '/admin' || it.to === '/'}
-              onClick={handleNavClick}
-              className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}
-            >
-              <span className="sidebar__icon" aria-hidden="true">{it.icon}</span>
-              <span>{it.label}</span>
-              {it.count && it.count > 0 ? (
-                <span className="sidebar__count">
-                  {it.count > 99 ? '99+' : it.count}
-                </span>
-              ) : null}
-            </NavLink>
-          ))}
-        </div>
-
-        <div className="sidebar__group">
-          <div className="sidebar__title">الحساب</div>
-          <button
-            type="button"
-            className="sidebar__link sidebar__link--danger"
-            onClick={handleLogout}
-          >
-            <span className="sidebar__icon" aria-hidden="true">🚪</span>
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
-      </aside>
-    </>
+        </section>
+      ) : null}
+    </div>
   );
 }
 `;
 
-/* ═══════════════════════════════════════════════════════════════
-   3. src/components/chat/ConversationList.tsx — إزالة members غير المستخدم
-   ═══════════════════════════════════════════════════════════════ */
-
 files[
-  "src/components/chat/ConversationList.tsx"
-] = `import type { Conversation, AppUser } from '@/types';
-import { teams } from '@/data/teams';
-import { initials, relativeTime } from '@/lib/format';
+  "src/pages/AchievementsPage.tsx"
+] = `import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { AchievementCard } from '@/components/achievement/AchievementCard';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SkeletonCard } from '@/components/ui/Loading';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Stat, StatRow } from '@/components/ui/Stat';
+import type { Achievement } from '@/types';
 
-interface ConversationListProps {
-  conversations: Conversation[];
-  activeId?: string;
-  currentUser: AppUser;
-  users: AppUser[];
-  onSelect: (id: string) => void;
-}
+export function AchievementsPage() {
+  const { data, loading } = useRealtimeCollection<Achievement>('achievements');
 
-function getConversationName(
-  conv: Conversation,
-  currentUser: AppUser,
-  users: AppUser[],
-): string {
-  if (conv.type === 'general') return 'المحادثة العامة';
-  if (conv.type === 'team') {
-    const team = teams.find((t) => t.id === conv.teamId);
-    return team ? 'فريق ' + team.nameAr : 'محادثة فريق';
-  }
-  const otherUid = conv.participantUids.find((uid) => uid !== currentUser.uid);
-  if (!otherUid) return 'محادثة خاصة';
-  const other = users.find((u) => u.uid === otherUid);
-  return other ? other.displayName : 'محادثة خاصة';
-}
+  const branchCount = data.filter((a: Achievement) => a.level === 'branch').length;
+  const nationalCount = data.filter((a: Achievement) => a.level === 'national').length;
+  const internationalCount = data.filter((a: Achievement) => a.level === 'international').length;
 
-function getConversationAvatar(
-  conv: Conversation,
-  currentUser: AppUser,
-  users: AppUser[],
-): { text: string; variant: 'general' | 'team' | 'private' } {
-  if (conv.type === 'general') return { text: '🌐', variant: 'general' };
-  if (conv.type === 'team') {
-    const team = teams.find((t) => t.id === conv.teamId);
-    return { text: team ? team.name.slice(0, 2) : 'FT', variant: 'team' };
-  }
-  const otherUid = conv.participantUids.find((uid) => uid !== currentUser.uid);
-  const other = users.find((u) => u.uid === otherUid);
-  return { text: other ? initials(other.displayName) : '؟', variant: 'private' };
-}
-
-export function ConversationList({
-  conversations,
-  activeId,
-  currentUser,
-  users,
-  onSelect,
-}: ConversationListProps) {
-  if (conversations.length === 0) {
-    return (
-      <div className="empty" style={{ padding: 24 }}>
-        <div className="empty__message">لا محادثات بعد</div>
-      </div>
-    );
-  }
-
-  const sorted = [...conversations].sort((a, b) => {
-    if (a.type === 'general') return -1;
-    if (b.type === 'general') return 1;
-    return a.lastMessageAt < b.lastMessageAt ? 1 : -1;
-  });
+  const sorted: Achievement[] = [...data].sort((a: Achievement, b: Achievement) =>
+    a.date < b.date ? 1 : -1,
+  );
 
   return (
-    <div className="chat-conversations">
-      {sorted.map((conv) => {
-        const name = getConversationName(conv, currentUser, users);
-        const avatar = getConversationAvatar(conv, currentUser, users);
-        const unread = conv.unreadCounts?.[currentUser.uid] ?? 0;
+    <div className="container">
+      <PageHeader
+        eyebrow="الإنجازات"
+        title="تكريمات المنظمة"
+        description="كل ما حققته المنظمة على مستوى الفرع، الدولة، والعالم."
+      />
 
-        return (
-          <button
-            key={conv.id}
-            type="button"
-            className={'chat-conv' + (activeId === conv.id ? ' is-active' : '')}
-            onClick={() => onSelect(conv.id)}
-          >
-            <div
-              className={'chat-conv__avatar chat-conv__avatar--' + avatar.variant}
-              aria-hidden="true"
-            >
-              {avatar.text}
-            </div>
+      <section className="section--tight">
+        <StatRow>
+          <Stat value={branchCount} label="مستوى الفرع" />
+          <Stat value={nationalCount} label="مستوى وطني" />
+          <Stat value={internationalCount} label="مستوى دولي" />
+        </StatRow>
+      </section>
 
-            <div className="chat-conv__body">
-              <div className="chat-conv__top">
-                <div className="chat-conv__name">{name}</div>
-                <div className="chat-conv__time">
-                  {relativeTime(conv.lastMessageAt)}
-                </div>
-              </div>
-              <div className="chat-conv__preview">
-                {conv.lastMessageSender ? (
-                  <strong style={{ color: 'var(--c-red)', fontWeight: 700 }}>
-                    {conv.lastMessageSender}:{' '}
-                  </strong>
-                ) : null}
-                {conv.lastMessageText || 'لا رسائل بعد'}
-              </div>
-            </div>
-
-            {unread > 0 ? (
-              <div className="chat-conv__badge">
-                {unread > 99 ? '99+' : unread}
-              </div>
-            ) : null}
-          </button>
-        );
-      })}
+      <section className="section">
+        <SectionHeader eyebrow="القائمة" title="كل الإنجازات" />
+        {loading ? (
+          <div className="stack">
+            <SkeletonCard count={4} />
+          </div>
+        ) : sorted.length === 0 ? (
+          <EmptyState
+            icon="🏆"
+            title="لا إنجازات بعد"
+            message="لم يتم تسجيل أي إنجازات حتى الآن."
+          />
+        ) : (
+          <div className="stack">
+            {sorted.map((a: Achievement) => (
+              <AchievementCard key={a.id} achievement={a} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
@@ -384,7 +275,7 @@ function run(cmd) {
 
 console.log("");
 console.log("  ═══════════════════════════════════════════════════");
-console.log("  fix.cjs — إصلاح أخطاء TypeScript v5.1");
+console.log("  fix.cjs v2 — إصلاح useCollection + Type errors");
 console.log("  ═══════════════════════════════════════════════════");
 console.log("");
 
@@ -410,7 +301,9 @@ console.log("  📦 Git add...");
 run("git add .");
 
 console.log("  💾 Git commit...");
-const committed = run('git commit -m "fix: TypeScript env + unused variables"');
+const committed = run(
+  'git commit -m "fix: useCollection alias + explicit types"'
+);
 
 if (!committed) {
   console.log("  ℹ️  لا تغييرات جديدة للـ commit");
