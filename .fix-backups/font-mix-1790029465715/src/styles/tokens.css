@@ -37,11 +37,9 @@
   --c-orange: #EA580C;
   --c-orange-soft: #FFEDD5;
   --c-orange-text: #9A3412;
-  /* ═══ Typography ═══ */
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-en: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Sigmar One', 'Gochi Hand', 'Comic Sans MS', cursive, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, monospace;
+
+  --font: 'Gochi Hand', 'Comic Sans MS', cursive, system-ui, sans-serif;
+  --font-en: 'Gochi Hand', 'Comic Sans MS', cursive, system-ui, sans-serif;
 
   --radius-xs: 6px;
   --radius-sm: 10px;

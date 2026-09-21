@@ -12,12 +12,3 @@
 .member-card__stat-value { font-size: 1.1rem; color: var(--c-navy); line-height: 1; }
 .member-card__stat--red .member-card__stat-value { color: var(--c-red); }
 .member-card__stat-label { font-size: 0.75rem; color: var(--c-ink-muted); }
-
-/* Member name uses body font for readability */
-.member-card__name,
-.member-card__role,
-.member-card__team-tag,
-.member-card__stat-value,
-.member-card__stat-label {
-  font-family: var(--font);
-}

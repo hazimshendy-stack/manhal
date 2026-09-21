@@ -1,14 +1,6 @@
 .home-hero { padding-block: 72px 56px; }
 @media (max-width: 640px) { .home-hero { padding-block: 48px 40px; } }
-.home-hero__title {
-  font-family: var(--font-display);
-  font-size: clamp(2rem, 5vw, 3.2rem);
-  line-height: 1.15;
-  margin-top: 16px;
-  max-width: 22ch;
-  color: var(--c-navy);
-  letter-spacing: 0;
-}
+.home-hero__title { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.15; margin-top: 16px; max-width: 22ch; color: var(--c-navy); }
 @media (max-width: 640px) { .home-hero__title { font-size: 1.85rem; max-width: none; } }
 .home-hero__brand { color: var(--c-red); }
 .home-hero__desc { margin-top: 22px; max-width: 62ch; color: var(--c-ink-soft); font-size: 1.05rem; line-height: 1.9; }

@@ -62,13 +62,3 @@
 .user-picker__email { font-size: 0.8rem; color: var(--c-ink-muted); margin-top: 2px; direction: ltr; }
 .user-picker__empty { padding: 32px 20px; text-align: center; color: var(--c-ink-muted); font-size: 0.92rem; border: 1.5px dashed var(--c-line-mid); border-radius: var(--radius-sm); }
 @media (max-width: 899px) { .chat-layout { border-radius: 0; border-left: none; border-right: none; height: calc(100dvh - var(--navbar-h) - var(--bottom-nav-h) - 24px); } .chat-sidebar.is-hidden { display: none; } .chat-panel.is-hidden { display: none; } .chat-messages { padding: 18px 16px; } .chat-composer { padding: 14px 16px; padding-bottom: calc(14px + var(--safe-bottom)); } .chat-message { max-width: 88%; } }
-
-/* Chat text uses body font for readability */
-.chat-message__bubble,
-.chat-composer__input,
-.chat-conv__name,
-.chat-conv__preview,
-.user-picker__name,
-.user-picker__email {
-  font-family: var(--font);
-}

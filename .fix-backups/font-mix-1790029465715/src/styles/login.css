@@ -16,15 +16,3 @@
 .login-back a:hover { color: var(--c-red); }
 .change-password-notice { background: var(--c-amber-soft); border: 1px solid #FCD34D; border-radius: var(--radius-sm); padding: 18px; margin-bottom: 26px; font-size: 0.94rem; color: var(--c-amber-text); line-height: 1.7; }
 .change-password-notice strong { display: block; margin-bottom: 8px; font-size: 1rem; }
-
-/* Display font for login headings */
-.login-label,
-.login-submit {
-  font-family: var(--font);
-}
-
-.change-password-notice strong {
-  font-family: var(--font-display);
-  font-weight: 400;
-  letter-spacing: 0;
-}

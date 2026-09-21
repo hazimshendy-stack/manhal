@@ -14,11 +14,3 @@
 .onboarding-cta { display: inline-flex; align-items: center; gap: 8px; padding: 15px 40px; border-radius: var(--radius-full); border: none; background: var(--c-red); color: #fff; font-family: inherit; font-size: 1.1rem; cursor: pointer; transition: all 0.15s; box-shadow: var(--shadow-red); }
 .onboarding-cta:hover { background: var(--c-red-soft); transform: translateY(-1px); }
 .onboarding-cta:active { transform: scale(0.98); }
-
-/* Display font for onboarding headings */
-.onboarding-header__title,
-.onboarding-card__title,
-.onboarding-cta {
-  font-family: var(--font-display);
-  letter-spacing: 0;
-}
