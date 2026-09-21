@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * fix.cjs — إصلاح أخطاء TypeScript (unused imports)
+ * fix.cjs — إصلاح أخطاء TypeScript (auth.ts + toast-or-fallback.ts)
  * Usage: node fix.cjs
  */
 
@@ -21,86 +21,197 @@ const C = {
   magenta: "\x1b[35m",
 };
 
-// ═══════════════════════════════════════════════════════════════
-// قائمة الإصلاحات: كل إصلاح = ملف + بحث واستبدال
-// ═══════════════════════════════════════════════════════════════
-const FIXES = [
-  {
-    file: "src/pages/ConversationsPage.tsx",
-    find: "import { FormField, Select, TextInput } from '@/components/ui/FormField';",
-    replace: "import { FormField, Select } from '@/components/ui/FormField';",
-    desc: "إزالة TextInput غير المستخدم",
-  },
-  // ─── إصلاحات محتملة إضافية ───
-  {
-    file: "src/pages/admin/AdminGovernancePage.tsx",
-    find: "import { FormField, TextInput, TextArea } from '@/components/ui/FormField';",
-    replace:
-      "import { FormField, TextInput, TextArea } from '@/components/ui/FormField';",
-    desc: "تأكيد استيراد صحيح",
-    optional: true,
-  },
-];
+const log = {
+  ok: (m) => console.log(`${C.green}✓${C.reset} ${m}`),
+  warn: (m) => console.log(`${C.yellow}⚠${C.reset} ${m}`),
+  info: (m) => console.log(`${C.cyan}ℹ${C.reset} ${m}`),
+  dim: (m) => console.log(`${C.dim}  ${m}${C.reset}`),
+  err: (m) => console.log(`${C.red}✗${C.reset} ${m}`),
+};
 
 // ═══════════════════════════════════════════════════════════════
-// إصلاح unused imports تلقائيًا لأي ملف
+// 1) إصلاح src/lib/auth.ts
 // ═══════════════════════════════════════════════════════════════
-function removeUnusedImports(filePath) {
-  const abs = path.join(ROOT, filePath);
-  if (!fs.existsSync(abs)) return false;
+function fixAuth() {
+  const file = path.join(ROOT, "src/lib/auth.ts");
+  if (!fs.existsSync(file)) {
+    log.warn("src/lib/auth.ts غير موجود");
+    return false;
+  }
 
-  let content = fs.readFileSync(abs, "utf8");
-  const original = content;
+  let content = fs.readFileSync(file, "utf8");
 
-  // regex لالتقاط كل import statements
-  const importRegex = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/g;
+  // تأكد من وجود type FirebaseUser في الاستيراد
+  const firebaseAuthImportRegex =
+    /import\s*\{([^}]+)\}\s*from\s*['"]firebase\/auth['"];?/;
 
-  content = content.replace(importRegex, (match, imports, source) => {
-    const names = imports
-      .split(",")
-      .map((n) => n.trim())
-      .filter(Boolean);
-    const used = names.filter((name) => {
-      // شيل كلمة "type" لو موجودة
-      const cleanName = name.replace(/^type\s+/, "").trim();
-      // ابحث عن الاستخدام في باقي الملف (بدون import statements)
-      const body = content.replace(importRegex, "");
-      const regex = new RegExp(`\\b${cleanName}\\b`, "g");
-      const matches = body.match(regex);
-      return matches && matches.length > 0;
-    });
+  const match = content.match(firebaseAuthImportRegex);
+  if (!match) {
+    log.err("مش لاقي استيراد firebase/auth في auth.ts");
+    return false;
+  }
 
-    if (used.length === 0) return ""; // شيل الاستيراد كامل
-    if (used.length === names.length) return match; // مفيش تغيير
+  const importsStr = match[1];
+  const hasFirebaseUser =
+    /type\s+User\s+as\s+FirebaseUser/.test(importsStr) ||
+    /FirebaseUser/.test(importsStr);
 
-    return `import { ${used.join(", ")} } from '${source}';`;
-  });
+  if (!hasFirebaseUser) {
+    // ضيف الاستيراد
+    const newImports =
+      importsStr.trim().replace(/,\s*$/, "") +
+      ",\n  type User as FirebaseUser,\n";
+    content = content.replace(
+      firebaseAuthImportRegex,
+      `import {\n  ${newImports
+        .trim()
+        .replace(/,\s*$/, "")}\n} from 'firebase/auth';`
+    );
 
-  // نظّف السطور الفاضية المتتالية
-  content = content.replace(/\n{3,}/g, "\n\n");
+    // تنظيف أي مسافات زايدة
+    content = content.replace(/\n{3,}/g, "\n\n");
 
-  if (content !== original) {
-    fs.writeFileSync(abs, content, "utf8");
+    fs.writeFileSync(file, content, "utf8");
+    log.ok("src/lib/auth.ts — إضافة FirebaseUser");
     return true;
   }
+
+  // لو موجود بس فيه مشكلة، أعد كتابة الاستيراد
+  const fixedImport = `import {
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  sendPasswordResetEmail,
+  updatePassword,
+  type User as FirebaseUser,
+} from 'firebase/auth';`;
+
+  const newContent = content.replace(firebaseAuthImportRegex, fixedImport);
+  if (newContent !== content) {
+    fs.writeFileSync(file, newContent, "utf8");
+    log.ok("src/lib/auth.ts — إعادة كتابة الاستيراد");
+    return true;
+  }
+
+  log.dim("src/lib/auth.ts — سليم بالفعل");
   return false;
 }
 
 // ═══════════════════════════════════════════════════════════════
-// المسح الشامل لمجلد src
+// 2) إصلاح src/components/ui/toast-or-fallback.ts
 // ═══════════════════════════════════════════════════════════════
-function walkDir(dir) {
-  const files = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...walkDir(full));
-    } else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
-      files.push(full);
+function fixToastFallback() {
+  const file = path.join(ROOT, "src/components/ui/toast-or-fallback.ts");
+  if (!fs.existsSync(file)) {
+    log.dim("src/components/ui/toast-or-fallback.ts — غير موجود (تخطي)");
+    return false;
+  }
+
+  // الملف ده مش محتاجينه — الأفضل نحذفه
+  // لكن للتأمين، نعيد كتابته صح
+  const content = `import { toast as realToast } from './Toast';
+
+export { realToast as toast };
+`;
+
+  fs.writeFileSync(file, content, "utf8");
+  log.ok("src/components/ui/toast-or-fallback.ts — إعادة كتابة صحيحة");
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 3) حذف الملف نهائيًا (بديل أنضف)
+// ═══════════════════════════════════════════════════════════════
+function deleteToastFallback() {
+  const file = path.join(ROOT, "src/components/ui/toast-or-fallback.ts");
+  if (!fs.existsSync(file)) return false;
+
+  // اتأكد إنه مش مستخدم في أي مكان
+  const srcDir = path.join(ROOT, "src");
+  let used = false;
+
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(tsx?|jsx?)$/.test(entry.name)) {
+        const c = fs.readFileSync(full, "utf8");
+        if (c.includes("toast-or-fallback")) {
+          used = true;
+          log.dim(`مستخدم في: ${path.relative(ROOT, full)}`);
+        }
+      }
     }
   }
-  return files;
+  walk(srcDir);
+
+  if (used) {
+    log.warn("toast-or-fallback مستخدم — هيتم إصلاحه بدل حذفه");
+    return fixToastFallback();
+  }
+
+  fs.unlinkSync(file);
+  log.ok("src/components/ui/toast-or-fallback.ts — تم الحذف (غير مستخدم)");
+  return true;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 4) مسح unused imports شامل (احتياطي)
+// ═══════════════════════════════════════════════════════════════
+function cleanUnusedImports() {
+  const srcDir = path.join(ROOT, "src");
+  if (!fs.existsSync(srcDir)) return 0;
+
+  let fixed = 0;
+  const files = [];
+
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (/\.(tsx?)$/.test(entry.name)) files.push(full);
+    }
+  }
+  walk(srcDir);
+
+  for (const file of files) {
+    let content = fs.readFileSync(file, "utf8");
+    const original = content;
+    const importRegex = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/g;
+
+    content = content.replace(importRegex, (match, imports, source) => {
+      const names = imports
+        .split(",")
+        .map((n) => n.trim())
+        .filter(Boolean);
+      const body = content.replace(importRegex, "");
+
+      const used = names.filter((name) => {
+        const cleanName = name.replace(/^type\s+/, "").trim();
+        const regex = new RegExp(
+          `\\b${cleanName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`,
+          "g"
+        );
+        return regex.test(body);
+      });
+
+      if (used.length === 0) return "";
+      if (used.length === names.length) return match;
+      return `import { ${used.join(", ")} } from '${source}';`;
+    });
+
+    content = content.replace(/\n{3,}/g, "\n\n");
+
+    if (content !== original) {
+      fs.writeFileSync(file, content, "utf8");
+      log.ok(
+        path.relative(ROOT, file).replace(/\\/g, "/") + " — تنظيف imports"
+      );
+      fixed++;
+    }
+  }
+
+  return fixed;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -111,66 +222,35 @@ console.log(
   `${C.bold}${C.magenta}╔══════════════════════════════════════════════════════╗${C.reset}`
 );
 console.log(
-  `${C.bold}${C.magenta}║  fix.cjs — إصلاح أخطاء TypeScript                    ║${C.reset}`
+  `${C.bold}${C.magenta}║  fix.cjs — إصلاح أخطاء build                         ║${C.reset}`
 );
 console.log(
   `${C.bold}${C.magenta}╚══════════════════════════════════════════════════════╝${C.reset}`
 );
 console.log("");
 
-// ── 1) إصلاحات محددة ──
-console.log(`${C.bold}▶ Step 1: تطبيق إصلاحات محددة${C.reset}\n`);
-
-let fixedCount = 0;
-for (const fix of FIXES) {
-  const abs = path.join(ROOT, fix.file);
-  if (!fs.existsSync(abs)) {
-    if (!fix.optional) {
-      console.log(`${C.yellow}⚠${C.reset} ${fix.file} غير موجود — تخطي`);
-    }
-    continue;
-  }
-
-  const content = fs.readFileSync(abs, "utf8");
-  if (content.includes(fix.find) && fix.find !== fix.replace) {
-    fs.writeFileSync(abs, content.replace(fix.find, fix.replace), "utf8");
-    console.log(`${C.green}✓${C.reset} ${fix.file}`);
-    console.log(`  ${C.dim}${fix.desc}${C.reset}`);
-    fixedCount++;
-  } else {
-    console.log(`${C.dim}→${C.reset} ${fix.file} — لا يحتاج تعديل`);
-  }
-}
-
-// ── 2) مسح شامل ──
+// Step 1: auth.ts
+console.log(`${C.bold}▶ Step 1: إصلاح src/lib/auth.ts${C.reset}`);
+fixAuth();
 console.log("");
-console.log(`${C.bold}▶ Step 2: مسح unused imports شامل${C.reset}\n`);
 
-const srcDir = path.join(ROOT, "src");
-if (fs.existsSync(srcDir)) {
-  const allFiles = walkDir(srcDir);
-  let autoFixed = 0;
-  for (const file of allFiles) {
-    const rel = path.relative(ROOT, file).replace(/\\/g, "/");
-    if (removeUnusedImports(rel)) {
-      console.log(
-        `${C.green}✓${C.reset} ${rel} ${C.dim}(تم التنظيف)${C.reset}`
-      );
-      autoFixed++;
-    }
-  }
-  if (autoFixed === 0) {
-    console.log(`${C.dim}لا يوجد unused imports${C.reset}`);
-  }
-  fixedCount += autoFixed;
-}
-
-// ── 3) التحقق من TypeScript ──
+// Step 2: toast-or-fallback.ts
+console.log(`${C.bold}▶ Step 2: إصلاح toast-or-fallback.ts${C.reset}`);
+deleteToastFallback();
 console.log("");
-console.log(`${C.bold}▶ Step 3: التحقق من TypeScript${C.reset}\n`);
 
+// Step 3: unused imports
+console.log(`${C.bold}▶ Step 3: مسح unused imports شامل${C.reset}`);
+const cleaned = cleanUnusedImports();
+if (cleaned === 0) log.dim("لا يوجد unused imports");
+console.log("");
+
+// Step 4: TypeScript check
+console.log(`${C.bold}▶ Step 4: التحقق من TypeScript${C.reset}\n`);
+let tscOk = false;
 try {
   execSync("npx tsc --noEmit", { cwd: ROOT, stdio: "inherit" });
+  tscOk = true;
   console.log("");
   console.log(`${C.green}${C.bold}✓ لا أخطاء TypeScript!${C.reset}`);
 } catch {
@@ -179,11 +259,15 @@ try {
 }
 
 console.log("");
-console.log(`${C.bold}الخلاصة:${C.reset}`);
-console.log(`  ${C.green}✓ تم إصلاح ${fixedCount} ملف${C.reset}`);
-console.log("");
-console.log(`${C.bold}الخطوة التالية:${C.reset}`);
-console.log(
-  `  ${C.cyan}git add -A && git commit -m "fix: remove unused imports" && git push origin main --force${C.reset}`
-);
+console.log(`${C.bold}═══ الخلاصة ═══${C.reset}`);
+if (tscOk) {
+  console.log(`${C.green}✓ المشروع جاهز للـ push${C.reset}`);
+  console.log("");
+  console.log(`${C.bold}الخطوة التالية:${C.reset}`);
+  console.log(`  ${C.cyan}git add -A`);
+  console.log(`  git commit -m "fix: auth + toast imports"`);
+  console.log(`  git push origin main --force${C.reset}`);
+} else {
+  console.log(`${C.yellow}⚠ راجع الأخطاء فوق وأعد التشغيل${C.reset}`);
+}
 console.log("");
