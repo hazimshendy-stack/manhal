@@ -18,7 +18,7 @@ export function ConversationsPage() {
   const { user } = useAuth();
   const { data: conversations, loading: loadingConvs } = useRealtimeCollection<Conversation>('conversations');
   const { data: messages, loading: loadingMsgs } = useRealtimeCollection<Message>('messages');
-  const { data: users, loading: loadingUsers } = useRealtimeCollection<AppUser>('users');
+  const { data: users } = useRealtimeCollection<AppUser>('users');
 
   const [activeId, setActiveId] = useState<string | null>(null);
   const [mobileShowChat, setMobileShowChat] = useState(false);
@@ -27,11 +27,6 @@ export function ConversationsPage() {
   const [createTarget, setCreateTarget] = useState<string>('');
   const [createTeamId, setCreateTeamId] = useState<TeamId>('helpers');
   const [busy, setBusy] = useState(false);
-
-  const otherUsers = useMemo(() => {
-    if (!user) return [];
-    return users.filter((u) => u.uid !== user.uid);
-  }, [users, user]);
 
   const myConversations = useMemo(() => {
     if (!user) return [];
@@ -42,24 +37,17 @@ export function ConversationsPage() {
     });
   }, [conversations, user]);
 
-  const defaultId = useMemo(
-    () => myConversations.find((c) => c.type === 'general')?.id ?? null,
-    [myConversations],
-  );
+  const defaultId = useMemo(() => myConversations.find((c) => c.type === 'general')?.id ?? null, [myConversations]);
   const currentId = activeId ?? defaultId;
   const active = currentId ? myConversations.find((c) => c.id === currentId) : null;
 
   const activeMessages = useMemo(() => {
     if (!currentId) return [];
-    return messages
-      .filter((m) => m.conversationId === currentId)
-      .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1));
+    return messages.filter((m) => m.conversationId === currentId).sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1));
   }, [messages, currentId]);
 
   if (!user) return null;
-  if (loadingConvs || loadingMsgs || loadingUsers) {
-    return <Loading fullHeight message="جارٍ تحميل المحادثات..." />;
-  }
+  if (loadingConvs || loadingMsgs) return <Loading fullHeight message="جارٍ تحميل المحادثات..." />;
 
   const getConvName = (): string => {
     if (!active) return '';
@@ -100,26 +88,22 @@ export function ConversationsPage() {
 
   const createConversation = async () => {
     if (!user) return;
-
-    if (createType === 'private') {
-      if (!createTarget) { toast.error('اختر عضوًا'); return; }
-      const existing = conversations.find(
-        (c) =>
-          c.type === 'private' &&
-          c.participantUids.length === 2 &&
-          c.participantUids.includes(user.uid) &&
-          c.participantUids.includes(createTarget),
-      );
-      if (existing) {
-        setActiveId(existing.id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.info('المحادثة موجودة — تم فتحها');
-        return;
-      }
-
-      setBusy(true);
-      try {
+    setBusy(true);
+    try {
+      if (createType === 'private') {
+        if (!createTarget) { toast.error('اختر عضوًا'); setBusy(false); return; }
+        const existing = conversations.find(
+          (c) => c.type === 'private'
+            && c.participantUids.length === 2
+            && c.participantUids.includes(user.uid)
+            && c.participantUids.includes(createTarget)
+        );
+        if (existing) {
+          setActiveId(existing.id);
+          setMobileShowChat(true);
+          setOpenCreate(false);
+          return;
+        }
         const id = newId('CONV-PRIVATE');
         await createOne('conversations', {
           id,
@@ -127,28 +111,19 @@ export function ConversationsPage() {
           title: '',
           participantUids: [user.uid, createTarget],
           lastMessageAt: now(),
-          createdBy: user.uid,
         });
         setActiveId(id);
         setMobileShowChat(true);
-        setOpenCreate(false);
-        setCreateTarget('');
-        toast.success('تم إنشاء المحادثة');
-      } catch {
-        toast.error('فشل الإنشاء');
-      } finally { setBusy(false); }
-    } else {
-      const id = 'CONV-TEAM-' + createTeamId;
-      const existing = conversations.find((c) => c.id === id);
-      if (existing) {
-        setActiveId(id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.info('المحادثة موجودة');
-        return;
-      }
-      setBusy(true);
-      try {
+      } else {
+        const id = 'CONV-TEAM-' + createTeamId;
+        const existing = conversations.find((c) => c.id === id);
+        if (existing) {
+          toast.info('محادثة الفريق موجودة بالفعل');
+          setActiveId(id);
+          setMobileShowChat(true);
+          setOpenCreate(false);
+          return;
+        }
         await createOne('conversations', {
           id,
           type: 'team',
@@ -160,11 +135,15 @@ export function ConversationsPage() {
         });
         setActiveId(id);
         setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.success('تم إنشاء محادثة الفريق');
-      } catch {
-        toast.error('فشل الإنشاء');
-      } finally { setBusy(false); }
+      }
+      toast.success('تم إنشاء المحادثة');
+      setOpenCreate(false);
+      setCreateTarget('');
+    } catch (err) {
+      const m = err instanceof Error ? err.message : 'فشل الإنشاء';
+      toast.error('فشل الإنشاء', m);
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -175,11 +154,7 @@ export function ConversationsPage() {
           <div className="chat-sidebar__head">
             <div className="row row--between" style={{ gap: 8 }}>
               <div className="chat-sidebar__title">المحادثات</div>
-              <button
-                type="button"
-                className="chat-sidebar__new"
-                onClick={() => setOpenCreate(true)}
-              >
+              <button type="button" className="chat-sidebar__new" onClick={() => setOpenCreate(true)}>
                 + جديدة
               </button>
             </div>
@@ -203,22 +178,11 @@ export function ConversationsPage() {
           ) : (
             <>
               <div className="chat-header">
-                <button
-                  type="button"
-                  className="chat-header__back"
-                  onClick={() => setMobileShowChat(false)}
-                  aria-label="رجوع"
-                >
-                  ‹
-                </button>
+                <button type="button" className="chat-header__back" onClick={() => setMobileShowChat(false)} aria-label="رجوع">‹</button>
                 <div className="chat-header__info">
                   <div className="chat-header__title">{getConvName()}</div>
                   <div className="chat-header__sub">
-                    {active.type === 'general'
-                      ? 'الجميع'
-                      : active.type === 'team'
-                        ? 'فريق'
-                        : 'محادثة خاصة'}
+                    {active.type === 'general' ? 'الجميع' : active.type === 'team' ? 'فريق' : 'محادثة خاصة'}
                   </div>
                 </div>
               </div>
@@ -227,9 +191,7 @@ export function ConversationsPage() {
                 {activeMessages.length === 0 ? (
                   <EmptyState title="ابدأ المحادثة" message="لا رسائل بعد. كن أول من يكتب." />
                 ) : (
-                  activeMessages.map((m) => (
-                    <MessageBubble key={m.id} message={m} currentUser={user} />
-                  ))
+                  activeMessages.map((m) => <MessageBubble key={m.id} message={m} currentUser={user} />)
                 )}
               </div>
 
@@ -245,9 +207,7 @@ export function ConversationsPage() {
         onClose={() => setOpenCreate(false)}
         footer={
           <>
-            <button type="button" className="btn btn--ghost" onClick={() => setOpenCreate(false)}>
-              إلغاء
-            </button>
+            <button type="button" className="btn btn--ghost" onClick={() => setOpenCreate(false)}>إلغاء</button>
             <button type="button" className="btn btn--primary" onClick={createConversation} disabled={busy}>
               {busy ? '...' : 'إنشاء'}
             </button>
@@ -266,16 +226,13 @@ export function ConversationsPage() {
         </FormField>
 
         {createType === 'private' ? (
-          <FormField label="العضو" required hint={otherUsers.length === 0 ? 'لا يوجد أعضاء آخرون' : undefined}>
+          <FormField label="العضو" required>
             <Select
               value={createTarget}
               onChange={setCreateTarget}
               options={[
-                { value: '', label: otherUsers.length === 0 ? '— لا يوجد أعضاء —' : '— اختر عضوًا —' },
-                ...otherUsers.map((u) => ({
-                  value: u.uid,
-                  label: u.displayName + (u.email ? ' (' + u.email + ')' : ''),
-                })),
+                { value: '', label: '— اختر —' },
+                ...users.filter((u) => u.uid !== user.uid).map((u) => ({ value: u.uid, label: u.displayName })),
               ]}
             />
           </FormField>

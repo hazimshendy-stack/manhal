@@ -6,14 +6,7 @@ import { hoursToPoints } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Loading } from '@/components/ui/Loading';
-import { REQUEST_TYPE_LABEL, REQUEST_STATUS_LABEL } from '@/lib/format';
 import type { Member, Contribution, RequestRecord } from '@/types';
-
-const CONTRIB_STATUS_LABEL: Record<string, string> = {
-  pending: 'معلّقة',
-  approved: 'معتمدة',
-  rejected: 'مرفوضة',
-};
 
 export function AdminAnalyticsPage() {
   const { data: liveMembers, loading: loadingM } = useCollection<Member>('members');
@@ -53,7 +46,7 @@ export function AdminAnalyticsPage() {
   });
 
   return (
-    <div className="admin-page">
+    <div>
       <PageHeader eyebrow="إدارة" title="التحليلات" description="نظرة شاملة على بيانات المنظمة." />
 
       <section className="section">
@@ -91,7 +84,7 @@ export function AdminAnalyticsPage() {
         <div className="grid grid--narrow">
           {Object.entries(statusCounts).map(([k, v]) => (
             <div key={k} className="card no-click">
-              <div className="card__meta">{REQUEST_STATUS_LABEL[k] ?? k}</div>
+              <div className="card__meta">{k}</div>
               <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.8rem', fontWeight: 800, color: 'var(--c-navy)', marginTop: 6 }}>{v}</div>
             </div>
           ))}
@@ -103,7 +96,7 @@ export function AdminAnalyticsPage() {
         <div className="grid grid--narrow">
           {Object.entries(typeCounts).map(([k, v]) => (
             <div key={k} className="card no-click">
-              <div className="card__meta">{REQUEST_TYPE_LABEL[k] ?? k}</div>
+              <div className="card__meta">{k}</div>
               <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.8rem', fontWeight: 800, color: 'var(--c-red)', marginTop: 6 }}>{v}</div>
             </div>
           ))}
@@ -115,7 +108,7 @@ export function AdminAnalyticsPage() {
         <div className="grid grid--narrow">
           {Object.entries(contributionsStatusCounts).map(([k, v]) => (
             <div key={k} className="card no-click">
-              <div className="card__meta">{CONTRIB_STATUS_LABEL[k] ?? k}</div>
+              <div className="card__meta">{k}</div>
               <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.8rem', fontWeight: 800, color: 'var(--c-navy)', marginTop: 6 }}>{v}</div>
             </div>
           ))}

@@ -1,0 +1,430 @@
+/* ═══════════════════════════════════════════════════════════════
+   v5.4 — Admin + Global Spacing Fix
+   كل الصفحات عندها هامش جانبي محترم
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ═══════════ Container موحد ═══════════ */
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 24px;
+  box-sizing: border-box;
+}
+
+@media (min-width: 640px) { .container { padding-inline: 32px; } }
+@media (min-width: 1024px) { .container { padding-inline: 40px; } }
+@media (max-width: 480px) { .container { padding-inline: 20px; } }
+
+/* كل عناصر الصفحة الداخلية تأخذ نفس الهامش */
+.app-main > * > .container,
+.app-main .container > * {
+  padding-inline: 0;
+}
+
+/* ═══════════ Admin Layout — هامش داخلي ═══════════ */
+
+.admin-page {
+  padding-block: 8px 32px;
+}
+
+.admin-page .section,
+.admin-page .section--tight {
+  padding-inline: 0;
+}
+
+.admin-page .section-head {
+  padding-inline: 0;
+}
+
+.admin-page h1,
+.admin-page h2,
+.admin-page h3 {
+  padding-inline: 0;
+}
+
+/* ═══════════ Admin Home ═══════════ */
+
+.admin-welcome {
+  padding: 24px 0 8px;
+  margin-bottom: 8px;
+}
+
+.admin-welcome__eyebrow {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--c-red);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.admin-welcome__name {
+  font-size: clamp(1.5rem, 4vw, 2.1rem);
+  font-weight: 900;
+  color: var(--c-navy);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: break-word;
+}
+
+.admin-welcome__subtitle {
+  margin-top: 8px;
+  color: var(--c-ink-muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+  max-width: 60ch;
+}
+
+/* ═══════════ Admin Stats Row ═══════════ */
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-block: 24px;
+}
+
+@media (min-width: 640px) {
+  .admin-stats { grid-template-columns: repeat(3, 1fr); gap: 16px; }
+}
+
+@media (min-width: 1024px) {
+  .admin-stats { grid-template-columns: repeat(6, 1fr); }
+}
+
+.admin-stats .stat {
+  padding: 22px 14px;
+  min-height: 108px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.admin-stats .stat__value { font-size: 1.65rem; }
+.admin-stats .stat__label { font-size: 0.72rem; }
+
+/* ═══════════ Admin Cards Grid ═══════════ */
+
+.admin-cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+@media (min-width: 600px) {
+  .admin-cards { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+}
+
+@media (min-width: 1024px) {
+  .admin-cards { grid-template-columns: repeat(3, 1fr); gap: 18px; }
+}
+
+.admin-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px;
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  text-decoration: none;
+  color: var(--c-ink);
+  transition: all 0.18s var(--ease);
+  box-shadow: var(--shadow-xs);
+  min-height: 110px;
+}
+
+.admin-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--c-line-mid);
+}
+
+.admin-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-card__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--c-navy);
+  line-height: 1.35;
+}
+
+.admin-card__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  background: var(--c-red);
+  color: #fff;
+  font-family: var(--font-en);
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.admin-card__desc {
+  font-size: 0.85rem;
+  color: var(--c-ink-muted);
+  line-height: 1.6;
+}
+
+/* ═══════════ Admin Seed Section ═══════════ */
+
+.admin-seed {
+  margin-block: 32px;
+  padding: 24px;
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (max-width: 640px) {
+  .admin-seed { padding: 18px; }
+}
+
+.admin-seed__head {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+@media (min-width: 640px) {
+  .admin-seed__head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.admin-seed__result {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--c-off-white);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  line-height: 1.9;
+  color: var(--c-ink-soft);
+  word-break: break-word;
+}
+
+/* ═══════════ Approval Card (Admin Requests) ═══════════ */
+
+.admin-request-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+}
+
+.admin-request-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.admin-request-card__title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--c-ink);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.admin-request-card__meta {
+  font-size: 0.82rem;
+  color: var(--c-ink-muted);
+  margin-top: 4px;
+  line-height: 1.6;
+}
+
+.admin-request-card__badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-request-card__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-line);
+}
+
+/* ═══════════ Admin Tables (على الموبايل) ═══════════ */
+
+@media (max-width: 700px) {
+  .admin-page table.data {
+    display: block;
+  }
+
+  .admin-page table.data thead { display: none; }
+
+  .admin-page table.data tbody { display: block; }
+
+  .admin-page table.data tr {
+    display: block;
+    background: var(--c-white);
+    border: 1px solid var(--c-line);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .admin-page table.data td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border: none;
+    font-size: 0.88rem;
+  }
+
+  .admin-page table.data td::before {
+    content: attr(data-label);
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--c-ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+}
+
+/* ═══════════ Chips — mobile safe ═══════════ */
+
+@media (max-width: 640px) {
+  .chips {
+    margin-inline: -20px;
+    padding-inline: 20px;
+  }
+}
+
+/* ═══════════ Forms داخل الأدمن ═══════════ */
+
+.admin-page .form-field {
+  margin-bottom: 18px;
+}
+
+.admin-page .input {
+  font-size: 0.92rem;
+}
+
+/* ═══════════ Modal داخل الأدمن ═══════════ */
+
+.admin-page .modal__body {
+  padding: 24px;
+}
+
+/* ═══════════ Achievement بدون تصنيف ═══════════ */
+
+.achievement-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  background: var(--c-white);
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-xs);
+}
+
+.achievement-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.achievement-card__title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--c-navy);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.achievement-card__date {
+  font-size: 0.78rem;
+  color: var(--c-ink-muted);
+  margin-top: 4px;
+  font-family: var(--font-en);
+  font-weight: 700;
+}
+
+.achievement-card__desc {
+  font-size: 0.88rem;
+  color: var(--c-ink-soft);
+  line-height: 1.7;
+}
+
+.achievement-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--c-line);
+}
+
+/* ═══════════ إشعارات صفحة — بدون أيقونات ═══════════ */
+
+.notif-item__icon { display: none !important; }
+
+.notif-item {
+  padding: 16px 18px !important;
+}
+
+/* ═══════════ Welcome header صفحة الأدمن ═══════════ */
+
+.admin-page h1 { font-size: 1.6rem; }
+
+@media (min-width: 640px) {
+  .admin-page h1 { font-size: 1.9rem; }
+}
+
+/* ═══════════ spacing عام للبطاقات في صفحات الأدمن ═══════════ */
+
+.admin-page .card {
+  padding: 20px;
+}
+
+@media (min-width: 640px) {
+  .admin-page .card { padding: 22px; }
+}
+
+/* ═══════════ كل الصفحات — إزالة اللزق ═══════════ */
+
+.page-section,
+section.section {
+  padding-inline: 0;
+}
+
+/* ═══════════ النصوص الطويلة ═══════════ */
+
+.admin-page .card__title,
+.admin-page .card__meta,
+.admin-page .card__body {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

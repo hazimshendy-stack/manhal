@@ -1,4 +1,4 @@
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
 import { AchievementCard } from '@/components/achievement/AchievementCard';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -8,49 +8,33 @@ import { Stat, StatRow } from '@/components/ui/Stat';
 import type { Achievement } from '@/types';
 
 export function AchievementsPage() {
-  const { data, loading } = useRealtimeCollection<Achievement>('achievements');
-
-  const branchCount = data.filter((a: Achievement) => a.level === 'branch').length;
-  const nationalCount = data.filter((a: Achievement) => a.level === 'national').length;
-  const internationalCount = data.filter((a: Achievement) => a.level === 'international').length;
-
-  const sorted: Achievement[] = [...data].sort((a: Achievement, b: Achievement) =>
-    a.date < b.date ? 1 : -1,
-  );
+  const { data, loading } = useCollection<Achievement>('achievements');
+  const sorted = [...data].sort((a, b) => (a.date < b.date ? 1 : -1));
 
   return (
     <div className="container">
       <PageHeader
         eyebrow="الإنجازات"
         title="تكريمات المنظمة"
-        description="كل ما حققته المنظمة على مستوى الفرع، الدولة، والعالم."
+        description="كل ما حققته المنظمة من إنجازات وتكريمات."
       />
 
       <section className="section--tight">
         <StatRow>
-          <Stat value={branchCount} label="مستوى الفرع" />
-          <Stat value={nationalCount} label="مستوى وطني" />
-          <Stat value={internationalCount} label="مستوى دولي" />
+          <Stat value={data.length} label="إجمالي الإنجازات" />
+          <Stat value={data.filter((a) => a.date >= '2026-01-01').length} label="هذا الموسم" />
         </StatRow>
       </section>
 
       <section className="section">
         <SectionHeader eyebrow="القائمة" title="كل الإنجازات" />
         {loading ? (
-          <div className="stack">
-            <SkeletonCard count={4} />
-          </div>
+          <div className="stack"><SkeletonCard count={4} /></div>
         ) : sorted.length === 0 ? (
-          <EmptyState
-            icon="🏆"
-            title="لا إنجازات بعد"
-            message="لم يتم تسجيل أي إنجازات حتى الآن."
-          />
+          <EmptyState title="لا إنجازات بعد" message="لم يتم تسجيل أي إنجازات." />
         ) : (
           <div className="stack">
-            {sorted.map((a: Achievement) => (
-              <AchievementCard key={a.id} achievement={a} />
-            ))}
+            {sorted.map((a) => <AchievementCard key={a.id} achievement={a} />)}
           </div>
         )}
       </section>
