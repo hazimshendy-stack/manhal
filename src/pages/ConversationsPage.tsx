@@ -16,24 +16,21 @@ import type { Conversation, Message, AppUser, TeamId } from '@/types';
 
 export function ConversationsPage() {
   const { user } = useAuth();
-  const { data: conversations, loading: loadingConvs } = useRealtimeCollection<Conversation>('conversations');
-  const { data: messages, loading: loadingMsgs } = useRealtimeCollection<Message>('messages');
-  const { data: users, loading: loadingUsers } = useRealtimeCollection<AppUser>('users');
+  const { data: conversations, loading: l1 } = useRealtimeCollection<Conversation>('conversations');
+  const { data: messages, loading: l2 } = useRealtimeCollection<Message>('messages');
+  const { data: users, loading: l3 } = useRealtimeCollection<AppUser>('users');
 
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [mobileShowChat, setMobileShowChat] = useState(false);
-  const [openCreate, setOpenCreate] = useState(false);
-  const [createType, setCreateType] = useState<'private' | 'team'>('private');
-  const [createTarget, setCreateTarget] = useState<string>('');
-  const [createTeamId, setCreateTeamId] = useState<TeamId>('helpers');
+  const [mobile, setMobile] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState<'private' | 'team'>('private');
+  const [target, setTarget] = useState('');
+  const [teamId, setTeamId] = useState<TeamId>('helpers');
   const [busy, setBusy] = useState(false);
 
-  const otherUsers = useMemo(() => {
-    if (!user) return [];
-    return users.filter((u) => u.uid !== user.uid);
-  }, [users, user]);
+  const others = useMemo(() => user ? users.filter((u) => u.uid !== user.uid) : [], [users, user]);
 
-  const myConversations = useMemo(() => {
+  const myConvs = useMemo(() => {
     if (!user) return [];
     return conversations.filter((c) => {
       if (c.type === 'general') return true;
@@ -42,256 +39,132 @@ export function ConversationsPage() {
     });
   }, [conversations, user]);
 
-  const defaultId = useMemo(
-    () => myConversations.find((c) => c.type === 'general')?.id ?? null,
-    [myConversations],
-  );
+  const defaultId = useMemo(() => myConvs.find((c) => c.type === 'general')?.id ?? null, [myConvs]);
   const currentId = activeId ?? defaultId;
-  const active = currentId ? myConversations.find((c) => c.id === currentId) : null;
-
-  const activeMessages = useMemo(() => {
-    if (!currentId) return [];
-    return messages
-      .filter((m) => m.conversationId === currentId)
-      .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1));
-  }, [messages, currentId]);
+  const active = currentId ? myConvs.find((c) => c.id === currentId) : null;
+  const activeMsgs = useMemo(() => !currentId ? [] : messages
+    .filter((m) => m.conversationId === currentId)
+    .sort((a, b) => a.sentAt > b.sentAt ? 1 : -1), [messages, currentId]);
 
   if (!user) return null;
-  if (loadingConvs || loadingMsgs || loadingUsers) {
-    return <Loading fullHeight message="جارٍ تحميل المحادثات..." />;
-  }
+  if (l1 || l2 || l3) return <Loading fullHeight message="جارٍ تحميل المحادثات..." />;
 
-  const getConvName = (): string => {
+  const getName = () => {
     if (!active) return '';
     if (active.type === 'general') return 'المحادثة العامة';
-    if (active.type === 'team') {
-      const team = teams.find((t) => t.id === active.teamId);
-      return 'فريق ' + (team?.name ?? '');
-    }
-    const otherUid = active.participantUids.find((uid) => uid !== user.uid);
-    const other = users.find((u) => u.uid === otherUid);
-    return other?.displayName ?? 'محادثة خاصة';
+    if (active.type === 'team') return 'فريق ' + (teams.find((t) => t.id === active.teamId)?.name ?? '');
+    const ou = active.participantUids.find((u) => u !== user.uid);
+    return users.find((u) => u.uid === ou)?.displayName ?? 'محادثة خاصة';
   };
 
-  const sendMessage = async (text: string) => {
-    if (!currentId || !user) return;
-    const myMember = members.find((m) => m.id === user.memberId);
+  const send = async (text: string) => {
+    if (!currentId) return;
+    const myM = members.find((m) => m.id === user.memberId);
     const msg: Message = {
-      id: newId('MSG'),
-      conversationId: currentId,
-      senderUid: user.uid,
-      senderName: myMember?.name ?? user.displayName,
-      text,
-      sentAt: now(),
+      id: newId('MSG'), conversationId: currentId, senderUid: user.uid,
+      senderName: myM?.name ?? user.displayName, text, sentAt: now(),
     };
     try {
       await createOne('messages', msg);
       await createOne('conversations', {
-        id: currentId,
-        lastMessageAt: now(),
-        lastMessageText: text,
-        lastMessageSender: myMember?.name ?? user.displayName,
+        id: currentId, lastMessageAt: now(),
+        lastMessageText: text, lastMessageSender: myM?.name ?? user.displayName,
       });
-    } catch (err) {
-      const m = err instanceof Error ? err.message : 'فشل الإرسال';
-      toast.error('فشل الإرسال', m);
-    }
+    } catch (e) { toast.error('فشل الإرسال', e instanceof Error ? e.message : ''); }
   };
 
-  const createConversation = async () => {
-    if (!user) return;
-
-    if (createType === 'private') {
-      if (!createTarget) { toast.error('اختر عضوًا'); return; }
-      const existing = conversations.find(
-        (c) =>
-          c.type === 'private' &&
-          c.participantUids.length === 2 &&
-          c.participantUids.includes(user.uid) &&
-          c.participantUids.includes(createTarget),
-      );
-      if (existing) {
-        setActiveId(existing.id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.info('المحادثة موجودة — تم فتحها');
-        return;
-      }
-
+  const createConv = async () => {
+    if (type === 'private') {
+      if (!target) { toast.error('اختر عضوًا'); return; }
+      const ex = conversations.find((c) => c.type === 'private' && c.participantUids.includes(user.uid) && c.participantUids.includes(target));
+      if (ex) { setActiveId(ex.id); setMobile(true); setOpen(false); toast.info('المحادثة موجودة'); return; }
       setBusy(true);
       try {
         const id = newId('CONV-PRIVATE');
         await createOne('conversations', {
-          id,
-          type: 'private',
-          title: '',
-          participantUids: [user.uid, createTarget],
-          lastMessageAt: now(),
-          createdBy: user.uid,
+          id, type: 'private', title: '', participantUids: [user.uid, target],
+          lastMessageAt: now(), createdBy: user.uid,
         });
-        setActiveId(id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        setCreateTarget('');
-        toast.success('تم إنشاء المحادثة');
-      } catch {
-        toast.error('فشل الإنشاء');
-      } finally { setBusy(false); }
+        setActiveId(id); setMobile(true); setOpen(false); setTarget(''); toast.success('تم');
+      } catch { toast.error('فشل'); } finally { setBusy(false); }
     } else {
-      const id = 'CONV-TEAM-' + createTeamId;
-      const existing = conversations.find((c) => c.id === id);
-      if (existing) {
-        setActiveId(id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.info('المحادثة موجودة');
-        return;
-      }
+      const id = 'CONV-TEAM-' + teamId;
+      const ex = conversations.find((c) => c.id === id);
+      if (ex) { setActiveId(id); setMobile(true); setOpen(false); toast.info('موجودة'); return; }
       setBusy(true);
       try {
         await createOne('conversations', {
-          id,
-          type: 'team',
-          title: 'فريق ' + (teams.find((t) => t.id === createTeamId)?.name ?? ''),
-          teamId: createTeamId,
-          participantUids: [],
-          lastMessageAt: now(),
-          createdBy: user.uid,
+          id, type: 'team', title: 'فريق ' + (teams.find((t) => t.id === teamId)?.name ?? ''),
+          teamId, participantUids: [], lastMessageAt: now(), createdBy: user.uid,
         });
-        setActiveId(id);
-        setMobileShowChat(true);
-        setOpenCreate(false);
-        toast.success('تم إنشاء محادثة الفريق');
-      } catch {
-        toast.error('فشل الإنشاء');
-      } finally { setBusy(false); }
+        setActiveId(id); setMobile(true); setOpen(false); toast.success('تم');
+      } catch { toast.error('فشل'); } finally { setBusy(false); }
     }
   };
 
   return (
     <div className="container" style={{ paddingTop: 12 }}>
       <div className="chat-layout">
-        <div className={'chat-sidebar' + (mobileShowChat ? ' is-hidden show-desktop' : '')}>
+        <div className={'chat-sidebar' + (mobile ? ' is-hidden show-desktop' : '')}>
           <div className="chat-sidebar__head">
             <div className="row row--between" style={{ gap: 8 }}>
               <div className="chat-sidebar__title">المحادثات</div>
-              <button
-                type="button"
-                className="chat-sidebar__new"
-                onClick={() => setOpenCreate(true)}
-              >
-                + جديدة
-              </button>
+              <button type="button" className="chat-sidebar__new" onClick={() => setOpen(true)}>+ جديدة</button>
             </div>
           </div>
-          <ConversationList
-            conversations={myConversations}
-            activeId={currentId ?? undefined}
-            currentUser={user}
-            users={users}
-            onSelect={(id) => { setActiveId(id); setMobileShowChat(true); }}
-          />
+          <ConversationList conversations={myConvs} activeId={currentId ?? undefined} currentUser={user} users={users} onSelect={(id) => { setActiveId(id); setMobile(true); }} />
         </div>
 
-        <div className={'chat-panel' + (!mobileShowChat ? ' is-hidden show-desktop' : '')}>
+        <div className={'chat-panel' + (!mobile ? ' is-hidden show-desktop' : '')}>
           {!active ? (
             <div className="chat-panel__empty">
               <div className="chat-panel__empty-icon">💬</div>
               <div style={{ fontWeight: 700, marginBottom: 6 }}>اختر محادثة</div>
-              <div className="small muted">أو أنشئ واحدة جديدة من زر "+ جديدة"</div>
+              <div className="small muted">أو اضغط "+ جديدة"</div>
             </div>
           ) : (
             <>
               <div className="chat-header">
-                <button
-                  type="button"
-                  className="chat-header__back"
-                  onClick={() => setMobileShowChat(false)}
-                  aria-label="رجوع"
-                >
-                  ‹
-                </button>
+                <button type="button" className="chat-header__back" onClick={() => setMobile(false)} aria-label="رجوع">‹</button>
                 <div className="chat-header__info">
-                  <div className="chat-header__title">{getConvName()}</div>
-                  <div className="chat-header__sub">
-                    {active.type === 'general'
-                      ? 'الجميع'
-                      : active.type === 'team'
-                        ? 'فريق'
-                        : 'محادثة خاصة'}
-                  </div>
+                  <div className="chat-header__title">{getName()}</div>
+                  <div className="chat-header__sub">{active.type === 'general' ? 'الجميع' : active.type === 'team' ? 'فريق' : 'خاصة'}</div>
                 </div>
               </div>
-
               <div className="chat-messages">
-                {activeMessages.length === 0 ? (
-                  <EmptyState title="ابدأ المحادثة" message="لا رسائل بعد. كن أول من يكتب." />
-                ) : (
-                  activeMessages.map((m) => (
-                    <MessageBubble key={m.id} message={m} currentUser={user} />
-                  ))
-                )}
+                {activeMsgs.length === 0 ? <EmptyState title="ابدأ المحادثة" message="لا رسائل بعد." /> :
+                  activeMsgs.map((m) => <MessageBubble key={m.id} message={m} currentUser={user} />)}
               </div>
-
-              <Composer onSend={sendMessage} />
+              <Composer onSend={send} />
             </>
           )}
         </div>
       </div>
 
-      <Modal
-        open={openCreate}
-        title="محادثة جديدة"
-        onClose={() => setOpenCreate(false)}
+      <Modal open={open} title="محادثة جديدة" onClose={() => setOpen(false)}
         footer={
           <>
-            <button type="button" className="btn btn--ghost" onClick={() => setOpenCreate(false)}>
-              إلغاء
-            </button>
-            <button type="button" className="btn btn--primary" onClick={createConversation} disabled={busy}>
-              {busy ? '...' : 'إنشاء'}
-            </button>
+            <button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>إلغاء</button>
+            <button type="button" className="btn btn--primary" onClick={createConv} disabled={busy}>{busy ? '...' : 'إنشاء'}</button>
           </>
         }
       >
         <FormField label="النوع" required>
-          <Select
-            value={createType}
-            onChange={(v) => setCreateType(v as 'private' | 'team')}
-            options={[
-              { value: 'private', label: 'محادثة خاصة (مع عضو)' },
-              { value: 'team', label: 'محادثة فريق' },
-            ]}
-          />
+          <Select value={type} onChange={(v) => setType(v as 'private' | 'team')}
+            options={[{ value: 'private', label: 'خاصة' }, { value: 'team', label: 'فريق' }]} />
         </FormField>
-
-        {createType === 'private' ? (
-          <FormField label="العضو" required hint={otherUsers.length === 0 ? 'لا يوجد أعضاء آخرون' : undefined}>
-            <Select
-              value={createTarget}
-              onChange={setCreateTarget}
-              options={[
-                { value: '', label: otherUsers.length === 0 ? '— لا يوجد أعضاء —' : '— اختر عضوًا —' },
-                ...otherUsers.map((u) => ({
-                  value: u.uid,
-                  label: u.displayName + (u.email ? ' (' + u.email + ')' : ''),
-                })),
-              ]}
-            />
+        {type === 'private' ? (
+          <FormField label="العضو" required hint={others.length === 0 ? 'لا يوجد أعضاء' : undefined}>
+            <Select value={target} onChange={setTarget}
+              options={[{ value: '', label: others.length === 0 ? '— لا يوجد —' : '— اختر —' },
+                ...others.map((u) => ({ value: u.uid, label: u.displayName + (u.email ? ' (' + u.email + ')' : '') }))]} />
           </FormField>
         ) : (
           <FormField label="الفريق" required>
-            <Select
-              value={createTeamId}
-              onChange={(v) => setCreateTeamId(v as TeamId)}
-              options={teams.map((t) => ({ value: t.id, label: t.name }))}
-            />
+            <Select value={teamId} onChange={(v) => setTeamId(v as TeamId)}
+              options={teams.map((t) => ({ value: t.id, label: t.name }))} />
           </FormField>
         )}
-
-        <p className="small muted mt-3" style={{ lineHeight: 1.7 }}>
-          ملاحظة: لو المحادثة موجودة بالفعل، سيتم فتحها مباشرة.
-        </p>
       </Modal>
     </div>
   );

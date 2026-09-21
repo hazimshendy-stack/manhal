@@ -19,151 +19,67 @@ import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
 import type { AppUser, RoleId, TeamId } from '@/types';
 
-const ROLE_OPTIONS: Array<{ value: RoleId; label: string }> = (
-  Object.entries(ROLE_LABEL) as Array<[RoleId, string]>
-).map(([value, label]) => ({ value, label }));
+const ROLE_OPTS: Array<{ value: RoleId; label: string }> = (Object.entries(ROLE_LABEL) as Array<[RoleId, string]>).map(([value, label]) => ({ value, label }));
 
-function generatePassword(): string {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-  let pass = '';
-  for (let i = 0; i < 10; i += 1) pass += chars.charAt(Math.floor(Math.random() * chars.length));
-  return pass + '@1';
+function genPass(): string {
+  const c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+  let p = '';
+  for (let i = 0; i < 10; i += 1) p += c.charAt(Math.floor(Math.random() * c.length));
+  return p + '@1';
 }
 
 export function AdminUsersPage() {
   const { user: me } = useAuth();
   const { data: users, loading } = useCollection<AppUser>('users');
+  const { data: liveMembers } = useCollection<{ id: string; name: string }>('members');
+  const { data: liveCommittees } = useCollection<{ id: string; nameAr: string }>('committees');
 
-  const [openCreate, setOpenCreate] = useState(false);
+  const [open, setOpen] = useState(false);
   const [toDelete, setToDelete] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState(generatePassword());
+  const [password, setPassword] = useState(genPass());
   const [name, setName] = useState('');
   const [role, setRole] = useState<RoleId>('MEMBER');
   const [teamId, setTeamId] = useState<TeamId>('helpers');
   const [committeeIds, setCommitteeIds] = useState<string[]>([]);
   const [bio, setBio] = useState('');
-  const [createdAccount, setCreatedAccount] = useState<{ email: string; password: string; name: string } | null>(null);
+  const [created, setCreated] = useState<{ email: string; password: string; name: string } | null>(null);
 
-  const resetForm = () => {
-    setEmail('');
-    setPassword(generatePassword());
-    setName('');
-    setRole('MEMBER');
-    setTeamId('helpers');
-    setCommitteeIds([]);
-    setBio('');
-  };
+  const memberList = liveMembers.length > 0 ? liveMembers : members.map((m) => ({ id: m.id, name: m.name }));
+  const committeeList = liveCommittees.length > 0 ? liveCommittees : committees.map((c) => ({ id: c.id, nameAr: c.nameAr }));
 
-  const handleCreate = async () => {
-    if (!email.trim() || !password || !name.trim()) {
-      toast.error('البيانات ناقصة', 'البريد، كلمة المرور، والاسم مطلوبة');
-      return;
-    }
-    if (password.length < 6) {
-      toast.error('كلمة المرور ضعيفة');
-      return;
-    }
+  const reset = () => { setEmail(''); setPassword(genPass()); setName(''); setRole('MEMBER'); setTeamId('helpers'); setCommitteeIds([]); setBio(''); };
+
+  const create = async () => {
+    if (!email.trim() || !name.trim()) { toast.error('البيانات ناقصة'); return; }
+    if (password.length < 6) { toast.error('كلمة المرور ضعيفة'); return; }
     setBusy(true);
     try {
-      const input: CreateMemberInput = {
-        email: email.trim(),
-        temporaryPassword: password,
-        name: name.trim(),
-        role,
-        teamIds: [teamId],
-        committeeIds,
-        bio: bio.trim() || undefined,
-      };
-      await adminCreateMember(input, me?.uid ?? 'system');
-      await logAudit(me, 'CREATE_USER', 'User', email, 'إنشاء حساب: ' + name);
-      setCreatedAccount({ email: input.email, password: input.temporaryPassword, name: input.name });
+      await adminCreateMember({ email: email.trim(), temporaryPassword: password, name: name.trim(), role, teamIds: [teamId], committeeIds, bio: bio.trim() || undefined }, me?.uid ?? 'system');
+      await logAudit(me, 'CREATE_USER', 'User', email, 'إنشاء: ' + name);
+      setCreated({ email: email.trim(), password, name: name.trim() });
       toast.success('تم إنشاء الحساب');
-      resetForm();
-      setOpenCreate(false);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'فشل الإنشاء';
-      toast.error('فشل الإنشاء', msg);
-    } finally { setBusy(false); }
-  };
-
-  const changeRole = async (uid: string, newRole: RoleId) => {
-    try {
-      await updateOne('users', uid, { role: newRole });
-      await logAudit(me, 'CHANGE_ROLE', 'User', uid, 'تغيير الدور');
-      toast.success('تم تغيير الدور');
-    } catch { toast.error('فشل'); }
-  };
-
-  const changeTeam = async (uid: string, newTeam: TeamId) => {
-    try {
-      await updateOne('users', uid, { teamId: newTeam });
-      toast.success('تم تغيير الفريق');
-    } catch { toast.error('فشل'); }
-  };
-
-  const linkMember = async (uid: string, memberId: string) => {
-    try {
-      await updateOne('users', uid, { memberId: memberId || null });
-      if (memberId) await updateOne('members', memberId, { linkedUserId: uid });
-      toast.success('تم الربط');
-    } catch { toast.error('فشل'); }
-  };
-
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    setBusy(true);
-    try {
-      await removeOne('users', toDelete);
-      await logAudit(me, 'DELETE_USER', 'User', toDelete, 'حذف');
-      toast.success('تم الحذف');
-      setToDelete(null);
-    } catch { toast.error('فشل'); }
+      reset(); setOpen(false);
+    } catch (e) { toast.error('فشل', e instanceof Error ? e.message : ''); }
     finally { setBusy(false); }
   };
 
+  const chRole = async (uid: string, r: RoleId) => { try { await updateOne('users', uid, { role: r }); toast.success('تم'); } catch { toast.error('فشل'); } };
+  const chTeam = async (uid: string, t: TeamId) => { try { await updateOne('users', uid, { teamId: t }); toast.success('تم'); } catch { toast.error('فشل'); } };
+  const link = async (uid: string, mid: string) => { try { await updateOne('users', uid, { memberId: mid || null }); if (mid) await updateOne('members', mid, { linkedUserId: uid }); toast.success('تم'); } catch { toast.error('فشل'); } };
+  const del = async () => { if (!toDelete) return; setBusy(true); try { await removeOne('users', toDelete); toast.success('تم'); setToDelete(null); } catch { toast.error('فشل'); } finally { setBusy(false); } };
+
   return (
     <div className="admin-page">
-      <PageHeader
-        eyebrow="إدارة"
-        title="المستخدمون"
-        description="إنشاء الحسابات، الأدوار، والربط بالأعضاء."
-      />
+      <PageHeader eyebrow="إدارة" title="المستخدمون" description="إنشاء الحسابات والأدوار." />
+      <SectionHeader eyebrow="القائمة" title={'المستخدمون (' + users.length + ')'}
+        action={<button type="button" className="btn btn--primary btn--sm" onClick={() => { reset(); setOpen(true); }}>+ مستخدم جديد</button>} />
 
-      <SectionHeader
-        eyebrow="القائمة"
-        title={'المستخدمون (' + users.length + ')'}
-        action={
-          <button
-            type="button"
-            className="btn btn--primary btn--sm"
-            onClick={() => { resetForm(); setOpenCreate(true); }}
-          >
-            + مستخدم جديد
-          </button>
-        }
-      />
-
-      {loading ? (
-        <SkeletonList count={6} />
-      ) : users.length === 0 ? (
-        <EmptyState title="لا مستخدمين" message="ابدأ بإنشاء أول مستخدم."
-          action={<button type="button" className="btn btn--primary" onClick={() => { resetForm(); setOpenCreate(true); }}>+ إنشاء</button>} />
-      ) : (
+      {loading ? <SkeletonList count={6} /> : users.length === 0 ? <EmptyState title="لا مستخدمين" message="ابدأ." /> : (
         <div className="table-wrap">
           <table className="data">
-            <thead>
-              <tr>
-                <th>الاسم</th>
-                <th>البريد</th>
-                <th>الدور</th>
-                <th>الفريق</th>
-                <th>العضو</th>
-                <th>إجراءات</th>
-              </tr>
-            </thead>
+            <thead><tr><th>الاسم</th><th>البريد</th><th>الدور</th><th>الفريق</th><th>العضو</th><th>إجراءات</th></tr></thead>
             <tbody>
               {users.map((u) => (
                 <tr key={u.uid}>
@@ -173,48 +89,23 @@ export function AdminUsersPage() {
                   </td>
                   <td className="muted small" data-label="البريد" dir="ltr">{u.email}</td>
                   <td data-label="الدور">
-                    <select
-                      className="input"
-                      value={u.role}
-                      onChange={(e) => changeRole(u.uid, e.target.value as RoleId)}
-                      style={{ minWidth: 140 }}
-                    >
-                      {ROLE_OPTIONS.map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
+                    <select className="input" value={u.role} onChange={(e) => chRole(u.uid, e.target.value as RoleId)} style={{ minWidth: 140 }}>
+                      {ROLE_OPTS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
                     </select>
                   </td>
                   <td data-label="الفريق">
-                    <select
-                      className="input"
-                      value={u.teamId ?? ''}
-                      onChange={(e) => changeTeam(u.uid, e.target.value as TeamId)}
-                      style={{ minWidth: 120 }}
-                    >
+                    <select className="input" value={u.teamId ?? ''} onChange={(e) => chTeam(u.uid, e.target.value as TeamId)} style={{ minWidth: 120 }}>
                       <option value="">— بدون —</option>
                       {teams.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </td>
                   <td data-label="العضو">
-                    <select
-                      className="input"
-                      value={u.memberId ?? ''}
-                      onChange={(e) => linkMember(u.uid, e.target.value)}
-                      style={{ minWidth: 140 }}
-                    >
+                    <select className="input" value={u.memberId ?? ''} onChange={(e) => link(u.uid, e.target.value)} style={{ minWidth: 140 }}>
                       <option value="">— غير مرتبط —</option>
-                      {members.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      {memberList.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                     </select>
                   </td>
-                  <td data-label="إجراءات">
-                    <button
-                      type="button"
-                      className="btn btn--danger btn--xs"
-                      onClick={() => setToDelete(u.uid)}
-                    >
-                      حذف
-                    </button>
-                  </td>
+                  <td data-label="إجراءات"><button type="button" className="btn btn--danger btn--xs" onClick={() => setToDelete(u.uid)}>حذف</button></td>
                 </tr>
               ))}
             </tbody>
@@ -222,86 +113,35 @@ export function AdminUsersPage() {
         </div>
       )}
 
-      {/* Create Modal */}
-      <Modal
-        open={openCreate}
-        title="إنشاء مستخدم جديد"
-        onClose={() => setOpenCreate(false)}
-        wide
-        footer={
-          <>
-            <button type="button" className="btn btn--ghost" onClick={() => setOpenCreate(false)}>إلغاء</button>
-            <button type="button" className="btn btn--primary" onClick={handleCreate} disabled={busy}>
-              {busy ? '...' : 'إنشاء'}
-            </button>
-          </>
-        }
-      >
-        <FormField label="الاسم الكامل" required>
-          <TextInput value={name} onChange={setName} placeholder="مثال: أحمد محمد" />
-        </FormField>
-        <FormField label="البريد الإلكتروني" required>
-          <TextInput value={email} onChange={setEmail} type="email" placeholder="name@resala-stem.org" />
-        </FormField>
-        <FormField label="كلمة المرور المؤقتة" required hint="سيُطلب تغييرها عند أول دخول">
+      <Modal open={open} title="إنشاء مستخدم جديد" onClose={() => setOpen(false)} wide
+        footer={<><button type="button" className="btn btn--ghost" onClick={() => setOpen(false)}>إلغاء</button><button type="button" className="btn btn--primary" onClick={create} disabled={busy}>{busy ? '...' : 'إنشاء'}</button></>}>
+        <FormField label="الاسم الكامل" required><TextInput value={name} onChange={setName} /></FormField>
+        <FormField label="البريد" required><TextInput value={email} onChange={setEmail} type="email" /></FormField>
+        <FormField label="كلمة المرور المؤقتة" required hint="يجب تغييرها عند أول دخول">
           <div style={{ display: 'flex', gap: 8 }}>
             <TextInput value={password} onChange={setPassword} type="text" />
-            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPassword(generatePassword())}>
-              توليد
-            </button>
+            <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPassword(genPass())}>توليد</button>
           </div>
         </FormField>
-        <FormField label="الدور" required>
-          <Select value={role} onChange={(v) => setRole(v as RoleId)} options={ROLE_OPTIONS} />
+        <FormField label="الدور" required><Select value={role} onChange={(v) => setRole(v as RoleId)} options={ROLE_OPTS} /></FormField>
+        <FormField label="الفريق" required><Select value={teamId} onChange={(v) => setTeamId(v as TeamId)} options={teams.map((t) => ({ value: t.id, label: t.name }))} /></FormField>
+        <FormField label="اللجان" hint={committeeList.length === 0 ? 'لا توجد لجان' : undefined}>
+          <MultiSelect values={committeeIds} onChange={setCommitteeIds} options={committeeList.map((c) => ({ value: c.id, label: c.nameAr }))} />
         </FormField>
-        <FormField label="الفريق" required>
-          <Select value={teamId} onChange={(v) => setTeamId(v as TeamId)}
-            options={teams.map((t) => ({ value: t.id, label: t.name }))} />
-        </FormField>
-        <FormField label="اللجان">
-          <MultiSelect
-            values={committeeIds}
-            onChange={setCommitteeIds}
-            options={committees.map((c) => ({ value: c.id, label: c.nameAr }))}
-          />
-        </FormField>
-        <FormField label="نبذة قصيرة">
-          <TextInput value={bio} onChange={setBio} placeholder="مثال: مطور واجهات" />
-        </FormField>
+        <FormField label="نبذة"><TextInput value={bio} onChange={setBio} /></FormField>
       </Modal>
 
-      {/* Created Account Info */}
-      <Modal
-        open={createdAccount !== null}
-        title="✓ تم إنشاء الحساب"
-        onClose={() => setCreatedAccount(null)}
-        footer={
-          <button type="button" className="btn btn--primary" onClick={() => setCreatedAccount(null)}>
-            فهمت
-          </button>
-        }
-      >
-        <p style={{ lineHeight: 1.8, marginBottom: 16 }}>أرسل بيانات الدخول التالية إلى العضو:</p>
-        <div style={{
-          background: 'var(--c-off-white)', border: '1px solid var(--c-line)',
-          borderRadius: 'var(--radius-sm)', padding: 16, fontSize: '0.9rem', lineHeight: 2,
-        }}>
-          <div><strong>الاسم:</strong> {createdAccount?.name}</div>
-          <div style={{ wordBreak: 'break-all' }}><strong>البريد:</strong>{' '}<span dir="ltr">{createdAccount?.email}</span></div>
-          <div style={{ wordBreak: 'break-all' }}><strong>كلمة المرور:</strong>{' '}<span dir="ltr" style={{ fontFamily: 'var(--font-en)' }}>{createdAccount?.password}</span></div>
+      <Modal open={created !== null} title="✓ تم إنشاء الحساب" onClose={() => setCreated(null)}
+        footer={<button type="button" className="btn btn--primary" onClick={() => setCreated(null)}>فهمت</button>}>
+        <p style={{ lineHeight: 1.8, marginBottom: 16 }}>أرسل البيانات للعضو:</p>
+        <div style={{ background: 'var(--c-off-white)', border: '1px solid var(--c-line)', borderRadius: 10, padding: 16, fontSize: '0.9rem', lineHeight: 2 }}>
+          <div><strong>الاسم:</strong> {created?.name}</div>
+          <div style={{ wordBreak: 'break-all' }}><strong>البريد:</strong> <span dir="ltr">{created?.email}</span></div>
+          <div style={{ wordBreak: 'break-all' }}><strong>المرور:</strong> <span dir="ltr" style={{ fontFamily: 'var(--font-en)' }}>{created?.password}</span></div>
         </div>
       </Modal>
 
-      <ConfirmDialog
-        open={toDelete !== null}
-        title="حذف المستخدم"
-        message="هل أنت متأكد؟ لا يمكن التراجع."
-        confirmLabel="حذف"
-        danger
-        busy={busy}
-        onConfirm={handleDelete}
-        onCancel={() => setToDelete(null)}
-      />
+      <ConfirmDialog open={toDelete !== null} title="حذف" message="متأكد؟" confirmLabel="حذف" danger busy={busy} onConfirm={del} onCancel={() => setToDelete(null)} />
     </div>
   );
 }

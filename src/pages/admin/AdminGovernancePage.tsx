@@ -6,23 +6,16 @@ import { logAudit } from '@/lib/audit';
 import { formatDate } from '@/lib/format';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { SkeletonList } from '@/components/ui/Loading';
 import { Modal } from '@/components/ui/Modal';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { FormField, TextInput, TextArea } from '@/components/ui/FormField';
+import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
 import type { GovernanceDocument } from '@/types';
 
-const EMPTY: Omit<GovernanceDocument, 'id'> = {
-  title: '',
-  category: 'السياسات',
-  description: '',
-  content: '',
-  version: '1.0',
-  updatedAt: new Date().toISOString().slice(0, 10),
-};
+const EMPTY: Omit<GovernanceDocument, 'id'> = { title: '', category: 'السياسات', description: '', content: '', version: '1.0', updatedAt: new Date().toISOString().slice(0, 10) };
 
 export function AdminGovernancePage() {
   const { user: me } = useAuth();
@@ -34,106 +27,30 @@ export function AdminGovernancePage() {
   const [busy, setBusy] = useState(false);
 
   const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title, 'ar'));
-
-  const openCreate = () => {
-    setForm({ ...EMPTY, updatedAt: new Date().toISOString().slice(0, 10) });
-    setCreating(true);
-    setEditing(null);
-  };
-
-  const openEdit = (d: GovernanceDocument) => {
-    setForm({
-      title: d.title,
-      category: d.category,
-      description: d.description,
-      content: d.content,
-      version: d.version,
-      updatedAt: d.updatedAt,
-    });
-    setEditing(d);
-    setCreating(false);
-  };
-
+  const openCreate = () => { setForm({ ...EMPTY, updatedAt: new Date().toISOString().slice(0, 10) }); setCreating(true); setEditing(null); };
+  const openEdit = (d: GovernanceDocument) => { setForm({ title: d.title, category: d.category, description: d.description, content: d.content, version: d.version, updatedAt: d.updatedAt }); setEditing(d); setCreating(false); };
   const close = () => { setCreating(false); setEditing(null); };
 
   const save = async () => {
-    if (!form.title.trim()) { toast.error('العنوان مطلوب'); return; }
-    if (!form.content.trim()) { toast.error('الوصف مطلوب'); return; }
-
+    if (!form.title.trim() || !form.content.trim()) { toast.error('العنوان والوصف مطلوبان'); return; }
     setBusy(true);
     try {
-      const payload = {
-        title: form.title.trim(),
-        category: form.category.trim() || 'عام',
-        description: form.description.trim(),
-        content: form.content.trim(),
-        version: form.version.trim() || '1.0',
-        updatedAt: new Date().toISOString().slice(0, 10),
-      };
-
-      if (editing) {
-        await updateOne('governance', editing.id, payload);
-        await logAudit(me, 'UPDATE_GOVERNANCE', 'Governance', editing.id, payload.title);
-        toast.success('تم التحديث');
-      } else {
-        const id = 'GOV-' + Date.now().toString(36).toUpperCase();
-        await createOne('governance', { id, ...payload });
-        await logAudit(me, 'CREATE_GOVERNANCE', 'Governance', id, payload.title);
-        toast.success('تمت الإضافة');
-      }
+      const payload = { ...form, updatedAt: new Date().toISOString().slice(0, 10) };
+      if (editing) { await updateOne('governance', editing.id, payload); toast.success('تم'); }
+      else { const id = 'GOV-' + Date.now().toString(36).toUpperCase(); await createOne('governance', { id, ...payload }); toast.success('تمت الإضافة'); }
       close();
-    } catch {
-      toast.error('فشل الحفظ');
-    } finally {
-      setBusy(false);
-    }
+    } catch { toast.error('فشل'); } finally { setBusy(false); }
   };
 
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    setBusy(true);
-    try {
-      await removeOne('governance', toDelete.id);
-      await logAudit(me, 'DELETE_GOVERNANCE', 'Governance', toDelete.id, toDelete.title);
-      toast.success('تم الحذف');
-      setToDelete(null);
-    } catch {
-      toast.error('فشل الحذف');
-    } finally {
-      setBusy(false);
-    }
-  };
+  const del = async () => { if (!toDelete) return; setBusy(true); try { await removeOne('governance', toDelete.id); toast.success('تم'); setToDelete(null); } catch { toast.error('فشل'); } finally { setBusy(false); } };
 
   return (
-    <div>
-      <PageHeader
-        eyebrow="إدارة"
-        title="الحوكمة"
-        description="أضف السياسات والإجراءات واللوائح بنفسك. لا يُضاف أي شيء تلقائيًا."
-      />
-
-      <SectionHeader
-        eyebrow="القائمة"
-        title={'الوثائق (' + data.length + ')'}
-        action={
-          <button type="button" className="btn btn--primary btn--sm" onClick={openCreate}>
-            + وثيقة جديدة
-          </button>
-        }
-      />
-
-      {loading ? (
-        <SkeletonList count={4} />
-      ) : sorted.length === 0 ? (
-        <EmptyState
-          title="لا وثائق"
-          message="أضف أول وثيقة لتظهر في صفحة الحوكمة."
-          action={
-            <button type="button" className="btn btn--primary" onClick={openCreate}>
-              + إضافة وثيقة
-            </button>
-          }
-        />
+    <div className="admin-page">
+      <PageHeader eyebrow="إدارة" title="الحوكمة" description="أضف السياسات بنفسك." />
+      <SectionHeader eyebrow="القائمة" title={'الوثائق (' + data.length + ')'}
+        action={<button type="button" className="btn btn--primary btn--sm" onClick={openCreate}>+ وثيقة جديدة</button>} />
+      {loading ? <SkeletonList count={4} /> : sorted.length === 0 ? (
+        <EmptyState title="لا وثائق" message="أضف أول وثيقة." action={<button type="button" className="btn btn--primary" onClick={openCreate}>+ إضافة</button>} />
       ) : (
         <div className="stack">
           {sorted.map((d) => (
@@ -141,9 +58,7 @@ export function AdminGovernancePage() {
               <div className="row row--between">
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div className="card__title">{d.title}</div>
-                  <div className="card__meta">
-                    {d.category} · v{d.version} · آخر تحديث {formatDate(d.updatedAt)}
-                  </div>
+                  <div className="card__meta">{d.category} · v{d.version} · آخر تحديث {formatDate(d.updatedAt)}</div>
                 </div>
                 <Badge variant="info">{d.category}</Badge>
               </div>
@@ -156,52 +71,15 @@ export function AdminGovernancePage() {
           ))}
         </div>
       )}
-
-      <Modal
-        open={creating || editing !== null}
-        title={editing ? 'تعديل وثيقة' : 'وثيقة جديدة'}
-        onClose={close}
-        wide
-        footer={
-          <>
-            <button type="button" className="btn btn--ghost" onClick={close}>إلغاء</button>
-            <button type="button" className="btn btn--primary" onClick={save} disabled={busy}>
-              {busy ? '...' : 'حفظ'}
-            </button>
-          </>
-        }
-      >
-        <FormField label="العنوان" required>
-          <TextInput value={form.title} onChange={(v) => setForm({ ...form, title: v })} placeholder="مثال: لائحة العضوية" />
-        </FormField>
-
-        <FormField label="التصنيف" required>
-          <TextInput value={form.category} onChange={(v) => setForm({ ...form, category: v })} placeholder="السياسات / الإجراءات / الحوكمة" />
-        </FormField>
-
-        <FormField label="الوصف المختصر" hint="يظهر في القائمة كسطر تعريفي">
-          <TextInput value={form.description} onChange={(v) => setForm({ ...form, description: v })} />
-        </FormField>
-
-        <FormField label="النص الكامل" required>
-          <TextArea value={form.content} onChange={(v) => setForm({ ...form, content: v })} rows={8} placeholder="اكتب نص الوثيقة كاملًا هنا..." />
-        </FormField>
-
-        <FormField label="الإصدار" required>
-          <TextInput value={form.version} onChange={(v) => setForm({ ...form, version: v })} placeholder="1.0" />
-        </FormField>
+      <Modal open={creating || editing !== null} title={editing ? 'تعديل وثيقة' : 'وثيقة جديدة'} onClose={close} wide
+        footer={<><button type="button" className="btn btn--ghost" onClick={close}>إلغاء</button><button type="button" className="btn btn--primary" onClick={save} disabled={busy}>{busy ? '...' : 'حفظ'}</button></>}>
+        <FormField label="العنوان" required><TextInput value={form.title} onChange={(v) => setForm({ ...form, title: v })} /></FormField>
+        <FormField label="التصنيف" required><TextInput value={form.category} onChange={(v) => setForm({ ...form, category: v })} /></FormField>
+        <FormField label="الوصف المختصر"><TextInput value={form.description} onChange={(v) => setForm({ ...form, description: v })} /></FormField>
+        <FormField label="النص الكامل" required><TextArea value={form.content} onChange={(v) => setForm({ ...form, content: v })} rows={8} /></FormField>
+        <FormField label="الإصدار" required><TextInput value={form.version} onChange={(v) => setForm({ ...form, version: v })} /></FormField>
       </Modal>
-
-      <ConfirmDialog
-        open={toDelete !== null}
-        title="حذف الوثيقة"
-        message={'سيتم حذف "' + (toDelete?.title || '') + '". متابعة؟'}
-        confirmLabel="حذف"
-        danger
-        busy={busy}
-        onConfirm={handleDelete}
-        onCancel={() => setToDelete(null)}
-      />
+      <ConfirmDialog open={toDelete !== null} title="حذف" message={'حذف "' + (toDelete?.title || '') + '"؟'} confirmLabel="حذف" danger busy={busy} onConfirm={del} onCancel={() => setToDelete(null)} />
     </div>
   );
 }
