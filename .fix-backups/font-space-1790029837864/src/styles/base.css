@@ -14,7 +14,7 @@ body {
 }
 #root { min-height: 100vh; min-height: 100dvh; }
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font);
+  font-family: var(--font-display);
   color: var(--c-ink);
   font-weight: 400;
   line-height: 1.3;
@@ -57,7 +57,7 @@ h1, h2, h3, h4, h5, h6,
 .modal__head h3,
 .login-card h1,
 .login-card h2 {
-  font-family: var(--font);
+  font-family: var(--font-display);
   font-weight: 400;
   letter-spacing: 0;
 }

@@ -6,7 +6,7 @@
 @media (min-width: 900px) { .footer__inner { grid-template-columns: 2fr 3fr; gap: 56px; } }
 .footer__brand-col { display: flex; flex-direction: column; gap: 16px; }
 .footer__brand {
-  font-family: var(--font-display);
+  font-family: var(--font);
   font-size: 1.65rem;
   color: var(--c-paper);
   letter-spacing: 0.02em;

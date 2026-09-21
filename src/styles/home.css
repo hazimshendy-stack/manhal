@@ -1,7 +1,7 @@
 .home-hero { padding-block: 72px 56px; }
 @media (max-width: 640px) { .home-hero { padding-block: 48px 40px; } }
 .home-hero__title {
-  font-family: var(--font-display);
+  font-family: var(--font);
   font-size: clamp(2rem, 5vw, 3.2rem);
   line-height: 1.15;
   margin-top: 16px;

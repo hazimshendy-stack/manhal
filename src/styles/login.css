@@ -24,7 +24,7 @@
 }
 
 .change-password-notice strong {
-  font-family: var(--font-display);
+  font-family: var(--font);
   font-weight: 400;
   letter-spacing: 0;
 }

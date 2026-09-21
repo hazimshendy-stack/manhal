@@ -19,6 +19,6 @@
 .onboarding-header__title,
 .onboarding-card__title,
 .onboarding-cta {
-  font-family: var(--font-display);
+  font-family: var(--font);
   letter-spacing: 0;
 }
