@@ -10,7 +10,7 @@ import { Composer } from '@/components/chat/Composer';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
 import { Modal } from '@/components/ui/Modal';
-import { FormField, Select, TextInput } from '@/components/ui/FormField';
+import { FormField, Select } from '@/components/ui/FormField';
 import { toast } from '@/components/ui/Toast';
 import type { Conversation, Message, AppUser, TeamId } from '@/types';
 
