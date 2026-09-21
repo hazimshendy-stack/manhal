@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { teams } from '@/data/teams';
 import { committees } from '@/data/committees';
@@ -37,11 +38,7 @@ export function LeaguePage() {
   const board = useMemo(() => {
     return [...filtered]
       .sort((a, b) => hoursToPoints(b.hours) - hoursToPoints(a.hours))
-      .map((m, i) => ({
-        member: m,
-        rank: i + 1,
-        points: hoursToPoints(m.hours),
-      }));
+      .map((m, i) => ({ member: m, rank: i + 1, points: hoursToPoints(m.hours) }));
   }, [filtered]);
 
   const totalPoints = board.reduce((s, e) => s + e.points, 0);
@@ -51,9 +48,8 @@ export function LeaguePage() {
     filterType === 'all'
       ? 'الترتيب العام'
       : filterType === 'team'
-        ? 'ترتيب فريق ' + (teams.find((t) => t.id === filterId)?.nameAr || '')
-        : 'ترتيب لجنة ' +
-          (committees.find((c) => c.id === filterId)?.nameAr || '');
+        ? 'ترتيب فريق ' + (teams.find((t) => t.id === filterId)?.name || '')
+        : 'ترتيب لجنة ' + (committees.find((c) => c.id === filterId)?.nameAr || '');
 
   return (
     <div className="container">
@@ -71,82 +67,75 @@ export function LeaguePage() {
         </StatRow>
       </section>
 
-      <div className="chips mb-3">
-        <button
-          type="button"
-          className={cx('chip', filterType === 'all' && 'is-active')}
-          onClick={() => {
-            setFilterType('all');
-            setFilterId('all');
-          }}
-        >
-          عام
-        </button>
-        <button
-          type="button"
-          className={cx('chip', filterType === 'team' && 'is-active')}
-          onClick={() => {
-            setFilterType('team');
-            setFilterId('all');
-          }}
-        >
-          حسب الفريق
-        </button>
-        <button
-          type="button"
-          className={cx('chip', filterType === 'committee' && 'is-active')}
-          onClick={() => {
-            setFilterType('committee');
-            setFilterId('all');
-          }}
-        >
-          حسب اللجنة
-        </button>
+      <div className="league-filters">
+        <div className="chips">
+          <button
+            type="button"
+            className={cx('chip', filterType === 'all' && 'is-active')}
+            onClick={() => { setFilterType('all'); setFilterId('all'); }}
+          >
+            عام
+          </button>
+          <button
+            type="button"
+            className={cx('chip', filterType === 'team' && 'is-active')}
+            onClick={() => { setFilterType('team'); setFilterId('all'); }}
+          >
+            حسب الفريق
+          </button>
+          <button
+            type="button"
+            className={cx('chip', filterType === 'committee' && 'is-active')}
+            onClick={() => { setFilterType('committee'); setFilterId('all'); }}
+          >
+            حسب اللجنة
+          </button>
+        </div>
+
+        {filterType === 'team' ? (
+          <div className="chips league-filters__sub">
+            <button
+              type="button"
+              className={cx('chip', filterId === 'all' && 'is-active')}
+              onClick={() => setFilterId('all')}
+            >
+              كل الفرق
+            </button>
+            {teams.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                className={cx('chip', filterId === t.id && 'is-active')}
+                onClick={() => setFilterId(t.id)}
+              >
+                {t.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {filterType === 'committee' ? (
+          <div className="chips league-filters__sub">
+            <button
+              type="button"
+              className={cx('chip', filterId === 'all' && 'is-active')}
+              onClick={() => setFilterId('all')}
+            >
+              كل اللجان
+            </button>
+            {committees.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={cx('chip', filterId === c.id && 'is-active')}
+                onClick={() => setFilterId(c.id)}
+              >
+                {c.nameAr}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
-
-      {filterType === 'team' ? (
-        <div className="chips mb-4">
-          <button
-            type="button"
-            className={cx('chip', filterId === 'all' && 'is-active')}
-            onClick={() => setFilterId('all')}
-          >
-            كل الفرق
-          </button>
-          {teams.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              className={cx('chip', filterId === t.id && 'is-active')}
-              onClick={() => setFilterId(t.id)}
-            >
-              {t.name}
-            </button>
-          ))}
-        </div>
-      ) : null}
-
-      {filterType === 'committee' ? (
-        <div className="chips mb-4">
-          <button
-            type="button"
-            className={cx('chip', filterId === 'all' && 'is-active')}
-            onClick={() => setFilterId('all')}
-          >
-            كل اللجان
-          </button>
-          {committees.map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              className={cx('chip', filterId === c.id && 'is-active')}
-              onClick={() => setFilterId(c.id)}
-            >
-              {c.icon} {c.nameAr}
-            </button>
-          ))}
-        </div>
-      ) : null}
 
       <section className="section">
         <SectionHeader eyebrow="الترتيب" title={title} />
@@ -154,81 +143,69 @@ export function LeaguePage() {
         {loading ? (
           <SkeletonList count={8} />
         ) : board.length === 0 ? (
-          <EmptyState
-            icon="🥇"
-            title="لا بيانات"
-            message="لا توجد مشاركات مسجلة لهذا التصنيف."
-          />
+          <EmptyState title="لا بيانات" message="لا توجد مشاركات مسجلة لهذا التصنيف." />
         ) : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>العضو</th>
-                  <th>الفريق</th>
-                  <th>الساعات</th>
-                  <th>النقاط</th>
-                </tr>
-              </thead>
-              <tbody>
-                {board.map((e) => {
-                  const memberTeams = teams.filter((t) =>
-                    e.member.teamIds.includes(t.id),
-                  );
-                  return (
-                    <tr key={e.member.id}>
-                      <td
-                        className={
-                          'rank rank--' + (e.rank <= 3 ? e.rank : '')
-                        }
-                        data-label="الترتيب"
-                      >
-                        {e.rank}
-                      </td>
-                      <td data-label="العضو">
-                        <div
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 10,
-                          }}
-                        >
-                          <Avatar name={e.member.name} size={32} variant="navy" />
-                          <span style={{ fontWeight: 700 }}>
-                            {e.member.name}
-                          </span>
-                        </div>
-                      </td>
-                      <td data-label="الفريق">
-                        <div
-                          style={{
-                            display: 'flex',
-                            gap: 4,
-                            flexWrap: 'wrap',
-                          }}
-                        >
-                          {memberTeams.map((t) => (
-                            <span key={t.id} className="badge">
-                              {t.name}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td
-                        style={{ fontFamily: 'var(--font-en)' }}
-                        data-label="الساعات"
-                      >
-                        {e.member.hours}
-                      </td>
-                      <td className="points" data-label="النقاط">
-                        {e.points}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="league-board">
+            {/* ═══ Top 3 podium ═══ */}
+            {board.length >= 3 ? (
+              <div className="league-podium">
+                {board.slice(0, 3).map((e) => (
+                  <Link
+                    key={e.member.id}
+                    to={'/members/' + e.member.id}
+                    className={'league-podium__card league-podium__card--' + e.rank}
+                  >
+                    <span className={'league-podium__rank league-podium__rank--' + e.rank}>
+                      #{e.rank}
+                    </span>
+                    <Avatar name={e.member.name} size={64} variant={e.rank === 1 ? 'red' : 'navy'} />
+                    <div className="league-podium__name">{e.member.name}</div>
+                    <div className="league-podium__points">{e.points} نقطة</div>
+                    <div className="league-podium__hours">{e.member.hours} ساعة</div>
+                  </Link>
+                ))}
+              </div>
+            ) : null}
+
+            {/* ═══ Full list ═══ */}
+            <div className="league-list">
+              <div className="league-list__head">
+                <span className="col-rank">#</span>
+                <span className="col-name">العضو</span>
+                <span className="col-team">الفريق</span>
+                <span className="col-hours">الساعات</span>
+                <span className="col-points">النقاط</span>
+              </div>
+              {board.map((e) => {
+                const memberTeams = teams.filter((t) => e.member.teamIds.includes(t.id));
+                return (
+                  <Link
+                    key={e.member.id}
+                    to={'/members/' + e.member.id}
+                    className="league-list__row"
+                  >
+                    <span className={'col-rank rank-badge rank-' + (e.rank <= 3 ? e.rank : 'n')}>
+                      {e.rank}
+                    </span>
+                    <span className="col-name">
+                      <Avatar name={e.member.name} size={32} variant="navy" />
+                      <span className="league-list__name">{e.member.name}</span>
+                    </span>
+                    <span className="col-team">
+                      {memberTeams.length === 0 ? (
+                        <span className="muted small">—</span>
+                      ) : (
+                        memberTeams.map((t) => (
+                          <span key={t.id} className="badge">{t.name}</span>
+                        ))
+                      )}
+                    </span>
+                    <span className="col-hours">{e.member.hours}</span>
+                    <span className="col-points">{e.points}</span>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         )}
       </section>

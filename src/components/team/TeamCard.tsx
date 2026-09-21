@@ -16,27 +16,31 @@ export function TeamCard({ team, rank }: TeamCardProps) {
   const totalPoints = hoursToPoints(totalHours);
   const avgPoints = teamMembers.length === 0 ? 0 : Math.round(totalPoints / teamMembers.length);
 
+  const isFirst = rank === 1;
+
   return (
-    <Link to={'/teams/' + team.id} className="card">
-      <div className="row row--between">
-        <div className="card__title">{team.name}</div>
-        {rank !== undefined ? <span className="badge badge--red">#{rank}</span> : null}
+    <Link to={'/teams/' + team.id} className="team-card">
+      <div className="team-card__head">
+        <div className="team-card__name">{team.name}</div>
+        {rank !== undefined ? (
+          <span className={'team-card__rank ' + (isFirst ? 'team-card__rank--first' : '')}>
+            #{rank}
+          </span>
+        ) : null}
       </div>
 
-      <div className="card__meta">{team.description}</div>
-
-      <div className="row" style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--c-line)', gap: 20 }}>
-        <div>
-          <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--c-navy)' }}>{totalPoints}</div>
-          <div className="tiny muted">نقاط</div>
+      <div className="team-card__stats">
+        <div className="team-card__stat">
+          <span className="team-card__stat-value">{totalPoints}</span>
+          <span className="team-card__stat-label">نقاط</span>
         </div>
-        <div>
-          <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--c-navy)' }}>{teamMembers.length}</div>
-          <div className="tiny muted">أعضاء</div>
+        <div className="team-card__stat">
+          <span className="team-card__stat-value">{teamMembers.length}</span>
+          <span className="team-card__stat-label">أعضاء</span>
         </div>
-        <div>
-          <div style={{ fontFamily: 'var(--font-en)', fontSize: '1.2rem', fontWeight: 800, color: 'var(--c-navy)' }}>{avgPoints}</div>
-          <div className="tiny muted">متوسط</div>
+        <div className="team-card__stat">
+          <span className="team-card__stat-value">{avgPoints}</span>
+          <span className="team-card__stat-label">متوسط</span>
         </div>
       </div>
     </Link>

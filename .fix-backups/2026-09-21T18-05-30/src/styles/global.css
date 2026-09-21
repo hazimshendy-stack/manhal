@@ -1,4 +1,4 @@
-/* sbapiaryy v5.3 — Global CSS */
+/* sbapiaryy v5.2 — Global CSS */
 
 @import './tokens.css';
 @import './base.css';
@@ -28,4 +28,3 @@
 @import './approvals.css';
 @import './print.css';
 @import './v52-fix.css';
-@import './v53-fix.css';

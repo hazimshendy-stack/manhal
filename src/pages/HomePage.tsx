@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { site, activeSeason } from '@/data';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useAuth } from '@/lib/useAuth';
 import { teams } from '@/data/teams';
 import { hoursToPoints } from '@/lib/format';
 import { Stat, StatRow } from '@/components/ui/Stat';
@@ -13,6 +14,7 @@ import { EmptyState } from '@/components/ui/EmptyState';
 import type { Member, Contribution } from '@/types';
 
 export function HomePage() {
+  const { user } = useAuth();
   const { data: members, loading: loadingM } = useRealtimeCollection<Member>('members');
   const { data: contributions, loading: loadingC } = useRealtimeCollection<Contribution>('contributions');
 
@@ -41,116 +43,128 @@ export function HomePage() {
 
   return (
     <>
-      <section className="hero" style={{ padding: '56px 0 40px' }}>
+      {/* ═══════════ HERO ═══════════ */}
+      <section className="home-hero">
         <div className="container">
           <div className="section-head__eyebrow">{activeSeason.label}</div>
-          <h1 style={{ fontSize: 'clamp(2rem, 5vw, 3rem)', fontWeight: 900, lineHeight: 1.15, marginTop: 14, maxWidth: '20ch' }}>
-            منصة <span style={{ color: 'var(--c-navy-3)' }}>{site.organization}</span> Sub Branches
+          <h1 className="home-hero__title">
+            منحل <span className="home-hero__brand">{site.organization}</span> Sub Branches
           </h1>
-          <p style={{ marginTop: 18, maxWidth: '60ch', color: 'var(--c-ink-soft)', fontSize: '1.02rem', lineHeight: 1.85 }}>
-            {site.description}
-          </p>
-          <div className="row" style={{ marginTop: 28, gap: 12 }}>
+          <p className="home-hero__desc">{site.description}</p>
+          <div className="home-hero__actions">
             <Link to="/members" className="btn btn--primary">تصفح الأعضاء</Link>
             <Link to="/league" className="btn btn--ghost">الترتيب العام</Link>
-            <Link to="/login" className="btn btn--ghost">تسجيل الدخول</Link>
+            {!user ? <Link to="/login" className="btn btn--ghost">تسجيل الدخول</Link> : null}
           </div>
         </div>
       </section>
 
-      <section className="container section--tight">
-        {isLoading ? (
-          <Loading />
-        ) : (
-          <StatRow>
-            <Stat value={activeMembers.length} label="الأعضاء" />
-            <Stat value={teams.length} label="الفرق" />
-            <Stat value={totalPoints} label="مجموع النقاط" />
-            <Stat value={totalHours} label="مجموع الساعات" />
-          </StatRow>
-        )}
-      </section>
-
-      <section className="container section">
-        <SectionHeader
-          eyebrow="ترتيب الفرق"
-          title="الفرق حسب النقاط"
-          description="الترتيب تلقائي من بيانات الأعضاء الحقيقية."
-          action={<Link to="/teams" className="btn btn--ghost btn--sm">كل الفرق</Link>}
-        />
-        {isLoading ? (
-          <Loading />
-        ) : teamRanking.length === 0 ? (
-          <EmptyState title="لا بيانات" message="لم تُضف فرق بعد." />
-        ) : (
-          <div className="grid">
-            {teamRanking.map((r) => <TeamCard key={r.team.id} team={r.team} rank={r.rank} />)}
-          </div>
-        )}
-      </section>
-
-      <section className="container section">
-        <SectionHeader
-          eyebrow="الترتيب العام"
-          title="أعلى الأعضاء"
-          action={<Link to="/league" className="btn btn--ghost btn--sm">الترتيب الكامل</Link>}
-        />
-        {isLoading ? (
-          <Loading />
-        ) : topMembers.length === 0 ? (
-          <EmptyState title="لا أعضاء" message="لم يُضف أعضاء بعد." />
-        ) : (
-          <div className="table-wrap">
-            <table className="data">
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>العضو</th>
-                  <th>الفرق</th>
-                  <th>الساعات</th>
-                  <th>النقاط</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topMembers.map((e) => {
-                  const memberTeams = teams.filter((t) => e.member.teamIds.includes(t.id));
-                  return (
-                    <tr key={e.member.id}>
-                      <td className={'rank rank--' + (e.rank <= 3 ? e.rank : '')} data-label="الترتيب">{e.rank}</td>
-                      <td data-label="العضو">
-                        <Link to={'/members/' + e.member.id} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                          <Avatar name={e.member.name} size={32} variant="navy" />
-                          <span style={{ fontWeight: 700 }}>{e.member.name}</span>
-                        </Link>
-                      </td>
-                      <td data-label="الفرق">
-                        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                          {memberTeams.map((t) => <span key={t.id} className="badge">{t.name}</span>)}
-                        </div>
-                      </td>
-                      <td style={{ fontFamily: 'var(--font-en)' }} data-label="الساعات">{e.member.hours}</td>
-                      <td className="points" data-label="النقاط">{hoursToPoints(e.member.hours)}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
-
-      <section className="container section">
-        <div className="card card--navy no-click" style={{ padding: '32px 28px', textAlign: 'center' }}>
-          <Badge variant="red" dot>{activeSeason.theme}</Badge>
-          <h2 style={{ marginTop: 16, fontSize: '1.5rem', color: '#fff' }}>انضم إلى المنصة</h2>
-          <p style={{ marginTop: 12, maxWidth: '46ch', marginInline: 'auto', color: 'var(--c-paper-soft)', fontSize: '0.95rem', lineHeight: 1.8 }}>
-            سجّل دخولك لمتابعة مشاركاتك، التقدم في الليج، والموافقات على طلباتك.
-          </p>
-          <div className="row" style={{ marginTop: 22, justifyContent: 'center' }}>
-            <Link to="/login" className="btn btn--primary">تسجيل الدخول</Link>
-          </div>
+      {/* ═══════════ STATS ═══════════ */}
+      <section className="home-section">
+        <div className="container">
+          {isLoading ? (
+            <Loading />
+          ) : (
+            <StatRow>
+              <Stat value={activeMembers.length} label="الأعضاء" />
+              <Stat value={teams.length} label="الفرق" />
+              <Stat value={totalPoints} label="مجموع النقاط" />
+              <Stat value={totalHours} label="مجموع الساعات" />
+            </StatRow>
+          )}
         </div>
       </section>
+
+      {/* ═══════════ TEAM RANKING ═══════════ */}
+      <section className="home-section">
+        <div className="container">
+          <SectionHeader
+            eyebrow="ترتيب الفرق"
+            title="الفرق حسب النقاط"
+            action={<Link to="/teams" className="btn btn--ghost btn--sm">كل الفرق</Link>}
+          />
+          {isLoading ? (
+            <Loading />
+          ) : teamRanking.length === 0 ? (
+            <EmptyState title="لا بيانات" message="لم تُضف فرق بعد." />
+          ) : (
+            <div className="home-teams-grid">
+              {teamRanking.map((r) => (
+                <TeamCard key={r.team.id} team={r.team} rank={r.rank} />
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ═══════════ TOP MEMBERS ═══════════ */}
+      <section className="home-section">
+        <div className="container">
+          <SectionHeader
+            eyebrow="الترتيب العام"
+            title="أعلى الأعضاء"
+            action={<Link to="/league" className="btn btn--ghost btn--sm">الترتيب الكامل</Link>}
+          />
+          {isLoading ? (
+            <Loading />
+          ) : topMembers.length === 0 ? (
+            <EmptyState title="لا أعضاء" message="لم يُضف أعضاء بعد." />
+          ) : (
+            <div className="home-league-table">
+              <div className="home-league-table__head">
+                <span className="col-rank">#</span>
+                <span className="col-name">العضو</span>
+                <span className="col-team">الفرق</span>
+                <span className="col-hours">الساعات</span>
+                <span className="col-points">النقاط</span>
+              </div>
+              {topMembers.map((e) => {
+                const memberTeams = teams.filter((t) => e.member.teamIds.includes(t.id));
+                return (
+                  <Link
+                    key={e.member.id}
+                    to={'/members/' + e.member.id}
+                    className="home-league-table__row"
+                  >
+                    <span className={'col-rank rank-badge rank-' + (e.rank <= 3 ? e.rank : 'n')}>
+                      {e.rank}
+                    </span>
+                    <span className="col-name">
+                      <Avatar name={e.member.name} size={32} variant="navy" />
+                      <span className="home-league-table__name">{e.member.name}</span>
+                    </span>
+                    <span className="col-team">
+                      {memberTeams.map((t) => (
+                        <span key={t.id} className="badge">{t.name}</span>
+                      ))}
+                    </span>
+                    <span className="col-hours">{e.member.hours}</span>
+                    <span className="col-points">{hoursToPoints(e.member.hours)}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ═══════════ JOIN CTA — يظهر فقط للزوار ═══════════ */}
+      {!user ? (
+        <section className="home-section">
+          <div className="container">
+            <div className="home-join-cta">
+              <Badge variant="red" dot>{activeSeason.theme}</Badge>
+              <h2 className="home-join-cta__title">انضم إلى المنحل</h2>
+              <p className="home-join-cta__desc">
+                سجّل دخولك لمتابعة مشاركاتك، التقدم في الليج، والموافقات على طلباتك.
+              </p>
+              <div className="home-join-cta__actions">
+                <Link to="/login" className="btn btn--primary">تسجيل الدخول</Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      ) : null}
     </>
   );
 }
