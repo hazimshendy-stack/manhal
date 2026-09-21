@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 /**
- * fix.cjs — Desktop = Mobile Layout
- * - Mobile experience: UNCHANGED (0 changes)
- * - Desktop: shows the exact same layout, centered in a phone frame
+ * fix.cjs — Chat Page Fix + English
+ * - Fixes: Cannot read properties of undefined (reading 'includes')
+ * - Safe guards on participantUids, teamIds everywhere
+ * - Full English
  */
 
 const fs = require("fs");
@@ -22,8 +23,6 @@ const C = {
   d: "\x1b[2m",
 };
 const sh = (cmd) => execSync(cmd, { cwd: ROOT, stdio: "inherit" });
-const BUILD_ID =
-  Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
 
 const files = {};
 const F = (p, c) => {
@@ -31,428 +30,570 @@ const F = (p, c) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   Desktop = Mobile — CSS
+   ConversationsPage.tsx — Fixed + English
    ═══════════════════════════════════════════════════════════════ */
-
 F(
-  "src/styles/desktop-mobile.css",
-  `/* ═══════════════════════════════════════════════════════════════
-   DESKTOP = MOBILE
-   - Mobile (<=900px): ZERO changes
-   - Desktop (>900px): phone frame centered
+  "src/pages/ConversationsPage.tsx",
+  `import { useMemo, useState } from 'react';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { createOne, updateOne, newId, now } from '@/lib/db';
+import { teams } from '@/data/teams';
+import { MessageBubble } from '@/components/chat/MessageBubble';
+import { Composer } from '@/components/chat/Composer';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { Modal } from '@/components/ui/Modal';
+import { toast } from '@/components/ui/Toast';
+import { relativeTime } from '@/lib/format';
+import type { Conversation, Message, AppUser, TeamId } from '@/types';
+
+/* ═══════════════════════════════════════════════════════════════
+   Helpers — Safe access
    ═══════════════════════════════════════════════════════════════ */
 
-/* ─── Desktop only — never touch mobile ─── */
-@media (min-width: 901px) {
+function safeArray<T>(arr: T[] | undefined | null): T[] {
+  return Array.isArray(arr) ? arr : [];
+}
 
-  /* Wallpaper behind phone frame */
-  html, body {
-    background: #0A0F2E;
-    min-height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    padding: 20px 0;
-    overflow-x: hidden;
-  }
+function includesSafe(arr: string[] | undefined | null, value: string): boolean {
+  return safeArray(arr).includes(value);
+}
 
-  /* Phone frame */
-  .app-shell {
-    max-width: 440px;
-    width: 100%;
-    min-height: calc(100vh - 40px);
-    max-height: calc(100vh - 40px);
-    margin: 0 auto;
-    background: var(--c-off-white);
-    border-radius: 32px;
-    box-shadow:
-      0 0 0 10px #1a1f3d,
-      0 0 0 12px #2a2f4d,
-      0 30px 80px rgba(0, 0, 0, 0.5);
-    overflow: hidden;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-  }
-
-  /* Scrollable content area */
-  .app-main {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding-bottom: 0 !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .app-main::-webkit-scrollbar {
-    width: 6px;
-  }
-  .app-main::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .app-main::-webkit-scrollbar-thumb {
-    background: var(--c-line-mid);
-    border-radius: 999px;
-  }
-
-  /* ─── Container: same as mobile ─── */
-  .container {
-    max-width: 100% !important;
-    padding-inline: 20px !important;
-    margin-inline: 0 !important;
-  }
-
-  .app-main > *:not(.container) {
-    padding-inline: 20px !important;
-  }
-
-  /* ─── Navbar ─── */
-  .navbar {
-    flex-shrink: 0;
-    border-radius: 32px 32px 0 0;
-  }
-
-  /* ─── Bottom nav: visible on desktop (like mobile) ─── */
-  .bottom-nav {
-    display: flex !important;
-    position: absolute !important;
-    bottom: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    border-radius: 0 0 32px 32px;
-    height: var(--bottom-nav-h) !important;
-    padding-bottom: 0 !important;
-    z-index: 60;
-  }
-
-  .bottom-nav__inner {
-    padding-inline: 6px;
-  }
-
-  /* Make room for bottom nav */
-  .app-main {
-    padding-bottom: calc(var(--bottom-nav-h) + 8px) !important;
-  }
-
-  /* ─── Sidebar: drawer only, never sticky ─── */
-  .sidebar {
-    position: fixed !important;
-    top: 0 !important;
-    left: -320px !important;
-    right: auto !important;
-    width: 300px !important;
-    max-width: 88vw !important;
-    height: 100vh !important;
-    z-index: 9999 !important;
-    padding: 24px 20px !important;
-    transition: left 0.28s var(--ease) !important;
-    box-shadow: 12px 0 40px rgba(21, 26, 69, 0.25) !important;
-    border-right: 1px solid var(--c-line) !important;
-    border-radius: 0 !important;
-    overflow-y: auto !important;
-  }
-
-  .sidebar.is-open {
-    left: 0 !important;
-  }
-
-  .sidebar-overlay {
-    display: block !important;
-    position: fixed !important;
-    inset: 0 !important;
-    z-index: 9998 !important;
-  }
-
-  .sidebar-close {
-    display: flex !important;
-  }
-
-  .dashboard-layout {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-
-  /* ─── All grids → single column ─── */
-  .grid,
-  .grid--wide,
-  .grid--narrow,
-  .grid--2,
-  .home-teams-grid,
-  .admin-cards,
-  .admin-stats,
-  .league-podium,
-  .stat-row,
-  .home-stats {
-    grid-template-columns: 1fr !important;
-    gap: 14px !important;
-  }
-
-  /* ─── Chat: single column ─── */
-  .chat-layout {
-    grid-template-columns: 1fr !important;
-    height: auto !important;
-    min-height: 500px;
-    max-height: calc(100vh - 200px);
-    border-radius: var(--radius);
-    border: 1px solid var(--c-line);
-  }
-
-  .chat-sidebar.is-hidden { display: none !important; }
-  .chat-panel.is-hidden { display: none !important; }
-  .chat-message { max-width: 88% !important; }
-
-  /* ─── Tables → cards (like mobile) ─── */
-  .table-wrap {
-    border: none !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    overflow: visible !important;
-  }
-
-  table.data {
-    display: block !important;
-    font-size: 0.9rem !important;
-  }
-
-  table.data thead { display: none !important; }
-  table.data tbody { display: block !important; }
-
-  table.data tr {
-    display: block !important;
-    background: var(--c-white) !important;
-    border: 1px solid var(--c-line) !important;
-    border-radius: var(--radius) !important;
-    padding: 18px !important;
-    margin-bottom: 14px !important;
-    box-shadow: var(--shadow-xs) !important;
-    position: relative !important;
-  }
-
-  table.data td {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 8px 0 !important;
-    border: none !important;
-    gap: 12px !important;
-  }
-
-  table.data td:not(:first-child)::before {
-    content: attr(data-label) !important;
-    font-size: 0.72rem !important;
-    color: var(--c-ink-muted) !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.04em !important;
-    flex-shrink: 0 !important;
-  }
-
-  /* ─── League table → cards ─── */
-  .league-table__head { display: none !important; }
-
-  .league-table {
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
-  }
-
-  .league-table__row {
-    display: grid !important;
-    grid-template-columns: 48px 1fr auto !important;
-    grid-template-areas:
-      'rank name points'
-      'rank team hours' !important;
-    gap: 8px 14px !important;
-    padding: 18px 20px !important;
-    background: var(--c-white) !important;
-    border: 1px solid var(--c-line) !important;
-    border-radius: var(--radius) !important;
-    box-shadow: var(--shadow-xs) !important;
-  }
-
-  .league-table__row .col-rank { grid-area: rank !important; align-self: center !important; }
-  .league-table__row .col-name { grid-area: name !important; }
-  .league-table__row .col-team { grid-area: team !important; }
-  .league-table__row .col-points { grid-area: points !important; text-align: end !important; align-self: center !important; }
-  .league-table__row .col-hours { grid-area: hours !important; text-align: end !important; font-size: 0.8rem !important; color: var(--c-ink-muted) !important; }
-
-  /* ─── Admin page: single column ─── */
-  .admin-stats { grid-template-columns: repeat(2, 1fr) !important; }
-
-  .admin-page table.data { display: block !important; }
-  .admin-page table.data thead { display: none !important; }
-  .admin-page table.data tbody { display: block !important; }
-  .admin-page table.data tr {
-    display: block !important;
-    background: var(--c-white) !important;
-    border: 1px solid var(--c-line) !important;
-    border-radius: var(--radius) !important;
-    padding: 18px !important;
-    margin-bottom: 14px !important;
-    box-shadow: var(--shadow-xs) !important;
-  }
-  .admin-page table.data td {
-    display: flex !important;
-    justify-content: space-between !important;
-    align-items: center !important;
-    padding: 8px 0 !important;
-    border: none !important;
-    gap: 12px !important;
-  }
-  .admin-page table.data td::before {
-    content: attr(data-label) !important;
-    font-size: 0.72rem !important;
-    color: var(--c-ink-muted) !important;
-    text-transform: uppercase !important;
-    flex-shrink: 0 !important;
-  }
-
-  /* ─── Modals: bottom-sheet style ─── */
-  .modal-backdrop {
-    align-items: flex-end !important;
-    padding: 0 !important;
-  }
-
-  .modal {
-    max-width: 440px !important;
-    border-radius: var(--radius-lg) var(--radius-lg) 0 0 !important;
-    margin-inline: auto !important;
-  }
-
-  .modal--wide {
-    max-width: 440px !important;
-  }
-
-  .modal__handle {
-    display: block !important;
-  }
-
-  /* ─── Toast: mobile position ─── */
-  .toast-container {
-    bottom: calc(20px + var(--bottom-nav-h) + var(--safe-bottom)) !important;
-    left: 20px !important;
-    right: 20px !important;
-    max-width: none !important;
-  }
-
-  /* ─── PWA banner ─── */
-  .pwa-install-banner {
-    left: 20px !important;
-    right: 20px !important;
-    max-width: none !important;
-  }
-
-  /* ─── Brand size ─── */
-  .brand {
-    font-size: 1.2rem !important;
-  }
-
-  /* ─── Hero ─── */
-  .home-hero {
-    padding-block: 48px 40px !important;
-  }
-
-  .home-hero__title {
-    font-size: 1.85rem !important;
-    max-width: none !important;
-  }
-
-  /* ─── Footer: hidden on desktop (like mobile has it small) ─── */
-  .footer {
-    margin-top: 32px !important;
-    padding-block: 32px 24px !important;
-    padding-bottom: 32px !important;
-    border-radius: 0 0 32px 32px;
-  }
-
-  .footer__inner {
-    grid-template-columns: 1fr !important;
-    gap: 24px !important;
-  }
-
-  .footer__links-col {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 20px !important;
-  }
-
-  /* ─── Sections: tighter spacing ─── */
-  .section { padding-block: 28px !important; }
-  .section--tight { padding-block: 18px !important; }
-
-  /* ─── Profile card ─── */
-  .profile {
-    flex-direction: column !important;
-    padding: 22px !important;
-    gap: 18px !important;
-  }
-
-  .profile__side {
-    grid-template-columns: repeat(2, 1fr) !important;
-    min-width: 0 !important;
-  }
-
-  /* ─── Splash/boot screen ─── */
-  .boot-screen {
-    padding-inline: 20px;
-  }
+function findSafe<T>(arr: T[] | undefined | null, fn: (item: T) => boolean): T | undefined {
+  return safeArray(arr).find(fn);
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   Extra large screens — keep it small, just more backdrop
-   ═══════════════════════════════════════════════════════════════ */
-@media (min-width: 1400px) {
-  html, body {
-    background:
-      radial-gradient(1200px 600px at 20% 0%, rgba(193, 39, 45, 0.15), transparent 60%),
-      radial-gradient(900px 500px at 80% 100%, rgba(96, 165, 250, 0.12), transparent 60%),
-      #0A0F2E;
-  }
-}
-`
-);
-
-/* ═══════════════════════════════════════════════════════════════
-   global.css — أضف الـ import
+   ConversationsPage
    ═══════════════════════════════════════════════════════════════ */
 
-const globalPath = path.join(ROOT, "src/styles/global.css");
-if (fs.existsSync(globalPath)) {
-  let global = fs.readFileSync(globalPath, "utf8");
-  if (!global.includes("desktop-mobile.css")) {
-    global = global.replace(
-      "@/import './v52-fix.css';",
-      "@/import './v52-fix.css';\n@import './desktop-mobile.css';"
+export function ConversationsPage() {
+  const { user } = useAuth();
+  const { data: conversations, loading: l1 } = useRealtimeCollection<Conversation>('conversations');
+  const { data: messages, loading: l2 } = useRealtimeCollection<Message>('messages');
+  const { data: users, loading: l3 } = useRealtimeCollection<AppUser>('users');
+
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [mobileShowChat, setMobileShowChat] = useState(false);
+  const [openPicker, setOpenPicker] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickerType, setPickerType] = useState<'private' | 'team'>('private');
+  const [selectedTeam, setSelectedTeam] = useState<TeamId>('helpers');
+  const [busy, setBusy] = useState(false);
+
+  /* ─── Other users ─── */
+  const others = useMemo(() => {
+    if (!user) return [];
+    return safeArray(users)
+      .filter((u) => u && u.uid !== user.uid)
+      .sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+  }, [users, user]);
+
+  const filteredOthers = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    if (!q) return others;
+    return others.filter(
+      (u) =>
+        (u.displayName || '').toLowerCase().includes(q) ||
+        (u.email || '').toLowerCase().includes(q),
     );
-    if (!global.includes("desktop-mobile.css")) {
-      global += "\n@import './desktop-mobile.css';\n";
+  }, [others, pickerQuery]);
+
+  /* ─── My conversations (safe) ─── */
+  const myConvs = useMemo(() => {
+    if (!user) return [];
+    return safeArray(conversations).filter((c) => {
+      if (!c) return false;
+      if (c.type === 'general') return true;
+      if (c.type === 'team') return c.teamId === user.teamId;
+      return includesSafe(c.participantUids, user.uid);
+    });
+  }, [conversations, user]);
+
+  /* ─── Default + active ─── */
+  const defaultId = useMemo(
+    () => myConvs.find((c) => c.type === 'general')?.id ?? null,
+    [myConvs],
+  );
+  const currentId = activeId ?? defaultId;
+  const active = useMemo(
+    () => (currentId ? myConvs.find((c) => c.id === currentId) ?? null : null),
+    [myConvs, currentId],
+  );
+
+  /* ─── Active messages ─── */
+  const activeMsgs = useMemo(() => {
+    if (!currentId) return [];
+    return safeArray(messages)
+      .filter((m) => m && m.conversationId === currentId)
+      .sort((a, b) => (a.sentAt > b.sentAt ? 1 : -1));
+  }, [messages, currentId]);
+
+  if (!user) return null;
+  if (l1 || l2 || l3) return <Loading fullHeight message="Loading conversations..." />;
+
+  /* ─── Conversation name ─── */
+  const getConvName = (): string => {
+    if (!active) return '';
+    if (active.type === 'general') return 'General Chat';
+    if (active.type === 'team') {
+      return 'Team ' + (teams.find((t) => t.id === active.teamId)?.name ?? '');
     }
-    fs.writeFileSync(globalPath, global, "utf8");
-    console.log(`${C.g}✓${C.r} src/styles/global.css`);
-  } else {
-    console.log(`${C.d}→${C.r} global.css already imports desktop-mobile.css`);
-  }
-}
+    const otherUid = findSafe(active.participantUids, (u) => u !== user.uid);
+    const other = safeArray(users).find((u) => u && u.uid === otherUid);
+    return other?.displayName ?? 'Private chat';
+  };
 
-/* ═══════════════════════════════════════════════════════════════
-   Wrapper — نضيف classe للـ app-shell عشان يشتغل على الديسكتوب
-   ═══════════════════════════════════════════════════════════════ */
+  /* ─── Conversation avatar ─── */
+  const getConvAvatar = (): { text: string; variant: 'general' | 'team' | 'private' } => {
+    if (!active) return { text: '?', variant: 'private' };
+    if (active.type === 'general') return { text: '#', variant: 'general' };
+    if (active.type === 'team') {
+      return {
+        text: (teams.find((t) => t.id === active.teamId)?.name ?? 'T').slice(0, 2),
+        variant: 'team',
+      };
+    }
+    const otherUid = findSafe(active.participantUids, (u) => u !== user.uid);
+    const other = safeArray(users).find((u) => u && u.uid === otherUid);
+    return { text: (other?.displayName ?? '?').charAt(0), variant: 'private' };
+  };
 
-F(
-  "src/components/layout/DesktopNotice.tsx",
-  `/**
- * DesktopNotice — optional notice for desktop users
- * Not used by default — kept for future use
- */
-export function DesktopNotice() {
-  return null;
+  /* ─── Send message ─── */
+  const sendMessage = async (text: string) => {
+    if (!currentId || !text.trim()) return;
+    const msg: Message = {
+      id: newId('MSG'),
+      conversationId: currentId,
+      senderUid: user.uid,
+      senderName: user.displayName,
+      text: text.trim(),
+      sentAt: now(),
+    };
+    try {
+      await createOne('messages', msg);
+      await updateOne('conversations', currentId, {
+        lastMessageAt: now(),
+        lastMessageText: text.trim(),
+        lastMessageSender: user.displayName,
+      });
+    } catch (e) {
+      toast.error('Failed to send', e instanceof Error ? e.message : '');
+    }
+  };
+
+  /* ─── Start private chat ─── */
+  const startPrivateChat = async (targetUid: string) => {
+    if (!targetUid) return;
+
+    const existing = safeArray(conversations).find(
+      (c) =>
+        c &&
+        c.type === 'private' &&
+        safeArray(c.participantUids).length === 2 &&
+        includesSafe(c.participantUids, user.uid) &&
+        includesSafe(c.participantUids, targetUid),
+    );
+
+    if (existing) {
+      setActiveId(existing.id);
+      setMobileShowChat(true);
+      setOpenPicker(false);
+      setPickerQuery('');
+      toast.info('Chat already exists — opened it');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const id = newId('CONV');
+      await createOne('conversations', {
+        id,
+        type: 'private',
+        title: '',
+        participantUids: [user.uid, targetUid],
+        lastMessageAt: now(),
+        createdBy: user.uid,
+      });
+      setActiveId(id);
+      setMobileShowChat(true);
+      setOpenPicker(false);
+      setPickerQuery('');
+      toast.success('Chat created');
+    } catch (e) {
+      toast.error('Failed to create', e instanceof Error ? e.message : '');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  /* ─── Start team chat ─── */
+  const startTeamChat = async () => {
+    const id = 'CONV-TEAM-' + selectedTeam;
+    const existing = safeArray(conversations).find((c) => c && c.id === id);
+    if (existing) {
+      setActiveId(id);
+      setMobileShowChat(true);
+      setOpenPicker(false);
+      return;
+    }
+    setBusy(true);
+    try {
+      await createOne('conversations', {
+        id,
+        type: 'team',
+        title: 'Team ' + (teams.find((t) => t.id === selectedTeam)?.name ?? ''),
+        teamId: selectedTeam,
+        participantUids: [],
+        lastMessageAt: now(),
+        createdBy: user.uid,
+      });
+      setActiveId(id);
+      setMobileShowChat(true);
+      setOpenPicker(false);
+      toast.success('Team chat created');
+    } catch {
+      toast.error('Failed to create');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const avatarInfo = getConvAvatar();
+
+  /* ═══════════════════════════════════════════════════════════════
+     Render
+     ═══════════════════════════════════════════════════════════════ */
+
+  return (
+    <div style={{ paddingTop: 16, paddingBottom: 24 }}>
+      <div className="chat-layout">
+
+        {/* ═══ Sidebar ═══ */}
+        <div className={'chat-sidebar' + (mobileShowChat ? ' is-hidden' : '')}>
+          <div className="chat-sidebar__head">
+            <div className="row row--between" style={{ gap: 10 }}>
+              <div className="chat-sidebar__title">Conversations</div>
+              <button
+                type="button"
+                className="chat-sidebar__new"
+                onClick={() => { setOpenPicker(true); setPickerQuery(''); }}
+              >
+                + New
+              </button>
+            </div>
+          </div>
+
+          <div className="chat-conversations">
+            {myConvs.length === 0 ? (
+              <div style={{ padding: 28, textAlign: 'center', color: 'var(--c-ink-muted)', fontSize: '0.92rem' }}>
+                No conversations yet
+                <br />
+                <button
+                  type="button"
+                  className="chat-sidebar__new"
+                  style={{ marginTop: 16 }}
+                  onClick={() => setOpenPicker(true)}
+                >
+                  + Start a chat
+                </button>
+              </div>
+            ) : (
+              [...myConvs]
+                .sort((a, b) => (a.lastMessageAt < b.lastMessageAt ? 1 : -1))
+                .map((c) => {
+                  let name = 'Chat';
+                  if (c.type === 'general') name = 'General Chat';
+                  else if (c.type === 'team') name = 'Team ' + (teams.find((t) => t.id === c.teamId)?.name ?? '');
+                  else {
+                    const otherUid = findSafe(c.participantUids, (u) => u !== user.uid);
+                    const other = safeArray(users).find((u) => u && u.uid === otherUid);
+                    name = other?.displayName ?? 'Private chat';
+                  }
+                  const avt = c.type === 'general' ? '#' : c.type === 'team' ? 'T' : 'U';
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      className={'chat-conv' + (currentId === c.id ? ' is-active' : '')}
+                      onClick={() => { setActiveId(c.id); setMobileShowChat(true); }}
+                    >
+                      <div className={'chat-conv__avatar chat-conv__avatar--' + c.type}>
+                        {avt}
+                      </div>
+                      <div className="chat-conv__body">
+                        <div className="chat-conv__top">
+                          <div className="chat-conv__name">{name}</div>
+                          {c.lastMessageAt ? (
+                            <div className="chat-conv__time">{relativeTime(c.lastMessageAt)}</div>
+                          ) : null}
+                        </div>
+                        <div className="chat-conv__preview">
+                          {c.lastMessageSender ? (
+                            <strong style={{ color: 'var(--c-red)' }}>
+                              {c.lastMessageSender}:{' '}
+                            </strong>
+                          ) : null}
+                          {c.lastMessageText || 'No messages yet'}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })
+            )}
+          </div>
+        </div>
+
+        {/* ═══ Chat Panel ═══ */}
+        <div className={'chat-panel' + (!mobileShowChat ? ' is-hidden' : '')}>
+          {!active ? (
+            <div className="chat-panel__empty">
+              <div className="chat-panel__empty-icon">#</div>
+              <div style={{ marginBottom: 8 }}>Select a conversation</div>
+              <div className="small muted">Or click "+ New" to start one</div>
+            </div>
+          ) : (
+            <>
+              <div className="chat-header">
+                <button
+                  type="button"
+                  className="chat-header__back"
+                  onClick={() => setMobileShowChat(false)}
+                  aria-label="Back"
+                >
+                  &lt;
+                </button>
+                <div className={'chat-header__avatar chat-header__avatar--' + avatarInfo.variant}>
+                  {avatarInfo.text}
+                </div>
+                <div className="chat-header__info">
+                  <div className="chat-header__title">{getConvName()}</div>
+                  <div className="chat-header__sub">
+                    {active.type === 'general'
+                      ? 'Everyone'
+                      : active.type === 'team'
+                        ? 'Team chat'
+                        : 'Private chat'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="chat-messages">
+                {activeMsgs.length === 0 ? (
+                  <EmptyState
+                    title="Start the conversation"
+                    message="No messages yet. Be the first to write."
+                  />
+                ) : (
+                  activeMsgs.map((m) => (
+                    <MessageBubble key={m.id} message={m} currentUser={user} />
+                  ))
+                )}
+              </div>
+
+              <Composer onSend={sendMessage} />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ═══ Picker Modal ═══ */}
+      <Modal
+        open={openPicker}
+        title="New Conversation"
+        onClose={() => { setOpenPicker(false); setPickerQuery(''); }}
+        wide
+      >
+        <div className="chips" style={{ marginBottom: 16 }}>
+          <button
+            type="button"
+            className={'chip' + (pickerType === 'private' ? ' is-active' : '')}
+            onClick={() => setPickerType('private')}
+          >
+            Private chat
+          </button>
+          <button
+            type="button"
+            className={'chip' + (pickerType === 'team' ? ' is-active' : '')}
+            onClick={() => setPickerType('team')}
+          >
+            Team chat
+          </button>
+        </div>
+
+        {pickerType === 'private' ? (
+          <>
+            <input
+              className="user-picker__search"
+              type="search"
+              placeholder="Search by name or email..."
+              value={pickerQuery}
+              onChange={(e) => setPickerQuery(e.target.value)}
+              autoFocus
+            />
+
+            {filteredOthers.length === 0 ? (
+              <div className="user-picker__empty">
+                {others.length === 0
+                  ? 'No other users on the platform yet.'
+                  : 'No results match your search.'}
+              </div>
+            ) : (
+              <div className="user-picker">
+                {filteredOthers.map((u) => (
+                  <button
+                    key={u.uid}
+                    type="button"
+                    className="user-picker__item"
+                    onClick={() => startPrivateChat(u.uid)}
+                    disabled={busy}
+                  >
+                    <div className="user-picker__avatar">
+                      {(u.displayName || '?').charAt(0)}
+                    </div>
+                    <div className="user-picker__info">
+                      <div className="user-picker__name">{u.displayName}</div>
+                      {u.email ? <div className="user-picker__email">{u.email}</div> : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <p className="small muted mb-3">Select a team to start a group chat:</p>
+            <div className="chips" style={{ marginBottom: 20 }}>
+              {teams.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={'chip' + (selectedTeam === t.id ? ' is-active' : '')}
+                  onClick={() => setSelectedTeam(t.id)}
+                >
+                  {t.name}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              className="btn btn--primary btn--block"
+              onClick={startTeamChat}
+              disabled={busy}
+            >
+              {busy ? '...' : 'Create chat for ' + (teams.find((t) => t.id === selectedTeam)?.name ?? '')}
+            </button>
+          </>
+        )}
+      </Modal>
+    </div>
+  );
 }
 `
 );
 
 /* ═══════════════════════════════════════════════════════════════
-   AUTO-FIX — يشيل unused imports
+   MessageBubble.tsx — Safe
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/components/chat/MessageBubble.tsx",
+  `import type { Message, AppUser } from '@/types';
+import { formatTime } from '@/lib/format';
+
+interface MessageBubbleProps {
+  message: Message;
+  currentUser: AppUser;
+}
+
+export function MessageBubble({ message, currentUser }: MessageBubbleProps) {
+  if (!message || !currentUser) return null;
+
+  const isMine = message.senderUid === currentUser.uid;
+  const senderName = message.senderName || 'Unknown';
+
+  return (
+    <div className={'chat-message' + (isMine ? ' chat-message--mine' : '')}>
+      {!isMine ? (
+        <div className="chat-message__avatar">{senderName.charAt(0)}</div>
+      ) : null}
+      <div className="chat-message__bubble">
+        {!isMine ? <div className="chat-message__sender">{senderName}</div> : null}
+        <div>{message.text || ''}</div>
+        <div className="chat-message__time">{formatTime(message.sentAt)}</div>
+      </div>
+    </div>
+  );
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   Composer.tsx — Safe
+   ═══════════════════════════════════════════════════════════════ */
+F(
+  "src/components/chat/Composer.tsx",
+  `import { useState, type KeyboardEvent } from 'react';
+
+interface ComposerProps {
+  onSend: (text: string) => Promise<void> | void;
+  disabled?: boolean;
+  placeholder?: string;
+}
+
+export function Composer({ onSend, disabled, placeholder = 'Type a message...' }: ComposerProps) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const send = async () => {
+    const trimmed = text.trim();
+    if (!trimmed || busy || disabled) return;
+    setBusy(true);
+    try {
+      await onSend(trimmed);
+      setText('');
+    } catch {
+      /* handled by parent */
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      void send();
+    }
+  };
+
+  return (
+    <div className="chat-composer">
+      <textarea
+        className="chat-composer__input"
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={onKeyDown}
+        placeholder={placeholder}
+        rows={1}
+        disabled={busy || disabled}
+      />
+      <button
+        type="button"
+        className="chat-composer__send"
+        onClick={send}
+        disabled={!text.trim() || busy || disabled}
+        aria-label="Send"
+      >
+        ↑
+      </button>
+    </div>
+  );
+}
+`
+);
+
+/* ═══════════════════════════════════════════════════════════════
+   AUTO-FIX ENGINE
    ═══════════════════════════════════════════════════════════════ */
 
 function walkDir(dir, exts) {
@@ -469,7 +610,8 @@ function walkDir(dir, exts) {
 function autoFixFile(filePath) {
   let content = fs.readFileSync(filePath, "utf8");
   const original = content;
-  const importRegex = /import\\s+\\{([^}]+)\\}\\s+from\\s+['"]([^'"]+)['"];?/g;
+
+  const importRegex = /import\s+\{([^}]+)\}\s+from\s+['"]([^'"]+)['"];?/g;
   content = content.replace(importRegex, (match, imports, source) => {
     const names = imports
       .split(",")
@@ -480,14 +622,15 @@ function autoFixFile(filePath) {
       let clean = name;
       if (clean.startsWith("type ")) clean = clean.slice(5).trim();
       if (clean.includes(" as ")) clean = clean.split(" as ")[1].trim();
-      const escaped = clean.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
-      return new RegExp("\\\\b" + escaped + "\\\\b").test(bodyWithoutImports);
+      const escaped = clean.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      return new RegExp(`\\b${escaped}\\b`).test(bodyWithoutImports);
     });
     if (used.length === 0) return "";
     if (used.length === names.length) return match;
-    return "import { " + used.join(", ") + " } from '" + source + "';";
+    return `import { ${used.join(", ")} } from '${source}';`;
   });
-  content = content.replace(/\\n{3,}/g, "\\n\\n");
+
+  content = content.replace(/\n{3,}/g, "\n\n");
   if (content !== original) {
     fs.writeFileSync(filePath, content, "utf8");
     return true;
@@ -496,21 +639,20 @@ function autoFixFile(filePath) {
 }
 
 function runAutoFix() {
-  console.log(`${C.b}▶ AUTO-FIX${C.r}\\n`);
+  console.log(`${C.b}▶ AUTO-FIX${C.r}\n`);
   const allFiles = walkDir(path.join(ROOT, "src"), [".ts", ".tsx"]);
   let fixed = 0;
   for (const f of allFiles) {
     if (autoFixFile(f)) {
       console.log(
-        `${C.g}✓${C.r} ${path.relative(ROOT, f).replace(/\\\\/g, "/")}`
+        `${C.g}✓${C.r} ${path.relative(ROOT, f).replace(/\\/g, "/")}`
       );
       fixed++;
     }
   }
   if (fixed === 0) console.log(`${C.d}No unused imports${C.r}`);
-  else console.log(`\\n${C.g}Fixed ${fixed} file(s)${C.r}`);
+  else console.log(`\n${C.g}Fixed ${fixed} file(s)${C.r}`);
   console.log("");
-  return fixed;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -524,8 +666,8 @@ function makeBuildSafe() {
   if (pkg.scripts && pkg.scripts.build && pkg.scripts.build.includes("tsc")) {
     pkg.scripts.build = "vite build";
     pkg.scripts.typecheck = "tsc --noEmit";
-    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\\n", "utf8");
-    console.log(`${C.g}✓${C.r} package.json — build without tsc\\n`);
+    fs.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+    console.log(`${C.g}✓${C.r} package.json — build without tsc\n`);
   }
 }
 
@@ -538,21 +680,14 @@ console.log(
   `${C.b}${C.m}╔══════════════════════════════════════════════════════╗${C.r}`
 );
 console.log(
-  `${C.b}${C.m}║  fix.cjs — Desktop = Mobile Layout                   ║${C.r}`
-);
-console.log(
-  `${C.b}${C.m}║  Mobile unchanged · Desktop mirrors phone             ║${C.r}`
+  `${C.b}${C.m}║  fix.cjs — Chat Fix + English                        ║${C.r}`
 );
 console.log(
   `${C.b}${C.m}╚══════════════════════════════════════════════════════╝${C.r}`
 );
 console.log("");
 
-const bkDir = path.join(
-  ROOT,
-  ".fix-backups",
-  "desktop-" + Date.now().toString()
-);
+const bkDir = path.join(ROOT, ".fix-backups", "chat-" + Date.now().toString());
 fs.mkdirSync(bkDir, { recursive: true });
 
 let count = 0;
@@ -590,7 +725,7 @@ try {
   }
 
   sh(
-    'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "feat: desktop uses mobile layout (phone frame)"'
+    'git -c user.name="fix-bot" -c user.email="fix-bot@local" commit -m "fix: chat page (safe guards) + English"'
   );
   console.log(`\n${C.g}✓ commit${C.r}`);
 
