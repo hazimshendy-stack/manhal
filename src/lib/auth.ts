@@ -1,4 +1,4 @@
-   import {
+import {
      signInWithEmailAndPassword,
      signOut,
      onAuthStateChanged,
@@ -378,5 +378,50 @@
    export function hasRole(user: AppUser | null, roles: RoleId[]): boolean {
      if (!user) return false;
      return roles.includes(user.role);
+   }
+
+
+   /* ═══════════════════════════════════════════════════════════════
+      Friendly error messages
+      ═══════════════════════════════════════════════════════════════ */
+
+   export function translateAuthError(err: unknown): string {
+     const code = err && typeof err === 'object' && 'code' in err
+       ? String((err as { code?: string }).code)
+       : '';
+     const raw = err instanceof Error ? err.message : String(err ?? '');
+     const combined = (code + ' ' + raw).toLowerCase();
+
+     if (combined.includes('invalid-credential') || combined.includes('wrong-password') || combined.includes('user-not-found') || combined.includes('invalid-login-credentials')) {
+       return 'الإيميل أو الباسورد خطأ';
+     }
+     if (combined.includes('invalid-email')) {
+       return 'الإيميل مش صح';
+     }
+     if (combined.includes('user-disabled')) {
+       return 'الحساب ده متوقف';
+     }
+     if (combined.includes('too-many-requests')) {
+       return 'حاول تاني بعد شوية';
+     }
+     if (combined.includes('network-request-failed')) {
+       return 'في مشكلة في الاتصال بالإنترنت';
+     }
+     if (combined.includes('email-already-in-use') || combined.includes('email_exists')) {
+       return 'الإيميل ده مستخدم بالفعل';
+     }
+     if (combined.includes('weak-password')) {
+       return 'الباسورد ضعيف — لازم 6 حروف على الأقل';
+     }
+     if (combined.includes('operation-not-allowed')) {
+       return 'التسجيل معطل حاليًا';
+     }
+     if (combined.includes('requires-recent-login')) {
+       return 'سجل دخول تاني وحاول';
+     }
+     if (combined.includes('missing-password')) {
+       return 'لازم تدخل الباسورد';
+     }
+     return raw || 'حصل خطأ غير متوقع';
    }
    

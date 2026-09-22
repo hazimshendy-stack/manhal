@@ -1,6 +1,6 @@
    import { useState, type FormEvent } from 'react';
    import { useNavigate, Link } from 'react-router-dom';
-   import { login } from '@/lib/auth';
+   import { login, translateAuthError } from '@/lib/auth';
    import { useAuth } from '@/lib/useAuth';
 
    export function LoginPage() {
@@ -18,7 +18,6 @@
        try {
          const appUser = await login(email.trim(), password);
 
-         /* Route based on status */
          if (appUser.status === 'pending' || appUser.status === 'rejected') {
            nav('/pending-approval');
          } else if (appUser.mustChangePassword) {
@@ -27,13 +26,14 @@
            nav('/dashboard');
          }
        } catch (err) {
-         setError(err instanceof Error ? err.message : 'Login failed');
+         /* Friendly message */
+         setError(translateAuthError(err));
        } finally {
          setBusy(false);
        }
      };
 
-     /* If already logged in */
+     /* If already logged in, redirect */
      if (user) {
        if (user.status === 'pending' || user.status === 'rejected') {
          nav('/pending-approval');
@@ -83,15 +83,9 @@
              </button>
            </form>
 
-           <p
-             className="login-back"
-             style={{ marginTop: 20, lineHeight: 1.7 }}
-           >
+           <p className="login-back" style={{ marginTop: 20, lineHeight: 1.7 }}>
              New here?{' '}
-             <Link
-               to="/register"
-               style={{ color: 'var(--c-red)', fontWeight: 700 }}
-             >
+             <Link to="/register" style={{ color: 'var(--c-red)', fontWeight: 700 }}>
                Create an account
              </Link>
            </p>
