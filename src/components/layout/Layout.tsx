@@ -6,6 +6,18 @@
    import { Footer } from './Footer';
    import { useAuth } from '@/lib/useAuth';
    import { initPwa } from '@/lib/pwa';
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
+import { Layout } from '@/components/layout/Layout';
+import { Navbar } from '@/components/layout/Navbar';
+import { Footer } from '@/components/layout/Footer';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { BottomNav } from '@/components/layout/BottomNav';
+import { login } from '@/lib/auth';
+import { initPwa } from '@/lib/pwa';
+import { useAuth } from '@/lib/useAuth';
 
    export function Layout() {
      const { pathname } = useLocation();

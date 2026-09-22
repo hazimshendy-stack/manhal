@@ -1,5 +1,10 @@
 import type { CalendarEvent } from '@/types';
    import { getArabicMonth, getDaysInMonth, getFirstWeekdayOfMonth } from '@/lib/format';
+import { CalendarGrid } from '@/components/calendar/CalendarGrid';
+import { today } from '@/lib/db';
+import { getArabicMonth } from '@/lib/format';
+import { getDaysInMonth } from '@/lib/format';
+import { getFirstWeekdayOfMonth } from '@/lib/format';
 
    interface CalendarGridProps { year: number; month: number; events: CalendarEvent[]; selectedDate?: string; onSelectDate: (date: string) => void; onPrevMonth: () => void; onNextMonth: () => void; }
    const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

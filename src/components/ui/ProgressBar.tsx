@@ -1,3 +1,5 @@
+
+import { ProgressBar } from '@/components/ui/ProgressBar';
 interface ProgressBarProps { percent: number; label?: string; color?: string; }
    export function ProgressBar({ percent, label, color = 'var(--c-red)' }: ProgressBarProps) {
      const safe = Math.max(0, Math.min(100, percent));

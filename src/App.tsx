@@ -54,6 +54,27 @@
    import { AdminGovernancePage } from '@/pages/admin/AdminGovernancePage';
    import { AdminRequestsPage } from '@/pages/admin/AdminRequestsPage';
    import { AdminAuditPage } from '@/pages/admin/AdminAuditPage';
+import { Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from '@/components/ui/Toast';
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { Layout } from '@/components/layout/Layout';
+import { RequireAuth } from '@/components/layout/RequireAuth';
+import { Onboarding } from '@/components/onboarding/Onboarding';
+import { PwaInstallBanner } from '@/components/pwa/PwaInstallBanner';
+import { login } from '@/lib/auth';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { requests } from '@/data/requests';
+import { approvals } from '@/data/approvals';
+import { warnings } from '@/data/warnings';
+import { achievements } from '@/data/achievements';
+import { notifications } from '@/data/notifications';
+import { conversations } from '@/data/conversations';
+import { audit } from '@/data/audit';
+import { roles } from '@/data/roles';
 
    export default function App() {
      return (

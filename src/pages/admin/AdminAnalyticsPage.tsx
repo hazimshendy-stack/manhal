@@ -5,6 +5,15 @@ import { useCollection } from '@/lib/useRealtimeCollection';
    import { SectionHeader } from '@/components/ui/SectionHeader';
    import { Loading } from '@/components/ui/Loading';
    import type { Member, Contribution, RequestRecord, Committee } from '@/types';
+import { Loading } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { getTeamTotalPoints } from '@/lib/rankings';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { requests } from '@/data/requests';
 
    export function AdminAnalyticsPage() {
      const { data: members, loading: lM } = useCollection<Member>('members');

@@ -249,4 +249,133 @@ import {
      if (!user) return false;
      return roles.includes(user.role);
    }
+
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Self-registration — يُنشئ الحساب بحالة pending
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export interface RegisterSelfInput {
+     email: string;
+     password: string;
+     name: string;
+     preferredTeamId?: TeamId | null;
+     note?: string;
+   }
+
+   export async function registerSelf(input: RegisterSelfInput): Promise<AppUser> {
+     const email = input.email.trim().toLowerCase();
+     const name = input.name.trim();
+     const password = input.password;
+
+     if (!email) throw new Error('Email required');
+     if (!name) throw new Error('Name required');
+     if (password.length < 6) throw new Error('Password must be at least 6 characters');
+
+     /* 1) أنشئ حساب Firebase Auth */
+     let uid = '';
+     try {
+       const cred = await createUserWithEmailAndPassword(auth, email, password);
+       uid = cred.user.uid;
+     } catch (err) {
+       throw new Error(translateAuthError(err));
+     }
+
+     /* 2) أنشئ user doc بحالة pending */
+     const userData: AppUser = {
+       uid,
+       email,
+       displayName: name,
+       role: 'VIEWER',
+       teamId: null,
+       committeeIds: [],
+       memberId: null,
+       createdAt: new Date().toISOString(),
+       emailVerified: false,
+       mustChangePassword: false,
+       status: 'pending',
+       preferredTeamId: input.preferredTeamId ?? null,
+       registrationNote: input.note?.trim() || undefined,
+     };
+
+     await setDoc(doc(db, 'users', uid), userData);
+
+     return userData;
+   }
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Admin: Approve a pending user
+      ─────────────────────────────────────────────────────────────────────
+      - Updates user doc: status=active, role, teamId, committeeIds
+      - Creates a linked member doc
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export interface ApproveUserInput {
+     role: RoleId;
+     teamIds: TeamId[];
+     committeeIds: string[];
+   }
+
+   export async function adminApproveUser(
+     user: AppUser,
+     input: ApproveUserInput,
+     adminUid: string,
+   ): Promise<void> {
+     const memberId = user.memberId || ('M-' + user.uid.slice(0, 8).toUpperCase());
+
+     /* 1) Update user doc */
+     await setDoc(
+       doc(db, 'users', user.uid),
+       {
+         role: input.role,
+         teamId: input.teamIds[0] ?? null,
+         committeeIds: input.committeeIds || [],
+         memberId,
+         status: 'active',
+         approvedAt: new Date().toISOString(),
+         approvedBy: adminUid,
+       },
+       { merge: true },
+     );
+
+     /* 2) Create member doc */
+     const memberData: Member = {
+       id: memberId,
+       name: user.displayName,
+       role: input.role,
+       teamIds: input.teamIds,
+       committeeIds: input.committeeIds || [],
+       joinedSeason: 7,
+       hours: 0,
+       points: 0,
+       status: 'active',
+       email: user.email,
+       linkedUserId: user.uid,
+     };
+
+     await setDoc(doc(db, 'members', memberId), memberData);
+
+     /* 3) Link member back on user doc (already done above) */
+   }
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Admin: Reject a pending user
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export async function adminRejectUser(
+     uid: string,
+     reason: string,
+     adminUid: string,
+   ): Promise<void> {
+     await setDoc(
+       doc(db, 'users', uid),
+       {
+         status: 'rejected',
+         rejectionReason: reason?.trim() || 'No reason provided',
+         rejectedAt: new Date().toISOString(),
+         rejectedBy: adminUid,
+       },
+       { merge: true },
+     );
+   }
    

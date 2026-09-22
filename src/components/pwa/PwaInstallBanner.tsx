@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
    import { canInstallPwa, promptInstall, isStandalone, isIos } from '@/lib/pwa';
    import { toast } from '@/components/ui/Toast';
+import { toast } from '@/components/ui/Toast';
+import { PwaInstallBanner } from '@/components/pwa/PwaInstallBanner';
+import { canInstallPwa } from '@/lib/pwa';
+import { promptInstall } from '@/lib/pwa';
+import { isStandalone } from '@/lib/pwa';
+import { isIos } from '@/lib/pwa';
 
    const DISMISSED_KEY = 'sbapiaryy-pwa-dismissed-v6';
    export function PwaInstallBanner() {

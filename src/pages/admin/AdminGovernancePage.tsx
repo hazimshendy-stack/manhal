@@ -12,6 +12,25 @@ import { useState } from 'react';
    import { Badge } from '@/components/ui/Badge';
    import { toast } from '@/components/ui/Toast';
    import type { GovernanceDocument } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { Modal } from '@/components/ui/Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
+import { toast } from '@/components/ui/Toast';
+import { FormField } from '@/components/ui/FormField';
+import { TextInput } from '@/components/ui/FormField';
+import { TextArea } from '@/components/ui/FormField';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { formatDate } from '@/lib/format';
+import { createOne } from '@/lib/db';
+import { updateOne } from '@/lib/db';
+import { removeOne } from '@/lib/db';
+import { now } from '@/lib/db';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
 
    const EMPTY: Omit<GovernanceDocument, 'id'> = { title: '', category: 'Policies', description: '', content: '', version: '1.0', updatedAt: new Date().toISOString().slice(0, 10) };
 

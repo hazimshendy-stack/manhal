@@ -4,6 +4,13 @@ import { Link, useNavigate } from 'react-router-dom';
    import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
    import { IconBell } from '@/components/ui/Icons';
    import type { Notification } from '@/types';
+import { IconBell } from '@/components/ui/Icons';
+import { Navbar } from '@/components/layout/Navbar';
+import { login } from '@/lib/auth';
+import { logout } from '@/lib/auth';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { notifications } from '@/data/notifications';
 
    interface NavbarProps { onMenuToggle?: () => void; }
 

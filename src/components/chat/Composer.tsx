@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from 'react';
+import { Composer } from '@/components/chat/Composer';
    interface ComposerProps { onSend: (text: string) => Promise<void> | void; disabled?: boolean; placeholder?: string; }
    export function Composer({ onSend, disabled, placeholder = 'Type a message...' }: ComposerProps) {
      const [text, setText] = useState('');

@@ -8,6 +8,21 @@ import { useState, type FormEvent } from 'react';
    import { FormField, TextInput, TextArea, Select } from '@/components/ui/FormField';
    import { toast } from '@/components/ui/Toast';
    import type { RequestRecord, RequestType, Priority, TeamId, ApprovalStep } from '@/types';
+import { useNavigate } from 'react-router-dom';
+import { toast } from '@/components/ui/Toast';
+import { FormField } from '@/components/ui/FormField';
+import { TextInput } from '@/components/ui/FormField';
+import { TextArea } from '@/components/ui/FormField';
+import { Select } from '@/components/ui/FormField';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { today } from '@/lib/db';
+import { createOne } from '@/lib/db';
+import { newId } from '@/lib/db';
+import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/lib/useAuth';
+import { teams } from '@/data/teams';
+import { requests } from '@/data/requests';
+import { approvals } from '@/data/approvals';
 
    const TYPE_LABEL: Record<RequestType, string> = {
      TRANSFER: 'Transfer', PROMOTION: 'Promotion', RESIGNATION: 'Resignation',

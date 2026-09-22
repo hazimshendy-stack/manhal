@@ -8,6 +8,19 @@ import { Link } from 'react-router-dom';
    import { EmptyState } from '@/components/ui/EmptyState';
    import { SkeletonList } from '@/components/ui/Loading';
    import type { ApprovalStep, RequestRecord } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ROLE_LABEL } from '@/lib/permissions';
+import { canApproveStep } from '@/lib/permissions';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { requests } from '@/data/requests';
+import { approvals } from '@/data/approvals';
 
    export function ApprovalsPage() {
      const { user } = useAuth();

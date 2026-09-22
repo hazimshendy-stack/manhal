@@ -11,6 +11,23 @@ import { useState } from 'react';
    import { toast } from '@/components/ui/Toast';
    import { relativeTime } from '@/lib/format';
    import type { AppUser, Notification } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { toast } from '@/components/ui/Toast';
+import { FormField } from '@/components/ui/FormField';
+import { TextInput } from '@/components/ui/FormField';
+import { TextArea } from '@/components/ui/FormField';
+import { Select } from '@/components/ui/FormField';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { relativeTime } from '@/lib/format';
+import { notifyUser } from '@/lib/notifications';
+import { notifyUsers } from '@/lib/notifications';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
 
    export function AdminNotificationsPage() {
      const { user: me } = useAuth();

@@ -7,6 +7,15 @@ import { Link } from 'react-router-dom';
    import { SkeletonList } from '@/components/ui/Loading';
    import { SectionHeader } from '@/components/ui/SectionHeader';
    import type { RequestRecord } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { RequestCard } from '@/components/request/RequestCard';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { requests } from '@/data/requests';
 
    export function MyRequestsPage() {
      const { user } = useAuth();

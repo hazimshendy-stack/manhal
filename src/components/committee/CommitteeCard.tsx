@@ -4,6 +4,13 @@ import { Link } from 'react-router-dom';
    import { getCommitteeTotalPoints } from '@/lib/rankings';
    import { teams } from '@/data/teams';
    import type { Contribution } from '@/types';
+import { CommitteeCard } from '@/components/committee/CommitteeCard';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { getCommitteeTotalPoints } from '@/lib/rankings';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
 
    interface CommitteeCardProps { committee: Committee; rank?: number; }
    export function CommitteeCard({ committee, rank }: CommitteeCardProps) {

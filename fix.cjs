@@ -1,10 +1,12 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════════════
-   fix-workflows.cjs
+   fix-registerself.cjs
    ─────────────────────────────────────────────────────────────────────
-   • يمسح كل ملفات .github/workflows/ (القديمة المكسورة)
-   • يكتب deploy.yml نظيف
-   • يعمل commit + push --force
+   يضيف الدوال الناقصة لـ src/lib/auth.ts:
+     • registerSelf
+     • adminApproveUser
+     • adminRejectUser
+   ثم يبني ويدفع.
    ═══════════════════════════════════════════════════════════════════════ */
 
 const fs = require("fs");
@@ -12,17 +14,12 @@ const path = require("path");
 const { execSync } = require("child_process");
 const ROOT = process.cwd();
 
-const WORKFLOWS_DIR = path.join(ROOT, ".github", "workflows");
-
 console.log("");
 console.log(
   " ╔══════════════════════════════════════════════════════════════╗"
 );
 console.log(
-  " ║   fix-workflows.cjs                                          ║"
-);
-console.log(
-  " ║   kill broken YAML · write clean deploy.yml · push           ║"
+  " ║   fix-registerself.cjs                                       ║"
 );
 console.log(
   " ╚══════════════════════════════════════════════════════════════╝"
@@ -30,153 +27,343 @@ console.log(
 console.log("");
 
 /* ─────────────────────────────────────────────────────────────────────
-      STEP 1 — امسح كل ملفات الـ workflows القديمة
+      اقرأ auth.ts الموجود
       ───────────────────────────────────────────────────────────────────── */
-console.log(" 🧹 STEP 1 · Removing old workflow files…");
+const authPath = path.join(ROOT, "src/lib/auth.ts");
+if (!fs.existsSync(authPath)) {
+  console.error(" ❌ src/lib/auth.ts not found at " + authPath);
+  process.exit(1);
+}
 
-if (fs.existsSync(WORKFLOWS_DIR)) {
-  const files = fs.readdirSync(WORKFLOWS_DIR);
-  for (const f of files) {
-    const abs = path.join(WORKFLOWS_DIR, f);
-    try {
-      fs.rmSync(abs, { recursive: true, force: true });
-      console.log("   ✗ removed: .github/workflows/" + f);
-    } catch (e) {
-      console.log("   ⚠ could not remove " + f + ": " + e.message);
-    }
-  }
-  if (files.length === 0) {
-    console.log("   (folder was empty)");
-  }
+let authContent = fs.readFileSync(authPath, "utf8");
+const original = authContent;
+
+/* ─────────────────────────────────────────────────────────────────────
+      تأكد إن الـ import بتاع Firebase موجود
+      ───────────────────────────────────────────────────────────────────── */
+const needsCreateUserImport = !/createUserWithEmailAndPassword/.test(
+  authContent
+);
+
+/* ─────────────────────────────────────────────────────────────────────
+      الدوال الجديدة
+      ───────────────────────────────────────────────────────────────────── */
+
+const registerSelfFn = `
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Self-registration — يُنشئ الحساب بحالة pending
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export interface RegisterSelfInput {
+     email: string;
+     password: string;
+     name: string;
+     preferredTeamId?: TeamId | null;
+     note?: string;
+   }
+
+   export async function registerSelf(input: RegisterSelfInput): Promise<AppUser> {
+     const email = input.email.trim().toLowerCase();
+     const name = input.name.trim();
+     const password = input.password;
+
+     if (!email) throw new Error('Email required');
+     if (!name) throw new Error('Name required');
+     if (password.length < 6) throw new Error('Password must be at least 6 characters');
+
+     /* 1) أنشئ حساب Firebase Auth */
+     let uid = '';
+     try {
+       const cred = await createUserWithEmailAndPassword(auth, email, password);
+       uid = cred.user.uid;
+     } catch (err) {
+       throw new Error(translateAuthError(err));
+     }
+
+     /* 2) أنشئ user doc بحالة pending */
+     const userData: AppUser = {
+       uid,
+       email,
+       displayName: name,
+       role: 'VIEWER',
+       teamId: null,
+       committeeIds: [],
+       memberId: null,
+       createdAt: new Date().toISOString(),
+       emailVerified: false,
+       mustChangePassword: false,
+       status: 'pending',
+       preferredTeamId: input.preferredTeamId ?? null,
+       registrationNote: input.note?.trim() || undefined,
+     };
+
+     await setDoc(doc(db, 'users', uid), userData);
+
+     return userData;
+   }
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Admin: Approve a pending user
+      ─────────────────────────────────────────────────────────────────────
+      - Updates user doc: status=active, role, teamId, committeeIds
+      - Creates a linked member doc
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export interface ApproveUserInput {
+     role: RoleId;
+     teamIds: TeamId[];
+     committeeIds: string[];
+   }
+
+   export async function adminApproveUser(
+     user: AppUser,
+     input: ApproveUserInput,
+     adminUid: string,
+   ): Promise<void> {
+     const memberId = user.memberId || ('M-' + user.uid.slice(0, 8).toUpperCase());
+
+     /* 1) Update user doc */
+     await setDoc(
+       doc(db, 'users', user.uid),
+       {
+         role: input.role,
+         teamId: input.teamIds[0] ?? null,
+         committeeIds: input.committeeIds || [],
+         memberId,
+         status: 'active',
+         approvedAt: new Date().toISOString(),
+         approvedBy: adminUid,
+       },
+       { merge: true },
+     );
+
+     /* 2) Create member doc */
+     const memberData: Member = {
+       id: memberId,
+       name: user.displayName,
+       role: input.role,
+       teamIds: input.teamIds,
+       committeeIds: input.committeeIds || [],
+       joinedSeason: 7,
+       hours: 0,
+       points: 0,
+       status: 'active',
+       email: user.email,
+       linkedUserId: user.uid,
+     };
+
+     await setDoc(doc(db, 'members', memberId), memberData);
+
+     /* 3) Link member back on user doc (already done above) */
+   }
+
+   /* ═══════════════════════════════════════════════════════════════════════
+      Admin: Reject a pending user
+      ═══════════════════════════════════════════════════════════════════════ */
+
+   export async function adminRejectUser(
+     uid: string,
+     reason: string,
+     adminUid: string,
+   ): Promise<void> {
+     await setDoc(
+       doc(db, 'users', uid),
+       {
+         status: 'rejected',
+         rejectionReason: reason?.trim() || 'No reason provided',
+         rejectedAt: new Date().toISOString(),
+         rejectedBy: adminUid,
+       },
+       { merge: true },
+     );
+   }
+   `;
+
+/* ─────────────────────────────────────────────────────────────────────
+      تحقق لو الدوال موجودة مسبقًا
+      ───────────────────────────────────────────────────────────────────── */
+const hasRegisterSelf = /export\s+(async\s+)?function\s+registerSelf\b/.test(
+  authContent
+);
+const hasApproveUser = /export\s+(async\s+)?function\s+adminApproveUser\b/.test(
+  authContent
+);
+const hasRejectUser = /export\s+(async\s+)?function\s+adminRejectUser\b/.test(
+  authContent
+);
+
+if (hasRegisterSelf && hasApproveUser && hasRejectUser) {
+  console.log("   ✓ All three functions already exist in auth.ts");
 } else {
-  console.log("   (no workflows folder yet — will create)");
+  /* ─────────────────────────────────────────────────────────────────────
+        تأكد من import الـ createUserWithEmailAndPassword
+        ───────────────────────────────────────────────────────────────────── */
+  if (needsCreateUserImport) {
+    console.log(
+      "   ↻ Adding createUserWithEmailAndPassword to firebase/auth import"
+    );
+    authContent = authContent.replace(
+      /import\s*\{([^}]+)\}\s*from\s*['"]firebase\/auth['"];?/,
+      (match, names) => {
+        const cleanNames = names
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        if (!cleanNames.includes("createUserWithEmailAndPassword")) {
+          cleanNames.push("createUserWithEmailAndPassword");
+        }
+        return (
+          "import {\n  " +
+          cleanNames.join(",\n  ") +
+          ",\n} from 'firebase/auth';"
+        );
+      }
+    );
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+        أضف الدوال قبل نهاية الملف
+        ───────────────────────────────────────────────────────────────────── */
+  authContent = authContent.trimEnd() + "\n" + registerSelfFn + "\n";
+
+  fs.writeFileSync(authPath, authContent, "utf8");
+  console.log(
+    "   ✓ src/lib/auth.ts updated with registerSelf + adminApproveUser + adminRejectUser"
+  );
 }
 
 /* ─────────────────────────────────────────────────────────────────────
-      STEP 2 — اكتب deploy.yml نظيف
+      تأكد من وجود Member في imports لـ auth.ts
       ───────────────────────────────────────────────────────────────────── */
-console.log("");
-console.log(" 🚀 STEP 2 · Writing clean deploy.yml…");
-
-fs.mkdirSync(WORKFLOWS_DIR, { recursive: true });
-
-const deployYaml = `name: Deploy to GitHub Pages
-
-   on:
-     push:
-       branches: [main]
-     workflow_dispatch:
-
-   permissions:
-     contents: read
-     pages: write
-     id-token: write
-
-   concurrency:
-     group: pages
-     cancel-in-progress: true
-
-   jobs:
-     build:
-       runs-on: ubuntu-latest
-       steps:
-         - name: Checkout
-           uses: actions/checkout@v4
-
-         - name: Setup Node
-           uses: actions/setup-node@v4
-           with:
-             node-version: '20'
-
-         - name: Setup Pages
-           uses: actions/configure-pages@v5
-
-         - name: Create .env file
-           run: |
-             cat > .env << 'EOF'
-             VITE_FIREBASE_API_KEY=\${{ secrets.VITE_FIREBASE_API_KEY }}
-             VITE_FIREBASE_AUTH_DOMAIN=\${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-             VITE_FIREBASE_PROJECT_ID=\${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-             VITE_FIREBASE_STORAGE_BUCKET=\${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-             VITE_FIREBASE_MESSAGING_SENDER_ID=\${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-             VITE_FIREBASE_APP_ID=\${{ secrets.VITE_FIREBASE_APP_ID }}
-             EOF
-
-         - name: Install dependencies
-           run: npm install --no-audit --no-fund --no-package-lock
-
-         - name: Build
-           run: npm run build
-
-         - name: Verify dist
-           run: |
-             if [ ! -d "dist" ]; then
-               echo "ERROR: dist folder was not created"
-               exit 1
-             fi
-             ls -la dist/
-
-         - name: Upload artifact
-           uses: actions/upload-pages-artifact@v3
-           with:
-             path: './dist'
-
-     deploy:
-       needs: build
-       runs-on: ubuntu-latest
-       environment:
-         name: github-pages
-         url: \${{ steps.deployment.outputs.page_url }}
-       steps:
-         - name: Deploy to GitHub Pages
-           id: deployment
-           uses: actions/deploy-pages@v4
-   `;
-
-fs.writeFileSync(path.join(WORKFLOWS_DIR, "deploy.yml"), deployYaml, "utf8");
-
-console.log("   ✓ wrote: .github/workflows/deploy.yml");
+if (!/import\s+type\s*\{[^}]*\bMember\b/.test(authContent)) {
+  console.log("   ↻ Ensuring Member type is imported");
+  authContent = fs.readFileSync(authPath, "utf8");
+  authContent = authContent.replace(
+    /import\s+type\s*\{([^}]+)\}\s*from\s*['"]@\/types['"];?/,
+    (match, names) => {
+      const clean = names
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      if (!clean.includes("Member")) clean.push("Member");
+      return "import type { " + clean.join(", ") + " } from '@/types';";
+    }
+  );
+  fs.writeFileSync(authPath, authContent, "utf8");
+}
 
 /* ─────────────────────────────────────────────────────────────────────
-      STEP 3 — تأكد من public/.nojekyll
+      تحقق من أن AppUser بيحتوي على preferredTeamId/registrationNote/rejectionReason
       ───────────────────────────────────────────────────────────────────── */
-console.log("");
-console.log(" 📄 STEP 3 · Ensuring public/.nojekyll…");
+const typesPath = path.join(ROOT, "src/types/index.ts");
+if (fs.existsSync(typesPath)) {
+  let typesContent = fs.readFileSync(typesPath, "utf8");
+  const needsFields =
+    !/preferredTeamId/.test(typesContent) ||
+    !/registrationNote/.test(typesContent) ||
+    !/rejectionReason/.test(typesContent) ||
+    !/approvedAt/.test(typesContent);
 
-const nojekyll = path.join(ROOT, "public", ".nojekyll");
-fs.mkdirSync(path.dirname(nojekyll), { recursive: true });
-fs.writeFileSync(nojekyll, "", "utf8");
-console.log("   ✓ public/.nojekyll");
+  if (needsFields) {
+    console.log("   ↻ Adding missing fields to AppUser type");
+    typesContent = typesContent.replace(
+      /export interface AppUser \{[\s\S]*?\n\}/,
+      `export interface AppUser {
+     uid: string;
+     email: string;
+     displayName: string;
+     role: RoleId;
+     teamId?: TeamId | null;
+     committeeIds?: string[];
+     memberId?: string | null;
+     createdAt?: string;
+     emailVerified?: boolean;
+     mustChangePassword?: boolean;
+     createdByAdmin?: string;
+     status?: 'active' | 'pending' | 'rejected';
+     preferredTeamId?: TeamId | null;
+     registrationNote?: string;
+     approvedAt?: string;
+     approvedBy?: string;
+     rejectedAt?: string;
+     rejectedBy?: string;
+     rejectionReason?: string;
+   }`
+    );
+    fs.writeFileSync(typesPath, typesContent, "utf8");
+    console.log("   ✓ src/types/index.ts updated");
+  }
+}
 
 /* ─────────────────────────────────────────────────────────────────────
-      STEP 4 — Commit
+      Build + push
       ───────────────────────────────────────────────────────────────────── */
 console.log("");
-console.log(" 📝 STEP 4 · Committing…");
+console.log(" 🧹 Cleaning old artifacts…");
+["dist", "node_modules/.vite", ".vite"].forEach((p) => {
+  const abs = path.join(ROOT, p);
+  if (fs.existsSync(abs)) {
+    try {
+      fs.rmSync(abs, { recursive: true, force: true });
+      console.log("   ✗ removed: " + p);
+    } catch {}
+  }
+});
 
 function run(cmd, silent = false) {
   try {
     if (!silent) console.log(" $ " + cmd);
     execSync(cmd, { stdio: silent ? "pipe" : "inherit", cwd: ROOT });
     return true;
-  } catch (e) {
+  } catch {
     if (!silent) console.log("   (command returned non-zero)");
     return false;
   }
 }
 
-/* لو مفيش git repo، نعمل واحد */
+if (!fs.existsSync(path.join(ROOT, "node_modules"))) {
+  console.log("");
+  console.log(" 📦 Installing dependencies…");
+  run("npm install --no-audit --no-fund");
+}
+
+console.log("");
+console.log(" 🏗  Building locally…");
+const buildOk = run("npm run build");
+
+if (!buildOk) {
+  console.log("");
+  console.log(
+    " ╔══════════════════════════════════════════════════════════════╗"
+  );
+  console.log(
+    " ║   ❌ BUILD STILL FAILS — ابعتلي السطرين اللي فوق الـ stack   ║"
+  );
+  console.log(
+    " ╚══════════════════════════════════════════════════════════════╝"
+  );
+  console.log("");
+  console.log(" 📋 ابعتلي السطرين اللي فوق الـ stack trace، شبه:");
+  console.log('    [vite]: Rollup failed to resolve import "XXX" from "YYY"');
+  console.log("    file: /path/to/file.tsx:LINE:COL");
+  console.log("");
+  process.exit(1);
+}
+
+console.log("");
+console.log("   ✅ Build succeeded!");
+console.log("");
+console.log(" 📤 Pushing to GitHub…");
+
 if (!fs.existsSync(path.join(ROOT, ".git"))) {
-  console.log("   no git repo — initializing…");
   run("git init");
   run("git branch -M main");
 }
 
-/* تأكد من وجود remote */
 try {
   execSync("git remote get-url origin", { cwd: ROOT, stdio: "pipe" });
 } catch {
-  console.log("   adding remote origin…");
   run(
     "git remote add origin https://github.com/hazimshendy-stack/sbapiaryyy.git"
   );
@@ -184,51 +371,23 @@ try {
 
 run("git add -A");
 run(
-  'git commit -m "fix(ci): remove all broken workflows, add clean deploy.yml"',
+  'git commit -m "fix(auth): add registerSelf + adminApproveUser + adminRejectUser"',
   true
 );
-
-/* ─────────────────────────────────────────────────────────────────────
-      STEP 5 — Push --force
-      ───────────────────────────────────────────────────────────────────── */
-console.log("");
-console.log(" 📤 STEP 5 · Pushing to GitHub…");
-
 const pushed = run("git push origin main --force");
 
-/* ─────────────────────────────────────────────────────────────────────
-      Summary
-      ───────────────────────────────────────────────────────────────────── */
 console.log("");
 console.log(
   " ╔══════════════════════════════════════════════════════════════╗"
 );
-if (pushed) {
-  console.log(
-    " ║   ✅ DONE — pushed to GitHub                                ║"
-  );
-} else {
-  console.log(
-    " ║   ⚠️  Push failed — see errors above                        ║"
-  );
-}
+console.log(
+  pushed
+    ? " ║   ✅ DONE — pushed. GitHub Actions will run in a moment.     ║"
+    : " ║   ⚠️  Push failed — check output above.                     ║"
+);
 console.log(
   " ╚══════════════════════════════════════════════════════════════╝"
 );
 console.log("");
-console.log(" ⚠️  تأكد من الإعدادات دي على GitHub:");
-console.log("");
-console.log("   1. Settings → Pages → Source = GitHub Actions");
-console.log('      (لو فيه "Deploy from a branch" → غيّرها)');
-console.log("");
-console.log("   2. Settings → Actions → General → Workflow permissions");
-console.log("      اختار: Read and write permissions");
-console.log("");
-console.log('   3. Actions tab → لو شفت ملف قديم مكسور، اعمل "Disable" له');
-console.log("      (بس مع الـ push الجديد المفروض ما يبقى فيه غيره)");
-console.log("");
-console.log(" ⏭️  بعد دقيقتين:");
-console.log("   • افتح Actions tab");
-console.log('   • هتلاقي run جديد اسمه "Deploy to GitHub Pages"');
-console.log("   • المفروض ينتهي بنجاح ✅");
+console.log(" ⏭️  بعد 4-7 دقايق افتح Actions واتأكد إن الـ build نجح ✅");
 console.log("");

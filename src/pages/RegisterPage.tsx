@@ -4,6 +4,16 @@
    import { teams } from '@/data/teams';
    import { FormField, TextInput, Select, TextArea } from '@/components/ui/FormField';
    import type { TeamId } from '@/types';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { FormField } from '@/components/ui/FormField';
+import { TextInput } from '@/components/ui/FormField';
+import { TextArea } from '@/components/ui/FormField';
+import { Select } from '@/components/ui/FormField';
+import { RequireAuth } from '@/components/layout/RequireAuth';
+import { login } from '@/lib/auth';
+import { teams } from '@/data/teams';
 
    export function RegisterPage() {
      const nav = useNavigate();

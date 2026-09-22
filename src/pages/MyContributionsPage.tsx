@@ -18,6 +18,40 @@
    import { FormField, TextInput, NumberInput, TextArea, Select } from '@/components/ui/FormField';
    import { toast } from '@/components/ui/Toast';
    import type { Contribution, TeamId, Committee } from '@/types';
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { Modal } from '@/components/ui/Modal';
+import { toast } from '@/components/ui/Toast';
+import { FormField } from '@/components/ui/FormField';
+import { TextInput } from '@/components/ui/FormField';
+import { NumberInput } from '@/components/ui/FormField';
+import { TextArea } from '@/components/ui/FormField';
+import { Select } from '@/components/ui/FormField';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Stat } from '@/components/ui/Stat';
+import { StatRow } from '@/components/ui/Stat';
+import { formatDate } from '@/lib/format';
+import { today } from '@/lib/db';
+import { safeArray } from '@/lib/safe';
+import { safeNumber } from '@/lib/safe';
+import { createOne } from '@/lib/db';
+import { newId } from '@/lib/db';
+import { logAudit } from '@/lib/audit';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { newContributionApprovals } from '@/lib/contributionApprovals';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { contributions } from '@/data/contributions';
+import { approvals } from '@/data/approvals';
 
    const STAGE_LABEL: Record<number, string> = {
      1: 'Committee HR',

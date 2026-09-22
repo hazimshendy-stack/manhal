@@ -6,6 +6,14 @@ import { Link } from 'react-router-dom';
    import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
    import { getMemberPoints } from '@/lib/rankings';
    import type { Contribution } from '@/types';
+import { Avatar } from '@/components/ui/Avatar';
+import { MemberCard } from '@/components/member/MemberCard';
+import { ROLE_LABEL } from '@/lib/permissions';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { getMemberPoints } from '@/lib/rankings';
+import { teams } from '@/data/teams';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
 
    interface MemberCardProps { member: Member; showTeam?: boolean; }
    export function MemberCard({ member, showTeam = true }: MemberCardProps) {

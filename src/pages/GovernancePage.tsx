@@ -6,6 +6,13 @@ import { useCollection } from '@/lib/useRealtimeCollection';
    import { SkeletonList } from '@/components/ui/Loading';
    import { formatDate } from '@/lib/format';
    import type { GovernanceDocument } from '@/types';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { formatDate } from '@/lib/format';
 
    export function GovernancePage() {
      const { data, loading } = useCollection<GovernanceDocument>('governance');

@@ -10,6 +10,17 @@ import { useMemo, useState } from 'react';
    import { Loading } from '@/components/ui/Loading';
    import { formatDate } from '@/lib/format';
    import type { CalendarEvent } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { EventCard } from '@/components/calendar/EventCard';
+import { CalendarGrid } from '@/components/calendar/CalendarGrid';
+import { formatDate } from '@/lib/format';
+import { today } from '@/lib/db';
+import { seesAllTeams } from '@/lib/permissions';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
 
    export function CalendarPage() {
      const { user } = useAuth();

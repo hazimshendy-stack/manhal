@@ -7,6 +7,15 @@ import { useAuth } from '@/lib/useAuth';
    import { SkeletonList } from '@/components/ui/Loading';
    import { toast } from '@/components/ui/Toast';
    import type { Notification } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { toast } from '@/components/ui/Toast';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { NotificationItem } from '@/components/notification/NotificationItem';
+import { updateOne } from '@/lib/db';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { notifications } from '@/data/notifications';
 
    export function NotificationsPage() {
      const { user } = useAuth();

@@ -6,6 +6,17 @@ import { useMemo, useState } from 'react';
    import { EmptyState } from '@/components/ui/EmptyState';
    import { Badge } from '@/components/ui/Badge';
    import type { Member, Contribution, Achievement, Committee } from '@/types';
+import { Link } from 'react-router-dom';
+import { Badge } from '@/components/ui/Badge';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { achievements } from '@/data/achievements';
 
    export function SearchPage() {
      const [query, setQuery] = useState('');

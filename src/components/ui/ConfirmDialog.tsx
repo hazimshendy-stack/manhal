@@ -1,4 +1,5 @@
 import { Modal } from './Modal';
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
    interface ConfirmDialogProps { open: boolean; title: string; message: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean; busy?: boolean; onConfirm: () => void; onCancel: () => void; }
    export function ConfirmDialog({ open, title, message, confirmLabel = 'Confirm', cancelLabel = 'Cancel', danger, busy, onConfirm, onCancel }: ConfirmDialogProps) {
      return (

@@ -7,6 +7,24 @@
    import { toast } from '@/components/ui/Toast';
    import { Loading } from '@/components/ui/Loading';
    import type { AppUser, RequestRecord, Contribution, Notification, Member, Committee } from '@/types';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Loading } from '@/components/ui/Loading';
+import { toast } from '@/components/ui/Toast';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { requests } from '@/data/requests';
+import { warnings } from '@/data/warnings';
+import { achievements } from '@/data/achievements';
+import { notifications } from '@/data/notifications';
+import { conversations } from '@/data/conversations';
+import { audit } from '@/data/audit';
+import { roles } from '@/data/roles';
 
    interface AdminCard { to: string; title: string; count?: number; description: string; }
 

@@ -8,6 +8,18 @@ import { useParams } from 'react-router-dom';
    import { EmptyState } from '@/components/ui/EmptyState';
    import { NotFoundPage } from './NotFoundPage';
    import type { Committee, Member, Contribution } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Stat } from '@/components/ui/Stat';
+import { StatRow } from '@/components/ui/Stat';
+import { MemberCard } from '@/components/member/MemberCard';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { useCollection } from '@/lib/useRealtimeCollection';
+import { getCommitteeRanking } from '@/lib/rankings';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
 
    export function CommitteeDetailPage() {
      const { committeeId } = useParams<{ committeeId: string }>();

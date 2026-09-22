@@ -1,5 +1,13 @@
 import { Link } from 'react-router-dom';
    import { site, activeSeason } from '@/data';
+import { Footer } from '@/components/layout/Footer';
+import { login } from '@/lib/auth';
+import { site } from '@/data/site';
+import { activeSeason } from '@/data/site';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { achievements } from '@/data/achievements';
 
    export function Footer() {
      const year = new Date().getFullYear();

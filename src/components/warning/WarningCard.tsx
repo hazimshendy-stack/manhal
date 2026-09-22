@@ -1,6 +1,9 @@
 import type { WarningRecord } from '@/types';
    import { Badge } from '@/components/ui/Badge';
    import { formatDate } from '@/lib/format';
+import { Badge } from '@/components/ui/Badge';
+import { WarningCard } from '@/components/warning/WarningCard';
+import { formatDate } from '@/lib/format';
 
    interface WarningCardProps { warning: WarningRecord; }
    export function WarningCard({ warning }: WarningCardProps) {

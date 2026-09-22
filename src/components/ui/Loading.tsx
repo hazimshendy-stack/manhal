@@ -1,3 +1,7 @@
+
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonCard } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
 interface LoadingProps { message?: string; fullHeight?: boolean; }
    export function Loading({ message = 'Loading...', fullHeight = false }: LoadingProps) {
      return <div className="loading-screen" style={fullHeight ? { minHeight: '60vh' } : undefined}><div className="loading-spinner" /><div>{message}</div></div>;

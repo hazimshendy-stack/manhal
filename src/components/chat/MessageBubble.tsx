@@ -1,5 +1,7 @@
 import type { Message, AppUser } from '@/types';
    import { formatTime } from '@/lib/format';
+import { MessageBubble } from '@/components/chat/MessageBubble';
+import { formatTime } from '@/lib/format';
 
    interface MessageBubbleProps { message: Message; currentUser: AppUser; }
    export function MessageBubble({ message, currentUser }: MessageBubbleProps) {

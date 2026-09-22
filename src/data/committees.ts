@@ -1,4 +1,6 @@
 import type { Committee } from '@/types';
+import { committees } from '@/data/committees';
+import { messages } from '@/data/conversations';
 
  /* ═══════════════════════════════════════════════════════════════
     Committees are added by Head Sub Branches via admin panel.

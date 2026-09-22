@@ -2,6 +2,12 @@ import { Link } from 'react-router-dom';
    import type { RequestRecord, RequestStatus } from '@/types';
    import { Badge } from '@/components/ui/Badge';
    import { formatDate, REQUEST_TYPE_LABEL, REQUEST_STATUS_LABEL } from '@/lib/format';
+import { Badge } from '@/components/ui/Badge';
+import { RequestCard } from '@/components/request/RequestCard';
+import { formatDate } from '@/lib/format';
+import { REQUEST_TYPE_LABEL } from '@/lib/format';
+import { REQUEST_STATUS_LABEL } from '@/lib/format';
+import { requests } from '@/data/requests';
 
    function statusVariant(s: RequestStatus): 'success' | 'danger' | 'warning' | 'info' | 'neutral' {
      if (s === 'APPROVED') return 'success';

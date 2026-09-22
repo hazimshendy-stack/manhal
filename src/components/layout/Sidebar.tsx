@@ -6,6 +6,28 @@
    import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
    import { cx } from '@/lib/format';
    import type { ApprovalStep, AppUser } from '@/types';
+import { useState } from 'react';
+import { useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+import { Sidebar } from '@/components/layout/Sidebar';
+import { cx } from '@/lib/format';
+import { ROLE_LABEL } from '@/lib/permissions';
+import { isAdmin } from '@/lib/permissions';
+import { seesAllTeams } from '@/lib/permissions';
+import { logout } from '@/lib/auth';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { requests } from '@/data/requests';
+import { approvals } from '@/data/approvals';
+import { warnings } from '@/data/warnings';
+import { achievements } from '@/data/achievements';
+import { notifications } from '@/data/notifications';
+import { conversations } from '@/data/conversations';
+import { audit } from '@/data/audit';
 
    interface NavItem { to: string; label: string; count?: number; }
    interface SidebarProps { open: boolean; onClose: () => void; }

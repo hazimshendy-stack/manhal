@@ -1,5 +1,7 @@
 import type { TimelineEvent } from '@/types';
    import { formatDate } from '@/lib/format';
+import { TimelineList } from '@/components/timeline/TimelineList';
+import { formatDate } from '@/lib/format';
 
    interface TimelineListProps { events: TimelineEvent[]; }
    export function TimelineList({ events }: TimelineListProps) {

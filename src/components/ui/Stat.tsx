@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { Stat } from '@/components/ui/Stat';
+import { StatRow } from '@/components/ui/Stat';
 
    interface StatProps { value: number | string; label: string; variant?: 'red' | 'success' | 'amber'; }
    export function Stat({ value, label, variant }: StatProps) {

@@ -4,6 +4,18 @@ import { NavLink } from 'react-router-dom';
    import { cx } from '@/lib/format';
    import { IconHome, IconMembers, IconChat, IconBell, IconAdmin } from '@/components/ui/Icons';
    import type { Notification } from '@/types';
+import { IconHome } from '@/components/ui/Icons';
+import { IconMembers } from '@/components/ui/Icons';
+import { IconChat } from '@/components/ui/Icons';
+import { IconBell } from '@/components/ui/Icons';
+import { IconAdmin } from '@/components/ui/Icons';
+import { BottomNav } from '@/components/layout/BottomNav';
+import { cx } from '@/lib/format';
+import { useAuth } from '@/lib/useAuth';
+import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+import { members } from '@/data/members';
+import { notifications } from '@/data/notifications';
+import { conversations } from '@/data/conversations';
 
    interface NavTab { to: string; label: string; Icon: (props: { size?: number }) => JSX.Element; badge?: number; }
 

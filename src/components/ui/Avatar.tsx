@@ -1,3 +1,6 @@
+
+import { Avatar } from '@/components/ui/Avatar';
+import { cx } from '@/lib/format';
 interface AvatarProps { name?: string; size?: number; variant?: 'navy' | 'red' | 'gradient' | 'light'; src?: string; }
    const BG: Record<string, string> = { navy: 'var(--c-navy)', red: 'var(--c-red)', gradient: 'linear-gradient(150deg, var(--c-red), var(--c-red-soft))', light: 'var(--c-off-white)' };
    export function Avatar({ name, size = 44, variant = 'navy', src }: AvatarProps) {

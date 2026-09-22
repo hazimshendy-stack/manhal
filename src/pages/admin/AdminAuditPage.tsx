@@ -5,6 +5,13 @@ import { useCollection } from '@/lib/useRealtimeCollection';
    import { SkeletonList } from '@/components/ui/Loading';
    import { formatDateTime } from '@/lib/format';
    import type { AuditRecord } from '@/types';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { Loading } from '@/components/ui/Loading';
+import { SkeletonList } from '@/components/ui/Loading';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { formatDateTime } from '@/lib/format';
+import { audit } from '@/data/audit';
 
    export function AdminAuditPage() {
      const { data, loading } = useCollection<AuditRecord>('audit');

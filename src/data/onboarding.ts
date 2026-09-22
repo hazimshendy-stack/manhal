@@ -1,4 +1,11 @@
 import type { OnboardingCard } from '@/types';
+import { teams } from '@/data/teams';
+import { committees } from '@/data/committees';
+import { members } from '@/data/members';
+import { contributions } from '@/data/contributions';
+import { requests } from '@/data/requests';
+import { achievements } from '@/data/achievements';
+import { onboardingCards } from '@/data/onboarding';
 
    export const onboardingCards: OnboardingCard[] = [
      { id: 'welcome', icon: '', title: 'Welcome to Manhal', description: 'The platform for Resala STEM Sub Branches — members, teams, committees, contributions, requests, and achievements in one place.', accentColor: '#C1272D', order: 1 },

@@ -2,6 +2,10 @@ import type { Achievement } from '@/types';
    import { Badge } from '@/components/ui/Badge';
    import { teams } from '@/data/teams';
    import { formatDate } from '@/lib/format';
+import { Badge } from '@/components/ui/Badge';
+import { AchievementCard } from '@/components/achievement/AchievementCard';
+import { formatDate } from '@/lib/format';
+import { teams } from '@/data/teams';
 
    interface AchievementCardProps { achievement: Achievement; }
    export function AchievementCard({ achievement }: AchievementCardProps) {
