@@ -5,12 +5,6 @@ import { Link } from 'react-router-dom';
    import { teams } from '@/data/teams';
    import { safeArray } from '@/lib/safe';
    import { hoursToPoints } from '@/lib/format';
-import { Avatar } from '@/components/ui/Avatar';
-import { MemberRow } from '@/components/member/MemberRow';
-import { hoursToPoints } from '@/lib/format';
-import { safeArray } from '@/lib/safe';
-import { ROLE_LABEL } from '@/lib/permissions';
-import { teams } from '@/data/teams';
 import { members } from '@/data/members';
 
    interface MemberRowProps {

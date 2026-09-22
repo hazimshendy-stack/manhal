@@ -1,3 +1,6 @@
+import { useRef } from 'react';
+import { parseCsv, buildSampleCsv, SAMPLE_CSV_COLUMNS } from '@/lib/csv';
+import { createUserAccount } from '@/lib/auth';
 import { useState } from 'react';
 import { useCollection, useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { createOne, updateOne, removeOne, now } from '@/lib/db';
@@ -28,6 +31,58 @@ import { members } from '@/data/members';
      const [toDelete, setToDelete] = useState<Member | null>(null);
      const [busy, setBusy] = useState(false);
      const [search, setSearch] = useState('');
+     const csvInputRef = useRef<HTMLInputElement | null>(null);
+     const [csvReport, setCsvReport] = useState<Array<{ row: number; ok: boolean; message: string }>>([]);
+
+     const downloadSample = () => {
+       const csv = buildSampleCsv(teams.map((t) => t.id), liveCommittees.map((c) => c.id));
+       const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+       const url = URL.createObjectURL(blob);
+       const a = document.createElement('a');
+       a.href = url;
+       a.download = 'members-sample.csv';
+       document.body.appendChild(a);
+       a.click();
+       document.body.removeChild(a);
+       URL.revokeObjectURL(url);
+     };
+
+     const handleCsvUpload = async (file: File) => {
+       const text = await file.text();
+       const rows = parseCsv(text);
+       const report: Array<{ row: number; ok: boolean; message: string }> = [];
+       for (let i = 0; i < rows.length; i += 1) {
+         const r = rows[i];
+         const rowNum = i + 2;
+         try {
+           const fullName = (r.fullName || r.name || '').trim();
+           const email = (r.email || '').trim().toLowerCase();
+           const password = (r.password || '').trim() || (Math.random().toString(36).slice(2) + 'Aa1!');
+           const role = (r.role || 'MEMBER').trim() as RoleId;
+           const teamIds = (r.teamIds || '').split('|').map((s) => s.trim()).filter(Boolean) as TeamId[];
+           const committeeIds = (r.committeeIds || '').split('|').map((s) => s.trim()).filter(Boolean);
+           const status = ((r.status || 'active').trim() as Member['status']);
+           const hours = Number(r.hours || 0);
+           const points = Number(r.points || 0);
+           const joinedSeason = Number(r.joinedSeason || 7);
+           const bio = (r.bio || '').trim();
+           if (!fullName) throw new Error('fullName is required');
+           if (!email || !email.includes('@')) throw new Error('email is required');
+           if (teamIds.length === 0) throw new Error('at least one teamId is required');
+           if (committeeIds.length === 0) throw new Error('at least one committeeId is required');
+           const memberId = 'M-' + Date.now().toString(36).toUpperCase() + '-' + rowNum;
+           const { uid } = await createUserAccount({ email, password, displayName: fullName, role, teamId: teamIds[0], memberId, status: 'approved' });
+           await createOne('members', { id: memberId, name: fullName, role, teamIds, committeeIds, joinedSeason, hours, points, status, bio, email });
+           report.push({ row: rowNum, ok: true, message: fullName + ' <' + email + '> (' + uid + ')' });
+         } catch (err) {
+           report.push({ row: rowNum, ok: false, message: err instanceof Error ? err.message : String(err) });
+         }
+       }
+       setCsvReport(report);
+       const ok = report.filter((x) => x.ok).length;
+       const ko = report.length - ok;
+       toast.success('Import done: ' + ok + ' ok, ' + ko + ' failed');
+     };
      const filtered = list.filter((m) => !search.trim() || m.name.toLowerCase().includes(search.trim().toLowerCase()));
      const openCreate = () => { setForm(EMPTY); setCreating(true); setEditing(null); };
      const openEdit = (m: Member) => { setForm({ name: m.name, role: m.role, teamIds: Array.isArray(m.teamIds) ? m.teamIds : [], committeeIds: Array.isArray(m.committeeIds) ? m.committeeIds : [], joinedSeason: m.joinedSeason || 7, hours: m.hours || 0, points: m.points || 0, status: m.status || 'active', bio: m.bio || '', email: m.email || '' }); setEditing(m); setCreating(false); };
@@ -49,6 +104,15 @@ import { members } from '@/data/members';
        <div className="admin-page">
          <PageHeader eyebrow="Admin" title="Members" description="Every member must be in a team AND a committee." />
          <div className="toolbar"><input className="input" type="search" placeholder="Search..." value={search} onChange={(e) => setSearch(e.target.value)} /></div>
+         <div className="toolbar" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+           <input ref={csvInputRef} type="file" accept=".csv,text/csv" style={{ display: 'none' }} onChange={(e) => {
+             const f = e.target.files && e.target.files[0];
+             if (f) handleCsvUpload(f);
+             e.target.value = '';
+           }} />
+           <button type="button" className="btn btn--primary btn--sm" onClick={() => csvInputRef.current && csvInputRef.current.click()}>Upload CSV</button>
+           <button type="button" className="btn btn--ghost btn--sm" onClick={downloadSample}>Download Sample CSV</button>
+         </div>
          <SectionHeader eyebrow="List" title={'Members (' + filtered.length + ')'} action={<button type="button" className="btn btn--primary btn--sm" onClick={openCreate}>+ New Member</button>} />
          {loading ? <SkeletonList count={6} /> : filtered.length === 0 ? <EmptyState title="No members" message="No members found." /> : (
            <div className="table-wrap"><table className="data">
@@ -70,6 +134,19 @@ import { members } from '@/data/members';
              })}</tbody>
            </table></div>
          )}
+         {csvReport.length > 0 ? (
+           <div className="card no-click mt-4">
+             <div className="card__title">CSV Import Report</div>
+             <ul className="small" style={{ marginTop: 8 }}>
+               {csvReport.map((r) => (
+                 <li key={r.row} style={{ color: r.ok ? '#16A34A' : '#C1272D' }}>
+                   Row {r.row}: {r.ok ? '✅' : '❌'} {r.message}
+                 </li>
+               ))}
+             </ul>
+             <div className="tiny muted mt-2">Accepted columns: {SAMPLE_CSV_COLUMNS.join(', ')}</div>
+           </div>
+         ) : null}
          <Modal open={creating || editing !== null} title={editing ? 'Edit Member' : 'Add Member'} onClose={close} wide
            footer={<><button type="button" className="btn btn--ghost" onClick={close}>Cancel</button><button type="button" className="btn btn--primary" onClick={save} disabled={busy}>{busy ? '...' : 'Save'}</button></>}>
            <FormField label="Full name" required><TextInput value={form.name} onChange={(v) => setForm({ ...form, name: v })} /></FormField>

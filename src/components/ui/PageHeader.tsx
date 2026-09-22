@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { PageHeader } from '@/components/ui/PageHeader';
    interface PageHeaderProps { eyebrow?: string; title: string; description?: string; children?: ReactNode; }
    export function PageHeader({ eyebrow, title, description, children }: PageHeaderProps) {
      return (

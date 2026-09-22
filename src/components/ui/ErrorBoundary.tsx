@@ -1,5 +1,4 @@
 import { Component, type ReactNode } from 'react';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
    interface Props { children: ReactNode; }
    interface State { hasError: boolean; error?: Error; }
    export class ErrorBoundary extends Component<Props, State> {

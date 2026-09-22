@@ -1,6 +1,5 @@
 import type { CalendarEvent } from '@/types';
    import { getArabicMonth, getDaysInMonth, getFirstWeekdayOfMonth } from '@/lib/format';
-import { CalendarGrid } from '@/components/calendar/CalendarGrid';
 import { today } from '@/lib/db';
 import { getArabicMonth } from '@/lib/format';
 import { getDaysInMonth } from '@/lib/format';

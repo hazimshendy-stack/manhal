@@ -2,12 +2,8 @@
    import { useAuth } from '@/lib/useAuth';
    import { logout } from '@/lib/auth';
    import { Loading } from '@/components/ui/Loading';
-import { useNavigate } from 'react-router-dom';
-import { Loading } from '@/components/ui/Loading';
 import { now } from '@/lib/db';
 import { login } from '@/lib/auth';
-import { logout } from '@/lib/auth';
-import { useAuth } from '@/lib/useAuth';
 
    export function PendingApprovalPage() {
      const { user, loading } = useAuth();

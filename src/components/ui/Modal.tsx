@@ -1,5 +1,4 @@
 import { useEffect, type ReactNode } from 'react';
-import { Modal } from '@/components/ui/Modal';
 
    interface ModalProps { open: boolean; title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; }
    export function Modal({ open, title, onClose, children, footer, wide }: ModalProps) {

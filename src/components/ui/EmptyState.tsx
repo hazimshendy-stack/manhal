@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { EmptyState } from '@/components/ui/EmptyState';
 
    interface EmptyStateProps { icon?: string; title?: string; message: string; action?: ReactNode; }
    export function EmptyState({ icon, title, message, action }: EmptyStateProps) {

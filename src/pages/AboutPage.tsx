@@ -5,12 +5,8 @@ import { site, activeSeason } from '@/data';
    import { SectionHeader } from '@/components/ui/SectionHeader';
    import { Stat, StatRow } from '@/components/ui/Stat';
    import type { Member } from '@/types';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat } from '@/components/ui/Stat';
 import { StatRow } from '@/components/ui/Stat';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
 import { members } from '@/data/members';
 
    export function AboutPage() {

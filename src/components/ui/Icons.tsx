@@ -1,9 +1,4 @@
 
-import { IconHome } from '@/components/ui/Icons';
-import { IconMembers } from '@/components/ui/Icons';
-import { IconChat } from '@/components/ui/Icons';
-import { IconBell } from '@/components/ui/Icons';
-import { IconAdmin } from '@/components/ui/Icons';
 import { cx } from '@/lib/format';
 interface IconProps { size?: number; className?: string; }
    export function IconHome({ size = 24, className }: IconProps) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true"><path d="M11.3 2.4a1 1 0 0 1 1.4 0l9 8.2a1 1 0 0 1-.7 1.7h-1.5v8.2a1 1 0 0 1-1 1h-4.6v-5.5a1.5 1.5 0 0 0-1.5-1.5h-.8a1.5 1.5 0 0 0-1.5 1.5v5.5H5.5a1 1 0 0 1-1-1v-8.2H3a1 1 0 0 1-.7-1.7l9-8.2z" /></svg>; }

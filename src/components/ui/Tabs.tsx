@@ -1,5 +1,4 @@
 import { cx } from '@/lib/format';
-import { Tabs } from '@/components/ui/Tabs';
 
    interface Tab {
      id: string;

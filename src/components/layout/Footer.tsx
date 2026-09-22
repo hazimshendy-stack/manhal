@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
    import { site, activeSeason } from '@/data';
-import { Footer } from '@/components/layout/Footer';
 import { login } from '@/lib/auth';
 import { site } from '@/data/site';
 import { activeSeason } from '@/data/site';

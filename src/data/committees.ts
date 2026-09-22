@@ -1,5 +1,4 @@
 import type { Committee } from '@/types';
-import { committees } from '@/data/committees';
 import { messages } from '@/data/conversations';
 
  /* ═══════════════════════════════════════════════════════════════

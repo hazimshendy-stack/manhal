@@ -1,0 +1,1 @@
+export function TextInput({value,onChange,type='text',placeholder}:{value:string;onChange:(v:string)=>void;type?:string;placeholder?:string}){return <input className="input" type={type} value={value} placeholder={placeholder} onChange={(e)=>onChange(e.target.value)} />;}

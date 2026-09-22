@@ -2,10 +2,6 @@ import type { CalendarEvent } from '@/types';
    import { Badge } from '@/components/ui/Badge';
    import { teams } from '@/data/teams';
    import { formatDate } from '@/lib/format';
-import { Badge } from '@/components/ui/Badge';
-import { EventCard } from '@/components/calendar/EventCard';
-import { formatDate } from '@/lib/format';
-import { teams } from '@/data/teams';
 
    interface EventCardProps { event: CalendarEvent; }
    export function EventCard({ event }: EventCardProps) {

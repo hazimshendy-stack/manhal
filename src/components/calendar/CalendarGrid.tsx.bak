@@ -1,0 +1,48 @@
+import type { CalendarEvent } from '@/types';
+   import { getArabicMonth, getDaysInMonth, getFirstWeekdayOfMonth } from '@/lib/format';
+import { CalendarGrid } from '@/components/calendar/CalendarGrid';
+import { today } from '@/lib/db';
+import { getArabicMonth } from '@/lib/format';
+import { getDaysInMonth } from '@/lib/format';
+import { getFirstWeekdayOfMonth } from '@/lib/format';
+
+   interface CalendarGridProps { year: number; month: number; events: CalendarEvent[]; selectedDate?: string; onSelectDate: (date: string) => void; onPrevMonth: () => void; onNextMonth: () => void; }
+   const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+   function pad(n: number): string { return n < 10 ? '0' + n : String(n); }
+   function toIso(y: number, m: number, d: number): string { return String(y) + '-' + pad(m + 1) + '-' + pad(d); }
+   export function CalendarGrid({ year, month, events, selectedDate, onSelectDate, onPrevMonth, onNextMonth }: CalendarGridProps) {
+     const daysInMonth = getDaysInMonth(year, month);
+     const firstWeekday = getFirstWeekdayOfMonth(year, month);
+     const todayIso = new Date().toISOString().slice(0, 10);
+     const eventsByDate = new Map<string, CalendarEvent[]>();
+     for (const e of events) { if (!eventsByDate.has(e.date)) eventsByDate.set(e.date, []); eventsByDate.get(e.date)!.push(e); }
+     const cells: Array<{ day: number | null; iso: string }> = [];
+     for (let i = 0; i < firstWeekday; i += 1) cells.push({ day: null, iso: '' });
+     for (let d = 1; d <= daysInMonth; d += 1) cells.push({ day: d, iso: toIso(year, month, d) });
+     return (
+       <div className="calendar-container">
+         <div className="calendar-header">
+           <div className="calendar-month">{getArabicMonth(month)}<span style={{ fontSize: '0.85rem', color: 'var(--c-ink-muted)' }}>{year}</span></div>
+           <div className="calendar-nav">
+             <button type="button" className="calendar-nav__btn" onClick={onPrevMonth}>‹</button>
+             <button type="button" className="calendar-nav__btn" onClick={onNextMonth}>›</button>
+           </div>
+         </div>
+         <div className="calendar-weekdays">{WEEKDAYS.map((d) => <div key={d} className="calendar-weekday">{d}</div>)}</div>
+         <div className="calendar-grid">
+           {cells.map((cell, idx) => {
+             if (cell.day === null) return <div key={'empty-' + idx} className="calendar-day" style={{ background: 'transparent' }} />;
+             const hasEvents = eventsByDate.has(cell.iso);
+             const isToday = cell.iso === todayIso;
+             const isSelected = cell.iso === selectedDate;
+             let cls = 'calendar-day';
+             if (hasEvents) cls += ' calendar-day--has-events';
+             if (isToday) cls += ' calendar-day--today';
+             if (isSelected && !isToday) cls += ' calendar-day--selected';
+             return <button key={cell.iso} type="button" className={cls} onClick={() => onSelectDate(cell.iso)}>{cell.day}</button>;
+           })}
+         </div>
+       </div>
+     );
+   }
+   

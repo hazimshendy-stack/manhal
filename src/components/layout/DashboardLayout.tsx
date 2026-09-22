@@ -1,7 +1,6 @@
 import { Outlet } from 'react-router-dom';
    import { Sidebar } from './Sidebar';
 import { Sidebar } from '@/components/layout/Sidebar';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
    interface DashboardLayoutProps { sidebarOpen?: boolean; onSidebarClose?: () => void; }
    export function DashboardLayout({ sidebarOpen = false, onSidebarClose }: DashboardLayoutProps) {
      return (

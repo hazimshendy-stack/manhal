@@ -3,11 +3,6 @@ import type { Contribution } from '@/types';
    import { teams } from '@/data/teams';
    import { formatDate } from '@/lib/format';
    import { safeNumber } from '@/lib/safe';
-import { Badge } from '@/components/ui/Badge';
-import { ContributionRow } from '@/components/contribution/ContributionRow';
-import { formatDate } from '@/lib/format';
-import { safeNumber } from '@/lib/safe';
-import { teams } from '@/data/teams';
 
    interface ContributionRowProps { contribution: Contribution; showMember?: boolean; showTeam?: boolean; }
    export function ContributionRow({ contribution, showMember = true, showTeam = true }: ContributionRowProps) {

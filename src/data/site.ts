@@ -1,7 +1,4 @@
 import type { SiteConfig, Season } from '@/types';
-import { site } from '@/data/site';
-import { seasons } from '@/data/site';
-import { activeSeason } from '@/data/site';
 
    export const site: SiteConfig = {
      name: 'Manhal',

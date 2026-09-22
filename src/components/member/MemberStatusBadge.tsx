@@ -1,6 +1,5 @@
 import { Badge } from '@/components/ui/Badge';
    import type { Member } from '@/types';
-import { MemberStatusBadge } from '@/components/member/MemberStatusBadge';
 
    export function MemberStatusBadge({ status }: { status: Member['status'] }) {
      if (status === 'active') return <Badge variant="success" dot>Active</Badge>;

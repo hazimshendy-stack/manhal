@@ -1,8 +1,6 @@
 import { useNavigate } from 'react-router-dom';
    import type { Notification } from '@/types';
    import { relativeTime } from '@/lib/format';
-import { NotificationItem } from '@/components/notification/NotificationItem';
-import { relativeTime } from '@/lib/format';
 
    interface NotificationItemProps { notification: Notification; onMarkRead?: (id: string) => void; }
    export function NotificationItem({ notification, onMarkRead }: NotificationItemProps) {

@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { parseCsv, buildSampleCsv, SAMPLE_CSV_COLUMNS } from '@/lib/csv';
-import { createUserAccount } from '@/lib/auth';
+import { createUserAccount } from '@/lib/createUserAccount';
 import { useState } from 'react';
 import { useCollection, useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { createOne, updateOne, removeOne, now } from '@/lib/db';

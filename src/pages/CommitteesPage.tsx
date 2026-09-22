@@ -7,15 +7,9 @@ import { useRealtimeCollection, useCollection } from '@/lib/useRealtimeCollectio
    import { EmptyState } from '@/components/ui/EmptyState';
    import { SkeletonList } from '@/components/ui/Loading';
    import type { Committee, Member, Contribution } from '@/types';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
-import { SkeletonList } from '@/components/ui/Loading';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Stat } from '@/components/ui/Stat';
 import { StatRow } from '@/components/ui/Stat';
-import { CommitteeCard } from '@/components/committee/CommitteeCard';
-import { getCommitteeTotalPoints } from '@/lib/rankings';
 import { teams } from '@/data/teams';
 import { committees } from '@/data/committees';
 import { members } from '@/data/members';

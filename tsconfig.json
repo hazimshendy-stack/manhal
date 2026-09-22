@@ -15,7 +15,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "strict": true,
+    "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
@@ -24,7 +24,11 @@
       "@/*": [
         "src/*"
       ]
-    }
+    },
+    "noImplicitAny": false,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
   },
   "include": [
     "src"

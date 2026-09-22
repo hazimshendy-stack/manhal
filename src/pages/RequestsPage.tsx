@@ -9,17 +9,8 @@ import { useMemo, useState } from 'react';
    import { SectionHeader } from '@/components/ui/SectionHeader';
    import { cx } from '@/lib/format';
    import type { RequestType, RequestStatus, RequestRecord } from '@/types';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
-import { SkeletonList } from '@/components/ui/Loading';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { RequestCard } from '@/components/request/RequestCard';
-import { cx } from '@/lib/format';
-import { seesAllTeams } from '@/lib/permissions';
-import { useAuth } from '@/lib/useAuth';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useCollection } from '@/lib/useRealtimeCollection';
 import { requests } from '@/data/requests';
 
    const TYPES: Array<RequestType | 'all'> = ['all', 'TRANSFER', 'PROMOTION', 'RESIGNATION', 'COMPLAINT', 'SUGGESTION', 'LEAVE'];

@@ -1,0 +1,1 @@
+export function SkeletonList({count=5}:{count?:number}){return <div className="stack">{Array.from({length:count}).map((_,i)=><div key={i} className="card no-click" style={{height:64,background:'#F1F5F9'}}/>)}</div>;}

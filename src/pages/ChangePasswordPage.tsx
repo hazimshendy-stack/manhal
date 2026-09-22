@@ -4,13 +4,9 @@ import { useState, type FormEvent } from 'react';
    import { changePassword, logout } from '@/lib/auth';
    import { toast } from '@/components/ui/Toast';
    import { Loading } from '@/components/ui/Loading';
-import { useNavigate } from 'react-router-dom';
-import { Loading } from '@/components/ui/Loading';
-import { toast } from '@/components/ui/Toast';
 import { login } from '@/lib/auth';
 import { logout } from '@/lib/auth';
 import { changePassword } from '@/lib/auth';
-import { useAuth } from '@/lib/useAuth';
 
    export function ChangePasswordPage() {
      const nav = useNavigate();

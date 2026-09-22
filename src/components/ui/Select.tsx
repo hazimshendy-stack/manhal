@@ -1,0 +1,1 @@
+export function Select({value,onChange,options}:{value:string;onChange:(v:string)=>void;options:Array<{value:string;label:string}>}){return <select className="input" value={value} onChange={(e)=>onChange(e.target.value)}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>;}

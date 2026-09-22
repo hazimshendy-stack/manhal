@@ -5,12 +5,7 @@ import { useCollection } from '@/lib/useRealtimeCollection';
    import { SkeletonCard } from '@/components/ui/Loading';
    import { SectionHeader } from '@/components/ui/SectionHeader';
    import type { Achievement } from '@/types';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
-import { SkeletonCard } from '@/components/ui/Loading';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { AchievementCard } from '@/components/achievement/AchievementCard';
 import { achievements } from '@/data/achievements';
 
    export function AchievementsPage() {

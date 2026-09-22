@@ -13,7 +13,6 @@ import { TextArea } from '@/components/ui/FormField';
 import { Select } from '@/components/ui/FormField';
 import { RequireAuth } from '@/components/layout/RequireAuth';
 import { login } from '@/lib/auth';
-import { teams } from '@/data/teams';
 
    export function RegisterPage() {
      const nav = useNavigate();

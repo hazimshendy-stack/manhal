@@ -5,12 +5,8 @@ import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
    import { PageHeader } from '@/components/ui/PageHeader';
    import { Stat, StatRow } from '@/components/ui/Stat';
    import type { Member, Contribution } from '@/types';
-import { PageHeader } from '@/components/ui/PageHeader';
 import { Stat } from '@/components/ui/Stat';
 import { StatRow } from '@/components/ui/Stat';
-import { TeamCard } from '@/components/team/TeamCard';
-import { getTeamTotalPoints } from '@/lib/rankings';
-import { teams } from '@/data/teams';
 import { members } from '@/data/members';
 import { contributions } from '@/data/contributions';
 

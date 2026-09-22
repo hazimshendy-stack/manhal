@@ -1,7 +1,4 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { ToastContainer } from '@/components/ui/Toast';
-import { useToast } from '@/components/ui/Toast';
-import { toast } from '@/components/ui/Toast';
    type ToastType = 'success' | 'error' | 'info' | 'warning';
    interface ToastItem { id: string; title: string; message?: string; type: ToastType; }
    interface ToastState { toasts: ToastItem[]; show: (title: string, message?: string, type?: ToastType) => void; remove: (id: string) => void; }

@@ -10,18 +10,8 @@ import { useMemo, useState } from 'react';
    import { SkeletonList } from '@/components/ui/Loading';
    import { cx } from '@/lib/format';
    import type { Contribution, ContributionStatus, TeamId } from '@/types';
-import { EmptyState } from '@/components/ui/EmptyState';
 import { Loading } from '@/components/ui/Loading';
-import { SkeletonList } from '@/components/ui/Loading';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { ContributionRow } from '@/components/contribution/ContributionRow';
-import { cx } from '@/lib/format';
-import { seesAllTeams } from '@/lib/permissions';
-import { useAuth } from '@/lib/useAuth';
 import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { useCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
 import { contributions } from '@/data/contributions';
 
    const STATUSES: Array<ContributionStatus | 'all'> = ['all', 'pending', 'in_review', 'approved', 'rejected'];

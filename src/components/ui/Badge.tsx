@@ -1,7 +1,5 @@
 import type { ReactNode } from 'react';
    import { cx } from '@/lib/format';
-import { Badge } from '@/components/ui/Badge';
-import { cx } from '@/lib/format';
 
    type Variant = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'navy' | 'red';
 

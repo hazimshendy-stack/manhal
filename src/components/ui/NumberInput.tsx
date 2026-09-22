@@ -1,0 +1,1 @@
+export function NumberInput({value,onChange,min,max}:{value:number;onChange:(v:number)=>void;min?:number;max?:number}){return <input className="input" type="number" value={value} min={min} max={max} onChange={(e)=>onChange(Number(e.target.value))} />;}

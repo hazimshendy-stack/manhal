@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import { SectionHeader } from '@/components/ui/SectionHeader';
    interface SectionHeaderProps { eyebrow?: string; title: string; description?: string; action?: ReactNode; }
    export function SectionHeader({ eyebrow, title, description, action }: SectionHeaderProps) {
      return (

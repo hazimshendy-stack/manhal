@@ -1,5 +1,4 @@
 import type { Role } from '@/types';
-import { roleLabels } from '@/data/roles';
 
 export const roles: Role[] = [
   { id: 'HEAD', name: 'Head', nameEn: 'Head', level: 100 },

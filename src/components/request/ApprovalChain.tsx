@@ -1,9 +1,6 @@
 import type { ApprovalStep } from '@/types';
    import { ROLE_LABEL } from '@/lib/permissions';
    import { formatDate } from '@/lib/format';
-import { ApprovalChain } from '@/components/request/ApprovalChain';
-import { formatDate } from '@/lib/format';
-import { ROLE_LABEL } from '@/lib/permissions';
 
    const STATUS_LABEL: Record<string, string> = { PENDING: 'Awaiting', APPROVED: 'Approved', REJECTED: 'Rejected', SKIPPED: 'Skipped' };
    interface ApprovalChainProps { steps: ApprovalStep[]; }

@@ -1,0 +1,1 @@
+export function TextArea({value,onChange,rows=3,placeholder}:{value:string;onChange:(v:string)=>void;rows?:number;placeholder?:string}){return <textarea className="input" rows={rows} value={value} placeholder={placeholder} onChange={(e)=>onChange(e.target.value)} />;}
