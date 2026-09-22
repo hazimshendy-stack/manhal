@@ -5,6 +5,8 @@
    import { createOne, newId, today } from '@/lib/db';
    import { logAudit } from '@/lib/audit';
    import { newContributionApprovals } from '@/lib/contributionApprovals';
+import { findCommitteeHR } from '@/lib/contributionRouting';
+import { notifyUser } from '@/lib/notifications';
    import { safeArray, safeNumber } from '@/lib/safe';
    import { teams } from '@/data/teams';
    import { formatDate } from '@/lib/format';
@@ -17,7 +19,7 @@
    import { Modal } from '@/components/ui/Modal';
    import { FormField, TextInput, NumberInput, TextArea, Select } from '@/components/ui/FormField';
    import { toast } from '@/components/ui/Toast';
-   import type { Contribution, TeamId, Committee } from '@/types';
+   import type { Contribution, TeamId, Committee, AppUser } from '@/types';
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { useMemo } from 'react';
@@ -57,6 +59,7 @@ const STAGE_LABEL: Record<number, string> = {
      const { user } = useAuth();
      const { data: contributions, loading } = useRealtimeCollection<Contribution>('contributions');
      const { data: liveCommittees } = useCollection<Committee>('committees');
+     const { data: users } = useCollection<AppUser>('users');
 
      /* ═══════════════════════════════════════════════════════════
         Derive user's own team + committees
@@ -201,23 +204,36 @@ const STAGE_LABEL: Record<number, string> = {
 
        setBusy(true);
        try {
+         // [auto-fix] v7.1 route to Stage-1 approver
+         const stage1 = findCommitteeHR(users, userTeamId, committeeId || '');
+         const stage1Uid = stage1 ? stage1.uid : null;
+         const stage1Role = stage1 ? stage1.role : null;
+         const blocked = !stage1Uid;
+
          const contrib: Contribution = {
            id: newId('C'),
            memberId: user.memberId!,
-           memberName: user.displayName,
+           memberName: myMember?.name ?? user.displayName,
            teamId: userTeamId,
-           committeeId,
+           committeeId: committeeId || undefined,
+           category,
            title: title.trim(),
            description: desc.trim(),
            date: today(),
            hours,
            points: 0,
-           status: 'pending',
+           status: blocked ? 'blocked_no_approver' : 'pending',
            seasonId: 'S7',
            createdBy: user.uid,
-           approvals: newContributionApprovals(),
            currentStage: 1,
-         };
+           approvals: newContributionApprovals(),
+           pendingApproverId: stage1Uid,
+           pendingApproverRole: stage1Role,
+           blockedReason: blocked
+             ? 'No HR of Committee found for team=' + userTeamId + ' committee=' + (committeeId || '')
+             : null,
+         } as Contribution;
+
          await createOne('contributions', contrib);
          try {
            await logAudit(
@@ -228,6 +244,31 @@ const STAGE_LABEL: Record<number, string> = {
              'Log contribution',
            );
          } catch { /* ignore */ }
+
+         if (stage1Uid) {
+           try {
+             await notifyUser(
+               stage1Uid,
+               'Contribution awaiting your approval',
+               (myMember?.name ?? user.displayName) + ' submitted "' + contrib.title + '".',
+               'approval',
+               '/approvals',
+               'high',
+               myMember?.name ?? user.displayName,
+             );
+           } catch { /* ignore */ }
+         } else {
+           try {
+             await logAudit(
+               user,
+               'CONTRIBUTION_BLOCKED_NO_APPROVER',
+               'Contribution',
+               contrib.id,
+               'No HR of Committee for team=' + userTeamId + ' committee=' + (committeeId || ''),
+             );
+           } catch { /* ignore */ }
+         }
+
 
          toast.success('Submitted', 'Awaiting committee HR approval');
          setOpen(false);
@@ -382,7 +423,7 @@ const STAGE_LABEL: Record<number, string> = {
                          <div
                            style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
                          >
-                           {[1, 2, 3].map((s) => {
+                           {[1, 2].map((s) => {
                              const apr = approvals.find((a) => a.stage === s);
                              const isDone = apr?.status === 'approved';
                              const isRej = apr?.status === 'rejected';

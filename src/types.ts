@@ -1,3 +1,14 @@
+export interface ContributionApproval {
+  stage: 1 | 2 | 3;
+  status: 'pending' | 'approved' | 'rejected' | 'skipped';
+  approvedBy?: string;
+  approvedByName?: string;
+  approvedByRole?: string;
+  approvedAt?: string;
+  comment?: string;
+  points?: number;
+}
+
 // src/types.ts
 // Reconstructed type surface referenced across the codebase.
 
@@ -36,7 +47,7 @@ export type RequestType =
   | 'LEAVE';
 export type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
-export type ContributionStatus = 'pending' | 'approved' | 'rejected';
+export type ContributionStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'blocked_no_approver';
 
 export interface Team {
   id: TeamId;
@@ -89,13 +100,24 @@ export interface Member {
 export interface Contribution {
   id: string;
   memberId: string;
+  memberName?: string;
+  teamId: TeamId | null;
   committeeId?: string | null;
-  teamId?: TeamId | null;
-  points: number;
-  hours: number;
-  status: ContributionStatus;
-  date?: string;
+  category?: string;
+  title: string;
   description?: string;
+  date: string;
+  hours: number;
+  points: number;
+  status: ContributionStatus;
+  seasonId?: string;
+  createdBy?: string;
+  currentStage?: 1 | 2 | 3 | 4;
+  approvals?: ContributionApproval[];
+  // [auto-fix] v7.1 routing fields
+  pendingApproverId?: string | null;
+  pendingApproverRole?: string | null;
+  blockedReason?: string | null;
 }
 
 export interface ApprovalStep {

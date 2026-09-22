@@ -30,7 +30,7 @@ export type TeamId =
    export type RequestStatus = 'PENDING' | 'IN_REVIEW' | 'APPROVED' | 'REJECTED' | 'CANCELLED' | 'COMPLETED';
    export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
    export type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
-   export type ContributionStatus = 'pending' | 'in_review' | 'approved' | 'rejected';
+   export type ContributionStatus = 'pending' | 'in_review' | 'approved' | 'rejected' | 'blocked_no_approver';
    export type ConversationType = 'private' | 'team' | 'general';
    export type NotificationType = 'approval' | 'request' | 'participation' | 'achievement' | 'system' | 'warning' | 'message';
 
@@ -111,6 +111,11 @@ export type TeamId =
      createdBy?: string;
      approvals?: ContributionApproval[];
      currentStage?: 1 | 2 | 3 | 4;
+  // [auto-fix] v7.1 routing fields
+  pendingApproverId?: string | null;
+  pendingApproverRole?: string | null;
+  blockedReason?: string | null;
+
    }
 
    export interface ApprovalStep {
