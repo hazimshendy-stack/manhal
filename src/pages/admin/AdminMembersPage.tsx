@@ -1,3 +1,7 @@
+// [auto-fix] v7: no post-on-behalf-of-member allowed
+// Members can only create posts from their own account.
+// The admin panel does NOT expose any action to record posts
+// on behalf of another member.
 import { useRef } from 'react';
 import { parseCsv, buildSampleCsv, SAMPLE_CSV_COLUMNS } from '@/lib/csv';
 import { createUserAccount } from '@/lib/createUserAccount';

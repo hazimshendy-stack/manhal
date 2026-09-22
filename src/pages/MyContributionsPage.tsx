@@ -40,11 +40,11 @@ import { committees } from '@/data/committees';
 import { contributions } from '@/data/contributions';
 import { approvals } from '@/data/approvals';
 
-   const STAGE_LABEL: Record<number, string> = {
-     1: 'Committee HR',
-     2: 'Team Head HR / Head',
-     3: 'Sub-Branches Review',
-   };
+   // [auto-fix] v7 stage labels — 2 stages.
+const STAGE_LABEL: Record<number, string> = {
+  1: 'HR of Committee',
+  2: 'HR of Team',
+};
 
    function getStage(c: Contribution): 1 | 2 | 3 | 4 {
      const s = c.currentStage;

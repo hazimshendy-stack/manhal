@@ -17,16 +17,11 @@ import { approvals } from '@/data/approvals';
      COMPLAINT: 'Complaint', SUGGESTION: 'Suggestion', LEAVE: 'Leave',
    };
 
-   function buildChain(request: RequestRecord): Array<{ role: string; teamId: TeamId | null }> {
-     // Parallel approval: either the Team Head or the Team HR Head is enough.
-     // No sequence, no global chain.
-     const t = request.fromTeamId ?? request.toTeamId ?? null;
-     if (!t) return [{ role: 'HEAD', teamId: null }];
-     return [
-       { role: 'HEAD', teamId: t },
-       { role: 'HEAD_HR_TEAM', teamId: t },
-     ];
-   }
+   // [auto-fix] v7 single-approver chain — one decision is final.
+function buildChain(request: RequestRecord): Array<{ role: string; teamId: TeamId | null }> {
+  const teamId = request.fromTeamId ?? request.toTeamId ?? null;
+  return [{ role: 'PRESIDENT', teamId }];
+}
 
    export function NewRequestPage() {
      const nav = useNavigate();

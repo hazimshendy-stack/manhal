@@ -1,62 +1,60 @@
-// src/lib/migrations.ts
-// One-shot data migrations. Safe to call on app boot (idempotent).
-//
-// Fix #8: purges legacy sequential-chain requests and their approval steps,
-// and rewrites remaining PENDING requests to the new parallel model.
-
+// [auto-fix] v7 — purge every legacy request + approval step, force the
+// new single-approver model. Runs once per browser (localStorage flag).
 import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-const MIGRATION_KEY = 'manhal.migration.v8.requests.parallel';
-const MIGRATION_FLAG = 'manhal.migration.v8.requests.parallel.done';
+const FLAG_KEY = 'manhal.migration.v7.requests.single-approver.done';
 
 export async function purgeLegacyRequestsOnce(): Promise<{ deleted: number; rewritten: number } | null> {
   if (typeof window === 'undefined') return null;
-  if (window.localStorage.getItem(MIGRATION_FLAG) === '1') return null;
+  if (window.localStorage.getItem(FLAG_KEY) === '1') return null;
 
   let deleted = 0;
   let rewritten = 0;
+
   try {
+    // 1) Delete every approval step whose request is legacy.
+    const aprSnap = await getDocs(collection(db, 'approvals'));
+    const legacyRequestIds = new Set<string>();
+
     const reqSnap = await getDocs(collection(db, 'requests'));
-    const legacyIds: string[] = [];
     reqSnap.forEach((d) => {
       const data = d.data() as Record<string, unknown>;
-      const isLegacy = data.parallelApproval !== true;
+      const isLegacy = data.singleApprover !== true;
       if (isLegacy && data.status !== 'APPROVED' && data.status !== 'REJECTED') {
-        legacyIds.push(d.id);
+        legacyRequestIds.add(d.id);
       }
     });
 
-    for (const id of legacyIds) {
-      // Best-effort: delete related approval steps first.
-      try {
-        const aprSnap = await getDocs(collection(db, 'approvals'));
-        for (const a of aprSnap.docs) {
-          const aData = a.data() as { requestId?: string };
-          if (aData.requestId === id) {
-            await deleteDoc(doc(db, 'approvals', a.id));
-          }
-        }
-      } catch { /* ignore */ }
-      await deleteDoc(doc(db, 'requests', id));
-      deleted++;
-    }
-
-    // Mark remaining PENDING requests as parallel.
-    for (const d of reqSnap.docs) {
-      const data = d.data() as { status?: string; parallelApproval?: boolean };
-      if (data.status === 'PENDING' && data.parallelApproval !== true) {
-        try { await updateDoc(doc(db, 'requests', d.id), { parallelApproval: true }); rewritten++; } catch { /* ignore */ }
+    for (const a of aprSnap.docs) {
+      const aData = a.data() as { requestId?: string };
+      if (aData.requestId && legacyRequestIds.has(aData.requestId)) {
+        await deleteDoc(doc(db, 'approvals', a.id));
+        deleted += 1;
       }
     }
 
-    window.localStorage.setItem(MIGRATION_FLAG, '1');
+    // 2) Delete the legacy requests themselves.
+    for (const id of legacyRequestIds) {
+      await deleteDoc(doc(db, 'requests', id));
+    }
+
+    // 3) Mark remaining PENDING requests as single-approver.
+    for (const d of reqSnap.docs) {
+      const data = d.data() as { status?: string; singleApprover?: boolean };
+      if (data.status === 'PENDING' && data.singleApprover !== true) {
+        await updateDoc(doc(db, 'requests', d.id), { singleApprover: true });
+        rewritten += 1;
+      }
+    }
+
+    window.localStorage.setItem(FLAG_KEY, '1');
     // eslint-disable-next-line no-console
-    console.info('[migration] ' + MIGRATION_KEY + ' done', { deleted, rewritten });
+    console.info('[migration] v7 purge done', { deleted, rewritten });
     return { deleted, rewritten };
   } catch (err) {
     // eslint-disable-next-line no-console
-    console.warn('[migration] failed:', err);
+    console.warn('[migration] v7 purge failed', err);
     return null;
   }
 }

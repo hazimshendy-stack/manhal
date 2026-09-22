@@ -13,15 +13,15 @@ export type RoleId =
   | 'HEAD'
   | 'VICE';
 
-// [auto-fix] v7 team ids
 export type TeamId =
   | 'helpers'
-  | 'coders'
-  | 'innovators'
   | 'heroes'
-  | 'messengers'
+  | 'coders'
+  | 'enviros'
+  | 'messages'
+  | 'masar'
   | 'rstc'
-  | 'track';
+  | 'mb';
 
 export type UserStatus = 'pending' | 'approved' | 'rejected' | 'active' | 'inactive' | 'suspended';
 export type MemberStatus = 'active' | 'inactive' | 'suspended';

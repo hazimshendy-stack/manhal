@@ -4,11 +4,35 @@ import type { ApprovalStep, RequestRecord, AppUser, RoleId, TeamId } from '@/typ
 
 export interface ApprovalChainStep { role: RoleId; teamId: TeamId | null; }
 
-// [auto-fix] v7 single-approver chain — the request goes ONLY to the Head of the requester's team.
 export function buildApprovalChain(request: RequestRecord): ApprovalChainStep[] {
-  const teamId = request.fromTeamId ?? request.toTeamId ?? null;
-  return [{ role: 'PRESIDENT', teamId }];
-}
+  const chain: ApprovalChainStep[] = [];
+  if (request.type === 'TRANSFER' && request.fromTeamId && request.toTeamId) {
+    chain.push({ role: 'PRESIDENT', teamId: request.fromTeamId });
+    chain.push({ role: 'PRESIDENT', teamId: request.toTeamId });
+    chain.push({ role: 'HEAD_HR', teamId: null });
+    chain.push({ role: 'HEAD', teamId: null });
+  } else if (request.type === 'PROMOTION') {
+    const t = request.fromTeamId ?? request.toTeamId ?? null;
+    if (t) { chain.push({ role: 'PRESIDENT', teamId: t }); chain.push({ role: 'HR', teamId: t }); }
+    chain.push({ role: 'HEAD_HR', teamId: null });
+    chain.push({ role: 'HEAD', teamId: null });
+  } else if (request.type === 'RESIGNATION') {
+    const t = request.fromTeamId ?? request.toTeamId ?? null;
+    if (t) { chain.push({ role: 'PRESIDENT', teamId: t }); chain.push({ role: 'HR', teamId: t }); }
+    chain.push({ role: 'HEAD', teamId: null });
+  } else if (request.type === 'COMPLAINT') {
+    chain.push({ role: 'HEAD_HR', teamId: null });
+    chain.push({ role: 'VICE', teamId: null });
+  } else if (request.type === 'SUGGESTION') {
+    const t = request.fromTeamId ?? request.toTeamId ?? null;
+    if (t) chain.push({ role: 'PRESIDENT', teamId: t });
+    chain.push({ role: 'HEAD', teamId: null });
+  } else if (request.type === 'LEAVE') {
+    const t = request.fromTeamId ?? request.toTeamId ?? null;
+    if (t) { chain.push({ role: 'PRESIDENT', teamId: t }); chain.push({ role: 'HR', teamId: t }); }
+  } else {
+    chain.push({ role: 'HEAD', teamId: null });
+  }
   return chain;
 }
 

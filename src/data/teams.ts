@@ -1,14 +1,54 @@
-import type, { Team } from '@/types';
-import { messages } from '@/data/conversations';
+// [auto-fix] Rebuilt team list — 7 teams per v7 hierarchy.
+import type { Team } from '@/types';
 
- export const teams: Team[] = [
-   { id: 'helpers', name: 'Helpers', nameAr: 'Helpers', description: 'Logistics, guidance, onboarding, and daily operations.', color: '#C1272D' },
-   { id: 'heroes', name: 'Heroes', nameAr: 'Heroes', description: 'Field activities, community outreach, and volunteering campaigns.', color: '#FB923C' },
-   { id: 'coders', name: 'Coders', nameAr: 'Coders', description: 'Designs and builds tools, platforms, and automation.', color: '#60A5FA' },
-   { id: 'enviros', name: 'Enviros', nameAr: 'Enviros', description: 'Sustainability: recycling, tree planting, environmental awareness.', color: '#16A34A' },
-   { id: 'messages', name: 'Messages', nameAr: 'Messages', description: 'Narrative, content, media, documentation, communication.', color: '#A78BFA' },
-   { id: 'masar', name: 'Masar', nameAr: 'Masar', description: 'Student guidance, career paths, mentoring programs.', color: '#F472B6' },
-   { id: 'rstc', name: 'RSTC', nameAr: 'RSTC', description: 'Resala STEM Training Center — curriculum and quality.', color: '#22D3EE' },
-   { id: 'mb', name: 'MB', nameAr: 'MB', description: 'Sub-Branches — Head and Vice Head of Sub-Branches, plus Head of HR (Global).', color: '#0EA5E9' },
- ];
- 
+export const teams: Team[] = [
+  {
+    id: 'helpers',
+    name: 'Helpers',
+    nameAr: 'Helpers',
+    description: 'Logistics, guidance, onboarding, and daily operations.',
+    color: '#C1272D',
+  },
+  {
+    id: 'coders',
+    name: 'Coders',
+    nameAr: 'Coders',
+    description: 'Designs and builds tools, platforms, and automation.',
+    color: '#60A5FA',
+  },
+  {
+    id: 'innovators',
+    name: 'Innovators',
+    nameAr: 'Innovators',
+    description: 'Research, prototyping, and innovative technical solutions.',
+    color: '#7C3AED',
+  },
+  {
+    id: 'heroes',
+    name: 'Heroes',
+    nameAr: 'Heroes',
+    description: 'Field activities, community outreach, and volunteering campaigns.',
+    color: '#FB923C',
+  },
+  {
+    id: 'messengers',
+    name: 'Messengers',
+    nameAr: 'Messengers',
+    description: 'Narrative, content, media, documentation, and communication.',
+    color: '#A78BFA',
+  },
+  {
+    id: 'rstc',
+    name: 'RSTC',
+    nameAr: 'RSTC',
+    description: 'Resala STEM Training Center — curriculum and quality.',
+    color: '#22D3EE',
+  },
+  {
+    id: 'track',
+    name: 'Track',
+    nameAr: 'Track',
+    description: 'Student guidance, career paths, and mentoring programs.',
+    color: '#F472B6',
+  },
+];

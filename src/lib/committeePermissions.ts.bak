@@ -7,8 +7,10 @@ import type { AppUser, Contribution } from '@/types';
       ─────────────────────────────────────────────────────────────
       STAGE 1: Committee HR (mandatory) — assigns points flexibly
       STAGE 2: Team Head HR OR Team Head (one of them)
-      STAGE 2: HR of Team (final) — awards points to the member.
-      */
+      STAGE 3: Head HR Global OR Head Sub Branches OR Vice (one of them)
+      ─────────────────────────────────────────────────────────────
+      After all 3 approved → points awarded, notifications sent, rankings update.
+      ═══════════════════════════════════════════════════════════════ */
 
    function hasCommittee(user: AppUser | null, committeeId: string): boolean {
      if (!user) return false;
@@ -42,11 +44,11 @@ import type { AppUser, Contribution } from '@/types';
    }
 
    export function getStage(c: Contribution): 1 | 2 | 3 | 4 {
-  const s = c.currentStage;
-  if (s === 1 || s === 2) return s;
-  if (c.status === 'approved' || c.status === 'rejected') return 4;
-  return 1;
-}
+     const s = c.currentStage;
+     if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+     if (c.status === 'approved' || c.status === 'rejected') return 4;
+     return 1;
+   }
 
    export interface StageInfo {
      stage: 1 | 2 | 3 | 4;
@@ -68,16 +70,21 @@ import type { AppUser, Contribution } from '@/types';
        };
      }
      if (stage === 2) {
-    return {
-      stage: 2,
-      label: 'HR of Team',
-      canApprove: userIsTeamHR(user, c.teamId) || isAdmin(user),
-      assignPoints: false,
-    };
-  }
+       return {
+         stage: 2,
+         label: 'Team Head HR or Team Head',
+         canApprove: userIsTeamHeadHR(user, c.teamId) || userIsTeamHead(user, c.teamId) || isAdmin(user),
+         assignPoints: false,
+       };
+     }
      if (stage === 3) {
-    return { stage: 4, label: 'Completed', canApprove: false, assignPoints: false };
-  }
+       return {
+         stage: 3,
+         label: 'Head HR Global / Head Sub Branches / Vice',
+         canApprove: userIsGlobalHR(user) || userIsSubBranchesHead(user) || isAdmin(user),
+         assignPoints: false,
+       };
+     }
      return { stage: 4, label: 'Completed', canApprove: false, assignPoints: false };
    }
 

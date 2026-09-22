@@ -24,23 +24,10 @@ import type { AppUser, RoleId, TeamId } from '@/types';
      VIEWER: 10,
    };
 
-   // [auto-fix] v7: admin is HEAD only — VICE has full permissions but no admin-only actions.
-export function isAdmin(user: AppUser | null): boolean {
-  if (!user) return false;
-  return user.role === 'HEAD';
-}
-
-// [auto-fix] v7: VICE keeps full permissions except admin-only actions.
-export function isViceHead(user: AppUser | null): boolean {
-  if (!user) return false;
-  return user.role === 'VICE';
-}
-
-// [auto-fix] v7: allow admin-panel access to HEAD + VICE.
-export function canAccessAdminPanel(user: AppUser | null): boolean {
-  if (!user) return false;
-  return user.role === 'HEAD' || user.role === 'VICE';
-}
+   export function isAdmin(user: AppUser | null): boolean {
+     if (!user) return false;
+     return user.role === 'HEAD' || user.role === 'VICE';
+   }
 
    export function isSubBranchesHead(user: AppUser | null): boolean {
      if (!user) return false;

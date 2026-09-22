@@ -10,15 +10,7 @@ import { messages } from '@/data/conversations';
      | 'COMMITTEE_HR'
      | 'MEMBER' | 'VIEWER';
 
-   // [auto-fix] v7 team ids
-export type TeamId =
-  | 'helpers'
-  | 'coders'
-  | 'innovators'
-  | 'heroes'
-  | 'messengers'
-  | 'rstc'
-  | 'track';
+   export type TeamId = 'helpers' | 'heroes' | 'coders' | 'enviros' | 'messages' | 'masar' | 'rstc';
 
    export type UserStatus = 'active' | 'pending' | 'rejected';
 
