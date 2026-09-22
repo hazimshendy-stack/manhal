@@ -6,6 +6,7 @@
    import { Footer } from './Footer';
    import { useAuth } from '@/lib/useAuth';
    import { initPwa } from '@/lib/pwa';
+import { runAllMigrationsOnce } from '@/lib/migrations';
 import { useState } from 'react';
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -22,7 +23,11 @@ import { login } from '@/lib/auth';
      const { user, mustChangePassword, loading } = useAuth();
      const [sidebarOpen, setSidebarOpen] = useState(false);
 
-     useEffect(() => { initPwa(); }, []);
+     // [auto-fix] v7 run migrations on boot
+     useEffect(() => {
+       initPwa();
+       runAllMigrationsOnce().catch(() => {});
+     }, []);
      useEffect(() => {
        window.scrollTo(0, 0);
        setSidebarOpen(false);

@@ -21,11 +21,12 @@ import type { AppUser, Contribution } from '@/types';
      return hasCommittee(user, committeeId);
    }
 
-   export function userIsTeamHeadHR(user: AppUser | null, teamId: string): boolean {
-     if (!user || !teamId) return false;
-     if (user.role !== 'HEAD_HR_TEAM') return false;
-     return user.teamId === teamId;
-   }
+   // [auto-fix] v7 teamHR helper
+export function userIsTeamHR(user: AppUser | null, teamId: string): boolean {
+  if (!user || !teamId) return false;
+  if (user.role !== 'HR') return false;
+  return user.teamId === teamId;
+}
 
    export function userIsTeamHead(user: AppUser | null, teamId: string): boolean {
      if (!user || !teamId) return false;
@@ -87,7 +88,7 @@ import type { AppUser, Contribution } from '@/types';
      const stage = getStage(c);
      if (stage === 1) return userIsCommitteeHR(user, c.committeeId || '');
      if (stage === 2) return userIsTeamHeadHR(user, c.teamId) || userIsTeamHead(user, c.teamId);
-     if (stage === 3) return userIsGlobalHR(user) || userIsSubBranchesHead(user);
+     if (stage === 3) return false;
      return false;
    }
    

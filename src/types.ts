@@ -1,19 +1,20 @@
 // src/types.ts
 // Reconstructed type surface referenced across the codebase.
 
+// [auto-fix] v7 role union
 export type RoleId =
-  | 'MEMBER'
-  | 'VIEWER'
-  | 'HR'
-  | 'COMMITTEE_HR'
-  | 'HEAD_HR_TEAM'
+  | 'HEAD'
+  | 'VICE'
   | 'HEAD_HR_GLOBAL'
   | 'PRESIDENT'
   | 'VICE_PRESIDENT'
-  | 'HEAD'
-  | 'VICE';
+  | 'HR'
+  | 'COMMITTEE_HR'
+  | 'MEMBER'
+  | 'VIEWER';
 
 // [auto-fix] v7 team ids
+// [auto-fix] v7 team union
 export type TeamId =
   | 'helpers'
   | 'coders'

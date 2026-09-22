@@ -112,7 +112,10 @@ import { approvals } from '@/data/approvals';
          <section className="section"><SectionHeader eyebrow="Approvals" title="Chain" /><ApprovalChain steps={steps} /></section>
          <Modal open={actionType !== null} title={actionType === 'approve' ? 'Approve' : 'Reject'} onClose={() => { setActionType(null); setComment(''); }}
            footer={<><button type="button" className="btn btn--ghost" onClick={() => { setActionType(null); setComment(''); }}>Cancel</button><button type="button" className={'btn ' + (actionType === 'approve' ? 'btn--success' : 'btn--danger')} onClick={doAction} disabled={busy}>{busy ? '...' : 'Confirm'}</button></>}>
-           <FormField label={actionType === 'approve' ? 'Comment (optional)' : 'Reason'} required={actionType === 'reject'}>
+           // [auto-fix] v7 approve-comment optional
+           <FormField
+             label={actionType === 'approve' ? 'Comment (optional)' : 'Reason (required)'}
+             required={actionType === 'reject'}>
              <TextArea value={comment} onChange={setComment} rows={3} />
            </FormField>
          </Modal>

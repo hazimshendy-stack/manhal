@@ -51,8 +51,7 @@ import { createOne, newId, now } from './db';
      fromName?: string,
    ): Promise<void> {
      const managers = safeArray(allUsers).filter((u) =>
-       // [auto-fix] v7 manager roles
-      ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HR', 'COMMITTEE_HR'].includes(u.role),
+       ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HEAD_HR_TEAM', 'HR', 'COMMITTEE_HR'].includes(u.role),
      );
      await notifyUsers(managers, title, message, type, route, priority, fromName);
    }

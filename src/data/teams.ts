@@ -1,4 +1,4 @@
-// [auto-fix] Rebuilt team list — 7 teams per v7 hierarchy.
+// [auto-fix] v7 — rebuilt team list (7 teams).
 import type { Team } from '@/types';
 
 export const teams: Team[] = [

@@ -1,16 +1,20 @@
 
 import { approvals } from '@/data/approvals';
 import { messages } from '@/data/conversations';
-   export type RoleId =
-     | 'HEAD' | 'VICE'
-     | 'HEAD_HR_GLOBAL'
-     | 'HEAD_HR_TEAM'
-     | 'PRESIDENT' | 'VICE_PRESIDENT'
-     | 'HR'
-     | 'COMMITTEE_HR'
-     | 'MEMBER' | 'VIEWER';
+   // [auto-fix] v7 role union
+export type RoleId =
+  | 'HEAD'
+  | 'VICE'
+  | 'HEAD_HR_GLOBAL'
+  | 'PRESIDENT'
+  | 'VICE_PRESIDENT'
+  | 'HR'
+  | 'COMMITTEE_HR'
+  | 'MEMBER'
+  | 'VIEWER';
 
    // [auto-fix] v7 team ids
+// [auto-fix] v7 team union
 export type TeamId =
   | 'helpers'
   | 'coders'

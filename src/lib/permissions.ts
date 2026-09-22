@@ -11,23 +11,36 @@ import type { AppUser, RoleId, TeamId } from '@/types';
       MEMBER → VIEWER
       ═══════════════════════════════════════════════════════════════ */
 
-   export const ROLE_LEVEL: Record<RoleId, number> = {
-     HEAD: 100,
-     VICE: 95,
-     HEAD_HR_GLOBAL: 90,
-     PRESIDENT: 80,
-     VICE_PRESIDENT: 70,
-     HEAD_HR_TEAM: 65,
-     HR: 60,
-     COMMITTEE_HR: 55,
-     MEMBER: 50,
-     VIEWER: 10,
-   };
+   // [auto-fix] v7 ROLE_LEVEL — HEAD_HR_TEAM removed
+export const ROLE_LEVEL: Record<RoleId, number> = {
+  HEAD: 100,
+  VICE: 95,
+  HEAD_HR_GLOBAL: 90,
+  PRESIDENT: 80,
+  VICE_PRESIDENT: 70,
+  HR: 60,
+  COMMITTEE_HR: 55,
+  MEMBER: 50,
+  VIEWER: 10,
+};
 
    // [auto-fix] v7: admin is HEAD only — VICE has full permissions but no admin-only actions.
+// [auto-fix] v7 isAdmin is HEAD-only
 export function isAdmin(user: AppUser | null): boolean {
   if (!user) return false;
   return user.role === 'HEAD';
+}
+
+// [auto-fix] v7 VICE has full permissions but not admin-only actions.
+export function isViceHead(user: AppUser | null): boolean {
+  if (!user) return false;
+  return user.role === 'VICE';
+}
+
+// [auto-fix] v7 admin-panel access for HEAD + VICE.
+export function canAccessAdminPanel(user: AppUser | null): boolean {
+  if (!user) return false;
+  return user.role === 'HEAD' || user.role === 'VICE';
 }
 
 // [auto-fix] v7: VICE keeps full permissions except admin-only actions.
@@ -59,9 +72,7 @@ export function canAccessAdminPanel(user: AppUser | null): boolean {
      return user?.role === 'VICE_PRESIDENT';
    }
 
-   export function isTeamHeadHR(user: AppUser | null): boolean {
-     return user?.role === 'HEAD_HR_TEAM';
-   }
+   // [auto-fix] v7: isTeamHeadHR removed — team HR role collapsed into HR.
 
    export function isTeamHR(user: AppUser | null): boolean {
      return user?.role === 'HR';
@@ -96,16 +107,16 @@ export function canAccessAdminPanel(user: AppUser | null): boolean {
      return true;
    }
 
-   export const ROLE_LABEL: Record<RoleId, string> = {
-     HEAD: 'Head Sub Branches',
-     VICE: 'Vice Head',
-     HEAD_HR_GLOBAL: 'Head HR Global',
-     PRESIDENT: 'Team Head',
-     VICE_PRESIDENT: 'Team Vice Head',
-     HEAD_HR_TEAM: 'Team Head HR',
-     HR: 'Team HR',
-     COMMITTEE_HR: 'Committee HR',
-     MEMBER: 'Member',
-     VIEWER: 'Viewer',
-   };
+   // [auto-fix] v7 ROLE_LABEL
+export const ROLE_LABEL: Record<RoleId, string> = {
+  HEAD: 'رئيس الفروع',
+  VICE: 'نائب رئيس الفروع',
+  HEAD_HR_GLOBAL: 'رئيس الموارد البشرية',
+  PRESIDENT: 'رئيس فريق',
+  VICE_PRESIDENT: 'نائب رئيس فريق',
+  HR: 'موارد بشرية الفريق',
+  COMMITTEE_HR: 'موارد بشرية اللجنة',
+  MEMBER: 'عضو',
+  VIEWER: 'زائر',
+};
    
