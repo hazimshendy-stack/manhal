@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 /* ═══════════════════════════════════════════════════════════════
-   sbapiaryy — fix-users-v2.cjs
-   - Instant user appearance after creation
-   - Full edit modal (name, role, team, committees, bio)
-   - Password reset button (sends email)
-   - Easy member linking (auto-match by email)
-   - Auto-create member doc + link on user creation
+   sbapiaryy — fix-my-contributions.cjs
+   Auto-select team + committee from user profile when logging a
+   contribution. Also filters committees to only the user's own.
    ═══════════════════════════════════════════════════════════════ */
 
 const fs = require("fs");
@@ -15,7 +12,7 @@ const ROOT = process.cwd();
 
 console.log("");
 console.log(" ╔══════════════════════════════════════════════════════╗");
-console.log(" ║  sbapiaryy — Users Management v2                    ║");
+console.log(" ║  sbapiaryy — Fix My Contributions                  ║");
 console.log(" ╚══════════════════════════════════════════════════════╝");
 console.log("");
 
@@ -38,984 +35,535 @@ function run(cmd, silent = false) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-      1. UPDATE auth.ts — Add resetUserPassword + updateUserData
+      FIX — MyContributionsPage.tsx
+      - Auto-fill team from user.teamId
+      - Auto-fill committee from user.committeeIds (first, or only)
+      - Filter committee dropdown to user's own committees
+      - Warn if user has no team or no committees
+      - Reset form when user changes
       ═══════════════════════════════════════════════════════════════ */
 
 write(
-  "src/lib/auth.ts",
+  "src/pages/MyContributionsPage.tsx",
   `
-   import {
-     signInWithEmailAndPassword,
-     signOut,
-     onAuthStateChanged,
-     sendPasswordResetEmail,
-     updatePassword,
-     createUserWithEmailAndPassword,
-     signOut as secondarySignOut,
-     type User as FirebaseUser,
-   } from 'firebase/auth';
-   import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-   import { auth, db, getSecondaryAuth, destroySecondaryApp } from './firebase';
-   import { safeArray } from './safe';
-   import type { AppUser, RoleId, TeamId, Member } from '@/types';
-
-   /* ═══════════════════════════════════════════════════════════════
-      Auth actions
-      ═══════════════════════════════════════════════════════════════ */
-
-   export async function login(email: string, password: string): Promise<AppUser> {
-     const cred = await signInWithEmailAndPassword(auth, email, password);
-     return await ensureUserDoc(cred.user);
-   }
-
-   export async function logout(): Promise<void> {
-     await signOut(auth);
-   }
-
-   export async function sendPasswordReset(email: string): Promise<void> {
-     await sendPasswordResetEmail(auth, email);
-   }
-
-   export async function changePassword(newPassword: string): Promise<void> {
-     const user = auth.currentUser;
-     if (!user) throw new Error('No user logged in');
-     await updatePassword(user, newPassword);
-     await updateDoc(doc(db, 'users', user.uid), { mustChangePassword: false });
-   }
-
-   /* ═══════════════════════════════════════════════════════════════
-      Admin: reset another user's password (sends email)
-      ═══════════════════════════════════════════════════════════════ */
-
-   export async function adminResetUserPassword(email: string): Promise<void> {
-     if (!email) throw new Error('Email required');
-     try {
-       await sendPasswordResetEmail(auth, email);
-     } catch (err) {
-       const msg = err instanceof Error ? err.message : 'Failed to send reset email';
-       throw new Error(msg);
-     }
-   }
-
-   /* ═══════════════════════════════════════════════════════════════
-      Admin: update user profile (name, role, team, committees, bio)
-      ═══════════════════════════════════════════════════════════════ */
-
-   export interface UpdateUserInput {
-     displayName?: string;
-     role?: RoleId;
-     teamId?: TeamId | null;
-     committeeIds?: string[];
-     bio?: string;
-   }
-
-   export async function adminUpdateUser(uid: string, input: UpdateUserInput): Promise<void> {
-     const payload: Record<string, unknown> = {};
-     if (input.displayName !== undefined) payload.displayName = input.displayName;
-     if (input.role !== undefined) payload.role = input.role;
-     if (input.teamId !== undefined) payload.teamId = input.teamId;
-     if (input.committeeIds !== undefined) payload.committeeIds = safeArray(input.committeeIds);
-
-     await updateDoc(doc(db, 'users', uid), payload);
-
-     /* Sync to linked member doc if exists */
-     try {
-       const userSnap = await getDoc(doc(db, 'users', uid));
-       if (userSnap.exists()) {
-         const userData = userSnap.data() as AppUser;
-         if (userData.memberId) {
-           const memberPayload: Record<string, unknown> = {};
-           if (input.displayName !== undefined) memberPayload.name = input.displayName;
-           if (input.role !== undefined) memberPayload.role = input.role;
-           if (input.teamId !== undefined) memberPayload.teamIds = input.teamId ? [input.teamId] : [];
-           if (input.committeeIds !== undefined) memberPayload.committeeIds = safeArray(input.committeeIds);
-           if (input.bio !== undefined) memberPayload.bio = input.bio;
-           if (Object.keys(memberPayload).length > 0) {
-             await updateDoc(doc(db, 'members', userData.memberId), memberPayload);
-           }
-         }
-       }
-     } catch { /* silent — user doc still updated */ }
-   }
-
-   /* ═══════════════════════════════════════════════════════════════
-      Create member (with secondary app — admin session untouched)
-      ═══════════════════════════════════════════════════════════════ */
-
-   export interface CreateMemberInput {
-     email: string;
-     temporaryPassword: string;
-     name: string;
-     role: RoleId;
-     teamIds: TeamId[];
-     committeeIds: string[];
-     bio?: string;
-   }
-
-   function translateAuthError(code: string): string {
-     if (code.includes('EMAIL_EXISTS') || code.includes('email-already-in-use')) {
-       return 'This email is already registered';
-     }
-     if (code.includes('WEAK_PASSWORD') || code.includes('weak-password')) {
-       return 'Password is too weak (min 6 characters)';
-     }
-     if (code.includes('INVALID_EMAIL') || code.includes('invalid-email')) {
-       return 'Invalid email address';
-     }
-     if (code.includes('TOO_MANY_REQUESTS')) {
-       return 'Too many requests. Try again later.';
-     }
-     if (code.includes('OPERATION_NOT_ALLOWED')) {
-       return 'Email/Password sign-in is disabled in Firebase Console';
-     }
-     if (code.includes('NETWORK')) {
-       return 'Network error. Check your connection.';
-     }
-     return code || 'Failed to create account';
-   }
-
-   export async function adminCreateMember(
-     input: CreateMemberInput,
-     adminUid: string,
-   ): Promise<{ uid: string; memberId: string; email: string }> {
-     const email = input.email.trim().toLowerCase();
-     const name = input.name.trim();
-     const password = input.temporaryPassword;
-
-     if (!email || !name) throw new Error('Email and name are required');
-     if (password.length < 6) throw new Error('Password must be at least 6 characters');
-     if (!input.teamIds || input.teamIds.length === 0) throw new Error('At least one team is required');
-     if (!input.committeeIds || input.committeeIds.length === 0) throw new Error('At least one committee is required');
-
-     const secondaryAuth = getSecondaryAuth();
-     let uid = '';
-
-     try {
-       const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-       uid = cred.user.uid;
-       try { await secondarySignOut(secondaryAuth); } catch { /* ignore */ }
-       await destroySecondaryApp();
-     } catch (err) {
-       await destroySecondaryApp();
-       const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
-       const msg = err instanceof Error ? err.message : String(err);
-       throw new Error(translateAuthError(code || msg));
-     }
-
-     if (!uid) throw new Error('Failed to create user account');
-
-     const memberId = 'M-' + uid.slice(0, 8).toUpperCase();
-
-     const userData: AppUser = {
-       uid,
-       email,
-       displayName: name,
-       role: input.role,
-       teamId: input.teamIds[0] ?? null,
-       committeeIds: safeArray(input.committeeIds),
-       memberId,
-       createdAt: new Date().toISOString(),
-       emailVerified: false,
-       mustChangePassword: true,
-       createdByAdmin: adminUid,
-     };
-     await setDoc(doc(db, 'users', uid), userData);
-
-     const memberData: Member = {
-       id: memberId,
-       name,
-       role: input.role,
-       teamIds: input.teamIds,
-       committeeIds: safeArray(input.committeeIds),
-       joinedSeason: 7,
-       hours: 0,
-       points: 0,
-       status: 'active',
-       bio: input.bio?.trim() || undefined,
-       email,
-       linkedUserId: uid,
-     };
-     await setDoc(doc(db, 'members', memberId), memberData);
-
-     return { uid, memberId, email };
-   }
-
-   /* ═══════════════════════════════════════════════════════════════
-      ensureUserDoc + observeAuth
-      ═══════════════════════════════════════════════════════════════ */
-
-   async function ensureUserDoc(fbUser: FirebaseUser): Promise<AppUser> {
-     const ref = doc(db, 'users', fbUser.uid);
-     const snap = await getDoc(ref);
-     if (snap.exists()) {
-       const data = snap.data() as Omit<AppUser, 'uid'>;
-       return { uid: fbUser.uid, ...data, emailVerified: fbUser.emailVerified };
-     }
-     const fallback: AppUser = {
-       uid: fbUser.uid,
-       email: fbUser.email ?? '',
-       displayName: fbUser.displayName ?? fbUser.email ?? 'Member',
-       role: 'VIEWER',
-       teamId: null,
-       committeeIds: [],
-       memberId: null,
-       createdAt: new Date().toISOString(),
-       emailVerified: fbUser.emailVerified,
-       mustChangePassword: false,
-     };
-     await setDoc(ref, fallback);
-     return fallback;
-   }
-
-   export function observeAuth(
-     callback: (user: AppUser | null, loading: boolean) => void,
-   ): () => void {
-     return onAuthStateChanged(auth, async (fbUser) => {
-       if (!fbUser) { callback(null, false); return; }
-       try {
-         const appUser = await ensureUserDoc(fbUser);
-         callback(appUser, false);
-       } catch {
-         callback(null, false);
-       }
-     });
-   }
-
-   export function hasRole(user: AppUser | null, roles: RoleId[]): boolean {
-     if (!user) return false;
-     return roles.includes(user.role);
-   }
-   `
-);
-
-/* ═══════════════════════════════════════════════════════════════
-      2. REWRITE AdminUsersPage — Full management UI
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  "src/pages/admin/AdminUsersPage.tsx",
-  `
-   import { useState, useMemo } from 'react';
+   import { useState, useEffect, useMemo } from 'react';
    import { Link } from 'react-router-dom';
-   import { useCollection } from '@/lib/useRealtimeCollection';
    import { useAuth } from '@/lib/useAuth';
-   import { updateOne, removeOne } from '@/lib/db';
-   import {
-     adminCreateMember,
-     adminResetUserPassword,
-     adminUpdateUser,
-     type UpdateUserInput,
-   } from '@/lib/auth';
+   import { useRealtimeCollection, useCollection } from '@/lib/useRealtimeCollection';
+   import { createOne, newId, today } from '@/lib/db';
    import { logAudit } from '@/lib/audit';
-   import { notifyUser } from '@/lib/notifications';
+   import { newContributionApprovals } from '@/lib/contributionApprovals';
+   import { safeArray, safeNumber } from '@/lib/safe';
    import { teams } from '@/data/teams';
-   import { ROLE_LABEL } from '@/lib/permissions';
+   import { formatDate } from '@/lib/format';
    import { PageHeader } from '@/components/ui/PageHeader';
    import { SectionHeader } from '@/components/ui/SectionHeader';
+   import { Stat, StatRow } from '@/components/ui/Stat';
+   import { Badge } from '@/components/ui/Badge';
    import { EmptyState } from '@/components/ui/EmptyState';
    import { SkeletonList } from '@/components/ui/Loading';
    import { Modal } from '@/components/ui/Modal';
-   import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-   import { FormField, TextInput, Select, MultiSelect, TextArea } from '@/components/ui/FormField';
-   import { Badge } from '@/components/ui/Badge';
-   import { Avatar } from '@/components/ui/Avatar';
+   import { FormField, TextInput, NumberInput, TextArea, Select } from '@/components/ui/FormField';
    import { toast } from '@/components/ui/Toast';
-   import type { AppUser, RoleId, TeamId, Member, Committee } from '@/types';
+   import type { Contribution, TeamId, Committee } from '@/types';
 
-   const ROLE_OPTS: Array<{ value: RoleId; label: string }> = (
-     Object.entries(ROLE_LABEL) as Array<[RoleId, string]>
-   ).map(([value, label]) => ({ value, label }));
+   const STAGE_LABEL: Record<number, string> = {
+     1: 'Committee HR',
+     2: 'Team Head HR / Head',
+     3: 'Sub-Branches Review',
+   };
 
-   const PASSWORD_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-
-   function genPass(): string {
-     let p = '';
-     for (let i = 0; i < 10; i += 1) {
-       p += PASSWORD_CHARS.charAt(Math.floor(Math.random() * PASSWORD_CHARS.length));
-     }
-     return p + '@1';
+   function getStage(c: Contribution): 1 | 2 | 3 | 4 {
+     const s = c.currentStage;
+     if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+     if (c.status === 'approved' || c.status === 'rejected') return 4;
+     return 1;
    }
 
-   function copyToClipboard(text: string, label: string) {
-     if (navigator.clipboard && navigator.clipboard.writeText) {
-       navigator.clipboard.writeText(text)
-         .then(() => toast.success(label + ' copied'))
-         .catch(() => toast.error('Copy failed'));
-     } else {
-       const ta = document.createElement('textarea');
-       ta.value = text;
-       document.body.appendChild(ta);
-       ta.select();
-       try { document.execCommand('copy'); toast.success(label + ' copied'); }
-       catch { toast.error('Copy failed'); }
-       document.body.removeChild(ta);
-     }
-   }
-
-   export function AdminUsersPage() {
-     const { user: me } = useAuth();
-     const { data: users, loading } = useCollection<AppUser>('users');
-     const { data: liveMembers } = useCollection<Member>('members');
+   export function MyContributionsPage() {
+     const { user } = useAuth();
+     const { data: contributions, loading } = useRealtimeCollection<Contribution>('contributions');
      const { data: liveCommittees } = useCollection<Committee>('committees');
 
-     /* ─── Create form ─── */
-     const [open, setOpen] = useState(false);
-     const [busy, setBusy] = useState(false);
-     const [email, setEmail] = useState('');
-     const [password, setPassword] = useState(genPass());
-     const [name, setName] = useState('');
-     const [role, setRole] = useState<RoleId>('MEMBER');
-     const [teamId, setTeamId] = useState<TeamId>('helpers');
-     const [committeeIds, setCommitteeIds] = useState<string[]>([]);
-     const [bio, setBio] = useState('');
+     /* ═══════════════════════════════════════════════════════════
+        Derive user's own team + committees
+        ═══════════════════════════════════════════════════════════ */
 
-     /* ─── Credentials modal ─── */
-     const [created, setCreated] = useState<{
-       email: string; password: string; name: string;
-     } | null>(null);
-
-     /* ─── Edit modal ─── */
-     const [editUser, setEditUser] = useState<AppUser | null>(null);
-     const [editForm, setEditForm] = useState<UpdateUserInput>({});
-     const [editBusy, setEditBusy] = useState(false);
-
-     /* ─── Password reset ─── */
-     const [resetTarget, setResetTarget] = useState<AppUser | null>(null);
-     const [resetBusy, setResetBusy] = useState(false);
-
-     /* ─── Delete ─── */
-     const [toDelete, setToDelete] = useState<AppUser | null>(null);
-     const [deleteBusy, setDeleteBusy] = useState(false);
-
-     /* ─── Search ─── */
-     const [search, setSearch] = useState('');
-
-     const filteredUsers = useMemo(() => {
-       const q = search.trim().toLowerCase();
-       if (!q) return users;
-       return users.filter(
-         (u) =>
-           u.displayName.toLowerCase().includes(q) ||
-           u.email.toLowerCase().includes(q),
-       );
-     }, [users, search]);
-
-     const committees = useMemo(
-       () => liveCommittees.map((c) => ({ id: c.id, nameAr: c.nameAr })),
-       [liveCommittees],
+     const userTeamId: TeamId | null = (user?.teamId as TeamId) ?? null;
+     const userCommitteeIds = useMemo(
+       () => safeArray(user?.committeeIds),
+       [user?.committeeIds],
      );
 
-     const resetForm = () => {
-       setEmail('');
-       setPassword(genPass());
-       setName('');
-       setRole('MEMBER');
-       setTeamId('helpers');
-       setCommitteeIds([]);
-       setBio('');
+     const myCommittees = useMemo(
+       () => liveCommittees.filter((c) => userCommitteeIds.includes(c.id)),
+       [liveCommittees, userCommitteeIds],
+     );
+
+     /* ═══════════════════════════════════════════════════════════
+        Form state
+        ═══════════════════════════════════════════════════════════ */
+
+     const [open, setOpen] = useState(false);
+     const [busy, setBusy] = useState(false);
+     const [title, setTitle] = useState('');
+     const [desc, setDesc] = useState('');
+     const [hours, setHours] = useState(1);
+     const [teamId, setTeamId] = useState<TeamId>('helpers');
+     const [committeeId, setCommitteeId] = useState<string>('');
+
+     /* ═══════════════════════════════════════════════════════════
+        AUTO-FILL when opening the modal (or when user data changes)
+        ═══════════════════════════════════════════════════════════ */
+
+     useEffect(() => {
+       if (!open) return;
+
+       /* Auto-select team from user profile */
+       if (userTeamId) {
+         setTeamId(userTeamId);
+       }
+
+       /* Auto-select committee:
+          - If only one → select it
+          - If multiple → if none selected yet, pick first
+          - If already selected and still valid → keep it */
+       if (myCommittees.length === 1) {
+         setCommitteeId(myCommittees[0].id);
+       } else if (myCommittees.length > 1 && !committeeId) {
+         setCommitteeId(myCommittees[0].id);
+       } else if (committeeId && !myCommittees.some((c) => c.id === committeeId)) {
+         /* Previously selected committee is no longer valid */
+         setCommitteeId(myCommittees[0]?.id ?? '');
+       }
+     }, [open, userTeamId, myCommittees, committeeId]);
+
+     /* ═══════════════════════════════════════════════════════════
+        Guards
+        ═══════════════════════════════════════════════════════════ */
+
+     if (!user?.memberId) {
+       return (
+         <div className="container">
+           <EmptyState
+             title="No member linked"
+             message="Your account is not linked to a member profile. Contact admin."
+           />
+         </div>
+       );
+     }
+
+     if (!userTeamId) {
+       return (
+         <div className="container">
+           <EmptyState
+             title="No team assigned"
+             message="You need to be assigned to a team before logging contributions. Contact admin."
+           />
+         </div>
+       );
+     }
+
+     if (userCommitteeIds.length === 0) {
+       return (
+         <div className="container">
+           <EmptyState
+             title="No committee assigned"
+             message="You need to be in at least one committee before logging contributions. Contact admin."
+           />
+         </div>
+       );
+     }
+
+     /* ═══════════════════════════════════════════════════════════
+        Data prep
+        ═══════════════════════════════════════════════════════════ */
+
+     const myContribs = safeArray(contributions)
+       .filter((c) => c.memberId === user.memberId)
+       .sort((a, b) => (a.date < b.date ? 1 : -1));
+
+     const approved = myContribs.filter((c) => c.status === 'approved');
+     const totalPoints = approved.reduce((s, c) => s + safeNumber(c.points), 0);
+     const totalHours = approved.reduce((s, c) => s + safeNumber(c.hours), 0);
+     const pending = myContribs.filter(
+       (c) => c.status === 'pending' || c.status === 'in_review',
+     ).length;
+
+     const reset = () => {
+       setTitle('');
+       setDesc('');
+       setHours(1);
+       /* keep team + committee — they are user's own */
+       if (userTeamId) setTeamId(userTeamId);
+       if (myCommittees.length > 0) setCommitteeId(myCommittees[0].id);
      };
 
      /* ═══════════════════════════════════════════════════════════
-        CREATE
+        Submit
         ═══════════════════════════════════════════════════════════ */
 
-     const handleCreate = async () => {
-       if (!email.trim() || !name.trim()) {
-         toast.error('Missing data', 'Email and name required');
+     const submit = async () => {
+       if (!title.trim() || !desc.trim()) {
+         toast.error('Title & description required');
          return;
        }
-       const emailRe = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-       if (!emailRe.test(email.trim())) {
-         toast.error('Invalid email');
+       if (hours <= 0) {
+         toast.error('Hours must be positive');
          return;
        }
-       if (password.length < 6) {
-         toast.error('Password too weak', 'Min 6 characters');
+       if (!userTeamId) {
+         toast.error('No team assigned');
          return;
        }
-       if (committeeIds.length === 0) {
-         toast.error('Committee required', 'Select at least one');
+       if (!committeeId) {
+         toast.error('Committee required');
+         return;
+       }
+       /* Validate committee belongs to user */
+       if (!userCommitteeIds.includes(committeeId)) {
+         toast.error('You can only submit to your own committees');
          return;
        }
 
        setBusy(true);
        try {
-         const result = await adminCreateMember(
-           {
-             email: email.trim(),
-             temporaryPassword: password,
-             name: name.trim(),
-             role,
-             teamIds: [teamId],
-             committeeIds,
-             bio: bio.trim() || undefined,
-           },
-           me?.uid ?? 'system',
-         );
-
+         const contrib: Contribution = {
+           id: newId('C'),
+           memberId: user.memberId!,
+           memberName: user.displayName,
+           teamId: userTeamId,
+           committeeId,
+           title: title.trim(),
+           description: desc.trim(),
+           date: today(),
+           hours,
+           points: 0,
+           status: 'pending',
+           seasonId: 'S7',
+           createdBy: user.uid,
+           approvals: newContributionApprovals(),
+           currentStage: 1,
+         };
+         await createOne('contributions', contrib);
          try {
-           await logAudit(me, 'CREATE_USER', 'User', result.uid, 'Created: ' + name);
+           await logAudit(
+             user,
+             'CREATE_CONTRIBUTION',
+             'Contribution',
+             contrib.id,
+             'Log contribution',
+           );
          } catch { /* ignore */ }
 
-         setCreated({ email: result.email, password, name: name.trim() });
+         toast.success('Submitted', 'Awaiting committee HR approval');
          setOpen(false);
-         resetForm();
-         toast.success('User created', 'Appears in list instantly');
+         reset();
        } catch (err) {
-         const msg = err instanceof Error ? err.message : 'Creation failed';
-         toast.error('Failed', msg);
+         toast.error('Failed', err instanceof Error ? err.message : '');
        } finally {
          setBusy(false);
        }
      };
 
      /* ═══════════════════════════════════════════════════════════
-        EDIT — open modal with prefilled form
+        Render
         ═══════════════════════════════════════════════════════════ */
 
-     const openEdit = (u: AppUser) => {
-       setEditUser(u);
-       setEditForm({
-         displayName: u.displayName,
-         role: u.role,
-         teamId: u.teamId ?? null,
-         committeeIds: u.committeeIds ?? [],
-       });
-     };
-
-     const saveEdit = async () => {
-       if (!editUser) return;
-       setEditBusy(true);
-       try {
-         await adminUpdateUser(editUser.uid, editForm);
-         try {
-           await logAudit(me, 'UPDATE_USER', 'User', editUser.uid, 'Updated profile');
-         } catch { /* ignore */ }
-         toast.success('User updated');
-         setEditUser(null);
-       } catch (err) {
-         const msg = err instanceof Error ? err.message : 'Update failed';
-         toast.error('Failed', msg);
-       } finally {
-         setEditBusy(false);
-       }
-     };
-
-     /* ═══════════════════════════════════════════════════════════
-        RESET PASSWORD — sends email
-        ═══════════════════════════════════════════════════════════ */
-
-     const confirmReset = async () => {
-       if (!resetTarget) return;
-       setResetBusy(true);
-       try {
-         await adminResetUserPassword(resetTarget.email);
-         try {
-           await logAudit(me, 'RESET_PASSWORD', 'User', resetTarget.uid, 'Password reset email sent');
-         } catch { /* ignore */ }
-
-         /* Also notify in-app */
-         try {
-           await notifyUser(
-             resetTarget.uid,
-             'Password reset requested',
-             'A password reset email was sent to your inbox. Check your email.',
-             'system',
-             '/dashboard',
-             'high',
-             me?.displayName,
-           );
-         } catch { /* ignore */ }
-
-         toast.success('Reset email sent', 'Check ' + resetTarget.email);
-         setResetTarget(null);
-       } catch (err) {
-         const msg = err instanceof Error ? err.message : 'Reset failed';
-         toast.error('Failed', msg);
-       } finally {
-         setResetBusy(false);
-       }
-     };
-
-     /* ═══════════════════════════════════════════════════════════
-        QUICK ACTIONS (inline)
-        ═══════════════════════════════════════════════════════════ */
-
-     const changeRole = async (uid: string, newRole: RoleId) => {
-       try {
-         await updateOne('users', uid, { role: newRole });
-         try { await logAudit(me, 'CHANGE_ROLE', 'User', uid, 'Role → ' + newRole); } catch { /* ignore */ }
-         toast.success('Role updated');
-       } catch { toast.error('Failed'); }
-     };
-
-     const changeTeam = async (uid: string, newTeam: TeamId) => {
-       try {
-         await updateOne('users', uid, { teamId: newTeam });
-         try { await logAudit(me, 'CHANGE_TEAM', 'User', uid, 'Team → ' + newTeam); } catch { /* ignore */ }
-         toast.success('Team updated');
-       } catch { toast.error('Failed'); }
-     };
-
-     const linkMember = async (uid: string, memberId: string) => {
-       try {
-         await updateOne('users', uid, { memberId: memberId || null });
-         if (memberId) {
-           await updateOne('members', memberId, { linkedUserId: uid });
-         }
-         try { await logAudit(me, 'LINK_MEMBER', 'User', uid, 'Member → ' + memberId); } catch { /* ignore */ }
-         toast.success('Member linked');
-       } catch { toast.error('Failed'); }
-     };
-
-     const sendWelcome = async (u: AppUser) => {
-       try {
-         await notifyUser(
-           u.uid,
-           'Welcome to sbapiaryy',
-           'Your account is ready. Please change your password if you have not already.',
-           'system',
-           '/dashboard',
-           'normal',
-           me?.displayName,
-         );
-         toast.success('Notification sent to ' + u.displayName);
-       } catch { toast.error('Failed to send'); }
-     };
-
-     /* ═══════════════════════════════════════════════════════════
-        DELETE
-        ═══════════════════════════════════════════════════════════ */
-
-     const confirmDelete = async () => {
-       if (!toDelete) return;
-       setDeleteBusy(true);
-       try {
-         await removeOne('users', toDelete.uid);
-         try {
-           await logAudit(me, 'DELETE_USER', 'User', toDelete.uid, 'Deleted user doc');
-         } catch { /* ignore */ }
-         toast.success('User removed');
-         setToDelete(null);
-       } catch {
-         toast.error('Failed to delete');
-       } finally {
-         setDeleteBusy(false);
-       }
-     };
-
-     /* ═══════════════════════════════════════════════════════════
-        RENDER
-        ═══════════════════════════════════════════════════════════ */
+     const canSubmit = myCommittees.length > 0;
 
      return (
-       <div className="admin-page">
+       <div className="container">
          <PageHeader
-           eyebrow="Admin"
-           title="Users"
-           description="Create, edit, and manage accounts. Changes appear instantly."
-         />
-
-         <div className="toolbar">
-           <input
-             className="input"
-             type="search"
-             placeholder="Search by name or email..."
-             value={search}
-             onChange={(e) => setSearch(e.target.value)}
-           />
+           eyebrow="My Contributions"
+           title="My Contributions"
+           description="Log your contributions. Committee HR assigns points fairly."
+         >
            <button
              type="button"
-             className="btn btn--primary"
-             onClick={() => { resetForm(); setOpen(true); }}
+             className="btn btn--primary mt-4"
+             onClick={() => {
+               /* Seed defaults before opening */
+               if (userTeamId) setTeamId(userTeamId);
+               if (myCommittees.length > 0) setCommitteeId(myCommittees[0].id);
+               setOpen(true);
+             }}
+             disabled={!canSubmit}
            >
-             + New User
+             + Log Contribution
            </button>
-         </div>
+         </PageHeader>
 
-         <SectionHeader
-           eyebrow="List"
-           title={'Users (' + filteredUsers.length + ')'}
-         />
+         {/* ─── Auto-filled info banner ─── */}
+         <section className="section--tight">
+           <div
+             className="card no-click"
+             style={{
+               display: 'flex',
+               gap: 12,
+               flexWrap: 'wrap',
+               padding: 16,
+               background: 'var(--c-off-white)',
+               border: '1px solid var(--c-line)',
+             }}
+           >
+             <div style={{ flex: 1, minWidth: 160 }}>
+               <div className="tiny muted" style={{ marginBottom: 6 }}>
+                 YOUR TEAM
+               </div>
+               <Badge variant="info">
+                 {teams.find((t) => t.id === userTeamId)?.name ?? userTeamId}
+               </Badge>
+             </div>
+             <div style={{ flex: 2, minWidth: 200 }}>
+               <div className="tiny muted" style={{ marginBottom: 6 }}>
+                 YOUR COMMITTEES
+               </div>
+               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                 {myCommittees.map((c) => (
+                   <Badge key={c.id} variant="neutral">{c.nameAr}</Badge>
+                 ))}
+               </div>
+             </div>
+           </div>
+         </section>
 
-         {loading ? (
-           <SkeletonList count={6} />
-         ) : filteredUsers.length === 0 ? (
-           <EmptyState
-             title={search ? 'No matches' : 'No users yet'}
-             message={search ? 'Try a different search.' : 'Create the first user.'}
-           />
-         ) : (
-           <div className="stack">
-             {filteredUsers.map((u) => {
-               const linkedMember = liveMembers.find((m) => m.id === u.memberId);
-               const userCommittees = liveCommittees.filter(
-                 (c) => Array.isArray(u.committeeIds) && u.committeeIds.includes(c.id),
-               );
-               return (
-                 <div key={u.uid} className="card no-click">
-                   {/* ─── Header ─── */}
-                   <div className="row row--between" style={{ gap: 12 }}>
-                     <div style={{ display: 'flex', gap: 14, alignItems: 'center', flex: 1, minWidth: 0 }}>
-                       <Avatar name={u.displayName} size={48} variant="navy" />
+         <section className="section--tight">
+           <StatRow>
+             <Stat value={totalPoints} label="Points" variant="red" />
+             <Stat value={totalHours} label="Hours" />
+             <Stat value={myContribs.length} label="Contributions" />
+             <Stat value={pending} label="Pending" />
+           </StatRow>
+         </section>
+
+         <section className="section">
+           <SectionHeader eyebrow="History" title="All Contributions" />
+           {loading ? (
+             <SkeletonList count={5} />
+           ) : myContribs.length === 0 ? (
+             <EmptyState
+               title="No contributions yet"
+               message="Log your first contribution."
+             />
+           ) : (
+             <div className="stack">
+               {myContribs.map((c) => {
+                 const team = teams.find((t) => t.id === c.teamId);
+                 const committee = liveCommittees.find((x) => x.id === c.committeeId);
+                 const stage = getStage(c);
+                 const approvals = safeArray(c.approvals);
+                 return (
+                   <div key={c.id} className="card no-click">
+                     <div className="row row--between">
                        <div style={{ flex: 1, minWidth: 0 }}>
-                         <div className="card__title" style={{ fontSize: '1rem' }}>
-                           {u.displayName}
-                           {u.mustChangePassword ? (
-                             <Badge variant="warning" className="mt-2">New</Badge>
-                           ) : null}
-                         </div>
-                         <div className="card__meta" dir="ltr" style={{ textAlign: 'start' }}>
-                           {u.email}
+                         <div className="card__title">{c.title}</div>
+                         <div className="card__meta">
+                           {team?.name} · {committee?.nameAr || c.committeeId} ·{' '}
+                           {formatDate(c.date)}
                          </div>
                        </div>
-                     </div>
-                     <Badge variant="navy">{ROLE_LABEL[u.role]}</Badge>
-                   </div>
-
-                   {/* ─── Meta row ─── */}
-                   <div className="row mt-3" style={{ gap: 8, flexWrap: 'wrap' }}>
-                     {u.teamId ? (
-                       <Badge variant="info">
-                         {teams.find((t) => t.id === u.teamId)?.name ?? u.teamId}
+                       <Badge
+                         variant={
+                           c.status === 'approved'
+                             ? 'success'
+                             : c.status === 'pending'
+                               ? 'info'
+                               : c.status === 'in_review'
+                                 ? 'warning'
+                                 : 'danger'
+                         }
+                       >
+                         {c.status === 'approved'
+                           ? 'Approved'
+                           : c.status === 'pending'
+                             ? 'Stage 1'
+                             : c.status === 'in_review'
+                               ? 'Stage ' + stage + '/3'
+                               : 'Rejected'}
                        </Badge>
+                     </div>
+                     <p className="small soft mt-2">{c.description}</p>
+                     <div className="row mt-3" style={{ gap: 12 }}>
+                       <span className="small">{safeNumber(c.hours)} hours</span>
+                       {c.status === 'approved' ? (
+                         <span className="points">{safeNumber(c.points)} points</span>
+                       ) : (
+                         <span className="muted small">Points pending</span>
+                       )}
+                     </div>
+                     {c.status !== 'approved' && c.status !== 'rejected' ? (
+                       <div
+                         className="mt-3"
+                         style={{
+                           paddingTop: 12,
+                           borderTop: '1px solid var(--c-line)',
+                         }}
+                       >
+                         <div
+                           className="tiny muted"
+                           style={{ marginBottom: 8 }}
+                         >
+                           Approval Progress
+                         </div>
+                         <div
+                           style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}
+                         >
+                           {[1, 2, 3].map((s) => {
+                             const apr = approvals.find((a) => a.stage === s);
+                             const isDone = apr?.status === 'approved';
+                             const isRej = apr?.status === 'rejected';
+                             const isActive = stage === s;
+                             return (
+                               <span
+                                 key={s}
+                                 className={
+                                   'badge ' +
+                                   (isDone
+                                     ? 'badge--success'
+                                     : isRej
+                                       ? 'badge--danger'
+                                       : isActive
+                                         ? 'badge--warning'
+                                         : 'badge--neutral')
+                                 }
+                               >
+                                 {s}. {STAGE_LABEL[s]}
+                                 {isDone ? ' ✓' : ''}
+                               </span>
+                             );
+                           })}
+                         </div>
+                       </div>
                      ) : null}
-                     {userCommittees.map((c) => (
-                       <Badge key={c.id} variant="neutral">{c.nameAr}</Badge>
-                     ))}
-                     {linkedMember ? (
-                       <Link to={'/members/' + linkedMember.id}>
-                         <Badge variant="success">
-                           Linked: {linkedMember.name}
-                         </Badge>
-                       </Link>
-                     ) : (
-                       <Badge variant="danger">Not linked to member</Badge>
-                     )}
                    </div>
-
-                   {/* ─── Inline controls ─── */}
-                   <div className="row mt-4" style={{ gap: 10, flexWrap: 'wrap' }}>
-                     <div style={{ flex: '1 1 180px', minWidth: 160 }}>
-                       <div className="tiny muted" style={{ marginBottom: 4 }}>Role</div>
-                       <select
-                         className="input"
-                         value={u.role}
-                         onChange={(e) => changeRole(u.uid, e.target.value as RoleId)}
-                       >
-                         {ROLE_OPTS.map((o) => (
-                           <option key={o.value} value={o.value}>{o.label}</option>
-                         ))}
-                       </select>
-                     </div>
-
-                     <div style={{ flex: '1 1 140px', minWidth: 130 }}>
-                       <div className="tiny muted" style={{ marginBottom: 4 }}>Team</div>
-                       <select
-                         className="input"
-                         value={u.teamId ?? ''}
-                         onChange={(e) => changeTeam(u.uid, e.target.value as TeamId)}
-                       >
-                         <option value="">— None —</option>
-                         {teams.map((t) => (
-                           <option key={t.id} value={t.id}>{t.name}</option>
-                         ))}
-                       </select>
-                     </div>
-
-                     <div style={{ flex: '1 1 180px', minWidth: 160 }}>
-                       <div className="tiny muted" style={{ marginBottom: 4 }}>Linked Member</div>
-                       <select
-                         className="input"
-                         value={u.memberId ?? ''}
-                         onChange={(e) => linkMember(u.uid, e.target.value)}
-                       >
-                         <option value="">— Not linked —</option>
-                         {liveMembers.map((m) => (
-                           <option key={m.id} value={m.id}>{m.name}</option>
-                         ))}
-                       </select>
-                     </div>
-                   </div>
-
-                   {/* ─── Actions ─── */}
-                   <div className="row mt-4" style={{ gap: 8, justifyContent: 'flex-end', paddingTop: 14, borderTop: '1px solid var(--c-line)' }}>
-                     <button
-                       type="button"
-                       className="btn btn--ghost btn--sm"
-                       onClick={() => openEdit(u)}
-                     >
-                       Edit Profile
-                     </button>
-                     <button
-                       type="button"
-                       className="btn btn--ghost btn--sm"
-                       onClick={() => setResetTarget(u)}
-                     >
-                       Reset Password
-                     </button>
-                     <button
-                       type="button"
-                       className="btn btn--ghost btn--sm"
-                       onClick={() => sendWelcome(u)}
-                     >
-                       Notify
-                     </button>
-                     <button
-                       type="button"
-                       className="btn btn--danger btn--sm"
-                       onClick={() => setToDelete(u)}
-                     >
-                       Delete
-                     </button>
-                   </div>
-                 </div>
-               );
-             })}
-           </div>
-         )}
+                 );
+               })}
+             </div>
+           )}
+         </section>
 
          {/* ═══════════════════════════════════════════════════════
-            CREATE MODAL
+            LOG CONTRIBUTION MODAL — team + committee auto-filled
             ═══════════════════════════════════════════════════════ */}
 
          <Modal
            open={open}
-           title="Create New User"
+           title="Log New Contribution"
            onClose={() => setOpen(false)}
            wide
-           footer={
-             <>
-               <button type="button" className="btn btn--ghost" onClick={() => setOpen(false)} disabled={busy}>
-                 Cancel
-               </button>
-               <button type="button" className="btn btn--primary" onClick={handleCreate} disabled={busy}>
-                 {busy ? 'Creating...' : 'Create Account'}
-               </button>
-             </>
-           }
-         >
-           <p className="small muted" style={{ marginBottom: 18, lineHeight: 1.7 }}>
-             The user will appear immediately. They can log in with this email
-             and password, and will be asked to change their password on first login.
-           </p>
-
-           <FormField label="Full name" required>
-             <TextInput value={name} onChange={setName} placeholder="e.g. Ahmed Mohamed" />
-           </FormField>
-
-           <FormField label="Email" required>
-             <TextInput value={email} onChange={setEmail} type="email" placeholder="name@resala-stem.org" />
-           </FormField>
-
-           <FormField label="Temporary password" required hint="Min 6 characters">
-             <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-               <TextInput value={password} onChange={setPassword} type="text" />
-               <button type="button" className="btn btn--ghost btn--sm" onClick={() => setPassword(genPass())}>
-                 Generate
-               </button>
-               <button type="button" className="btn btn--ghost btn--sm" onClick={() => copyToClipboard(password, 'Password')}>
-                 Copy
-               </button>
-             </div>
-           </FormField>
-
-           <FormField label="Role" required>
-             <Select value={role} onChange={(v) => setRole(v as RoleId)} options={ROLE_OPTS} />
-           </FormField>
-
-           <FormField label="Team" required>
-             <Select
-               value={teamId}
-               onChange={(v) => setTeamId(v as TeamId)}
-               options={teams.map((t) => ({ value: t.id, label: t.name }))}
-             />
-           </FormField>
-
-           <FormField
-             label="Committees"
-             required
-             hint={committees.length === 0 ? 'Create a committee first from /admin/committees' : 'At least one required'}
-           >
-             <MultiSelect
-               values={committeeIds}
-               onChange={setCommitteeIds}
-               options={committees.map((c) => ({ value: c.id, label: c.nameAr }))}
-             />
-           </FormField>
-
-           <FormField label="Short bio">
-             <TextInput value={bio} onChange={setBio} placeholder="Optional" />
-           </FormField>
-         </Modal>
-
-         {/* ═══════════════════════════════════════════════════════
-            CREDENTIALS MODAL
-            ═══════════════════════════════════════════════════════ */}
-
-         <Modal
-           open={created !== null}
-           title="✓ Account Created"
-           onClose={() => setCreated(null)}
            footer={
              <>
                <button
                  type="button"
                  className="btn btn--ghost"
-                 onClick={() =>
-                   copyToClipboard(
-                     'Name: ' + created?.name + '\\nEmail: ' + created?.email + '\\nPassword: ' + created?.password,
-                     'All credentials',
-                   )
-                 }
+                 onClick={() => setOpen(false)}
                >
-                 Copy All
-               </button>
-               <button type="button" className="btn btn--primary" onClick={() => setCreated(null)}>
-                 Done
-               </button>
-             </>
-           }
-         >
-           <p style={{ lineHeight: 1.8, marginBottom: 16 }}>
-             Send these credentials to the member:
-           </p>
-           <div style={{
-             background: 'var(--c-off-white)',
-             border: '1px solid var(--c-line)',
-             borderRadius: 'var(--radius-sm)',
-             padding: 16,
-             fontSize: '0.9rem',
-             lineHeight: 2,
-           }}>
-             <div><strong>Name:</strong> {created?.name}</div>
-             <div style={{ wordBreak: 'break-all', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-               <span><strong>Email:</strong> <span dir="ltr">{created?.email}</span></span>
-               <button type="button" className="btn btn--ghost btn--xs" onClick={() => copyToClipboard(created?.email || '', 'Email')}>Copy</button>
-             </div>
-             <div style={{ wordBreak: 'break-all', display: 'flex', justifyContent: 'space-between', gap: 8 }}>
-               <span><strong>Password:</strong> <span dir="ltr" style={{ fontFamily: 'var(--font-en)' }}>{created?.password}</span></span>
-               <button type="button" className="btn btn--ghost btn--xs" onClick={() => copyToClipboard(created?.password || '', 'Password')}>Copy</button>
-             </div>
-           </div>
-           <p style={{ fontSize: '0.82rem', color: 'var(--c-ink-muted)', marginTop: 16, lineHeight: 1.7 }}>
-             ⚠ Save these somewhere safe. Password will not be shown again.
-           </p>
-         </Modal>
-
-         {/* ═══════════════════════════════════════════════════════
-            EDIT MODAL
-            ═══════════════════════════════════════════════════════ */}
-
-         <Modal
-           open={editUser !== null}
-           title={'Edit: ' + (editUser?.displayName ?? '')}
-           onClose={() => setEditUser(null)}
-           wide
-           footer={
-             <>
-               <button type="button" className="btn btn--ghost" onClick={() => setEditUser(null)} disabled={editBusy}>
                  Cancel
                </button>
-               <button type="button" className="btn btn--primary" onClick={saveEdit} disabled={editBusy}>
-                 {editBusy ? 'Saving...' : 'Save Changes'}
+               <button
+                 type="button"
+                 className="btn btn--primary"
+                 onClick={submit}
+                 disabled={busy}
+               >
+                 {busy ? '...' : 'Submit'}
                </button>
              </>
            }
          >
-           <FormField label="Display name" required>
+           <FormField label="Title" required>
              <TextInput
-               value={editForm.displayName ?? ''}
-               onChange={(v) => setEditForm({ ...editForm, displayName: v })}
+               value={title}
+               onChange={setTitle}
+               placeholder="e.g. Ramadan Campaign volunteer"
              />
            </FormField>
 
-           <FormField label="Role" required>
-             <Select
-               value={editForm.role ?? 'MEMBER'}
-               onChange={(v) => setEditForm({ ...editForm, role: v as RoleId })}
-               options={ROLE_OPTS}
-             />
-           </FormField>
-
-           <FormField label="Team">
-             <Select
-               value={editForm.teamId ?? ''}
-               onChange={(v) => setEditForm({ ...editForm, teamId: (v as TeamId) || null })}
-               options={[{ value: '', label: '— None —' }, ...teams.map((t) => ({ value: t.id, label: t.name }))]}
-             />
-           </FormField>
-
-           <FormField label="Committees">
-             <MultiSelect
-               values={editForm.committeeIds ?? []}
-               onChange={(v) => setEditForm({ ...editForm, committeeIds: v })}
-               options={committees.map((c) => ({ value: c.id, label: c.nameAr }))}
-             />
-           </FormField>
-
-           <FormField label="Bio">
+           <FormField label="Description" required>
              <TextArea
-               value={editForm.bio ?? ''}
-               onChange={(v) => setEditForm({ ...editForm, bio: v })}
-               rows={2}
+               value={desc}
+               onChange={setDesc}
+               rows={3}
+               placeholder="What did you do exactly?"
+             />
+           </FormField>
+
+           {/* ─── Team (auto-filled, locked) ─── */}
+           <FormField
+             label="Team"
+             required
+             hint="Auto-filled from your profile"
+           >
+             <div
+               className="input"
+               style={{
+                 display: 'flex',
+                 alignItems: 'center',
+                 justifyContent: 'space-between',
+                 cursor: 'not-allowed',
+                 background: 'var(--c-off-white)',
+                 color: 'var(--c-ink-soft)',
+               }}
+             >
+               <span>
+                 {teams.find((t) => t.id === userTeamId)?.name ?? userTeamId}
+               </span>
+               <span className="tiny muted">🔒 locked</span>
+             </div>
+           </FormField>
+
+           {/* ─── Committee (auto-filled, locked if only one) ─── */}
+           <FormField
+             label="Committee"
+             required
+             hint={
+               myCommittees.length === 1
+                 ? 'Auto-filled from your profile — locked'
+                 : 'Select from your own committees'
+             }
+           >
+             {myCommittees.length === 1 ? (
+               <div
+                 className="input"
+                 style={{
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'space-between',
+                   cursor: 'not-allowed',
+                   background: 'var(--c-off-white)',
+                   color: 'var(--c-ink-soft)',
+                 }}
+               >
+                 <span>{myCommittees[0].nameAr}</span>
+                 <span className="tiny muted">🔒 locked</span>
+               </div>
+             ) : (
+               <Select
+                 value={committeeId}
+                 onChange={setCommitteeId}
+                 options={myCommittees.map((c) => ({
+                   value: c.id,
+                   label: c.nameAr,
+                 }))}
+               />
+             )}
+           </FormField>
+
+           <FormField
+             label="Hours"
+             required
+             hint="Approximate — committee HR will assign the final points"
+           >
+             <NumberInput
+               value={hours}
+               onChange={setHours}
+               min={0.5}
+               max={200}
+               step={0.5}
              />
            </FormField>
          </Modal>
-
-         {/* ═══════════════════════════════════════════════════════
-            RESET PASSWORD MODAL
-            ═══════════════════════════════════════════════════════ */}
-
-         <Modal
-           open={resetTarget !== null}
-           title="Reset Password"
-           onClose={() => setResetTarget(null)}
-           footer={
-             <>
-               <button type="button" className="btn btn--ghost" onClick={() => setResetTarget(null)} disabled={resetBusy}>
-                 Cancel
-               </button>
-               <button type="button" className="btn btn--primary" onClick={confirmReset} disabled={resetBusy}>
-                 {resetBusy ? 'Sending...' : 'Send Reset Email'}
-               </button>
-             </>
-           }
-         >
-           <p style={{ lineHeight: 1.8 }}>
-             A password reset link will be sent to:
-           </p>
-           <div style={{
-             background: 'var(--c-off-white)',
-             borderRadius: 'var(--radius-sm)',
-             padding: 14,
-             marginTop: 10,
-             fontFamily: 'var(--font-en)',
-             direction: 'ltr',
-             textAlign: 'start',
-           }}>
-             {resetTarget?.email}
-           </div>
-           <p style={{ fontSize: '0.85rem', color: 'var(--c-ink-muted)', marginTop: 14, lineHeight: 1.7 }}>
-             The user will receive an email with a link to set a new password.
-             Their current password will remain valid until they change it.
-           </p>
-         </Modal>
-
-         {/* ═══════════════════════════════════════════════════════
-            DELETE CONFIRM
-            ═══════════════════════════════════════════════════════ */}
-
-         <ConfirmDialog
-           open={toDelete !== null}
-           title="Delete User"
-           message={'Remove "' + (toDelete?.displayName || '') + '" from Firestore? The Firebase Auth account must be deleted manually from Firebase Console if needed.'}
-           confirmLabel="Delete"
-           danger
-           busy={deleteBusy}
-           onConfirm={confirmDelete}
-           onCancel={() => setToDelete(null)}
-         />
        </div>
      );
    }
@@ -1023,7 +571,7 @@ write(
 );
 
 /* ═══════════════════════════════════════════════════════════════
-      3. AUTO-FIX — cleanup
+      AUTO-FIX
       ═══════════════════════════════════════════════════════════════ */
 
 console.log("");
@@ -1037,7 +585,7 @@ console.log(" 🔧 Cleanup...");
 });
 
 /* ═══════════════════════════════════════════════════════════════
-      4. BUILD + PUSH
+      BUILD + PUSH
       ═══════════════════════════════════════════════════════════════ */
 
 console.log("");
@@ -1066,14 +614,10 @@ try {
 
 run("git add -A");
 run(
-  'git commit -m "feat: full user management (edit, reset password, link member)"',
+  'git commit -m "fix: auto-fill team + committee on contribution log"',
   true
 );
 const pushed = run("git push origin main --force");
-
-/* ═══════════════════════════════════════════════════════════════
-      5. SUMMARY
-      ═══════════════════════════════════════════════════════════════ */
 
 console.log("");
 console.log(" ╔══════════════════════════════════════════════════════╗");
@@ -1084,21 +628,20 @@ console.log(
 );
 console.log(" ╚══════════════════════════════════════════════════════╝");
 console.log("");
-console.log(" ✨ New in /admin/users:");
-console.log("   ✓ Real-time search box");
-console.log("   ✓ Card layout per user (cleaner than table)");
-console.log("   ✓ Inline dropdowns: Role, Team, Linked Member");
-console.log("   ✓ Edit Profile modal (name, role, team, committees, bio)");
-console.log("   ✓ Reset Password button → sends email");
-console.log("   ✓ Notify button → sends in-app notification");
-console.log("   ✓ Auto-sync between user doc and member doc");
-console.log("   ✓ User appears instantly after creation");
+console.log(" ✨ What was fixed:");
+console.log("   ✓ Team auto-selected from user.teamId");
+console.log("   ✓ Committee auto-selected from user.committeeIds");
+console.log("   ✓ Team field is LOCKED (read-only)");
+console.log("   ✓ Committee field LOCKED if user has only one");
+console.log("   ✓ Committee dropdown shows ONLY user's committees");
+console.log("   ✓ Info banner at top shows team + committees");
+console.log("   ✓ Blocks submission if user has no team/committee");
+console.log("   ✓ Validates committee belongs to user before submit");
 console.log("");
-console.log(" ⏭  After GitHub Actions finishes (4-7 min):");
-console.log("   1. Open /admin/users");
-console.log("   2. Create a user → see the credentials modal");
-console.log("   3. Card appears immediately in the list");
-console.log("   4. Change role / team / linked member from inline dropdowns");
-console.log('   5. Click "Edit Profile" for full edit');
-console.log('   6. Click "Reset Password" to send a reset email');
+console.log(" ⏭  After GitHub Actions (4-7 min):");
+console.log("   1. Member logs in → /my-contributions");
+console.log('   2. Click "+ Log Contribution"');
+console.log("   3. Team shows automatically (locked)");
+console.log("   4. Committee shows automatically (locked if one)");
+console.log("   5. Just fill title, description, hours → Submit");
 console.log("");
