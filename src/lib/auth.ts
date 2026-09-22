@@ -14,7 +14,7 @@
    import type { AppUser, RoleId, TeamId, Member } from '@/types';
 
    /* ═══════════════════════════════════════════════════════════════
-      Auth actions
+      Login / Logout / Reset
       ═══════════════════════════════════════════════════════════════ */
 
    export async function login(email: string, password: string): Promise<AppUser> {
@@ -38,21 +38,177 @@
    }
 
    /* ═══════════════════════════════════════════════════════════════
-      Admin: reset another user's password (sends email)
+      SELF REGISTRATION — anyone can sign up
+      Result: pending status, awaiting admin approval
+      ═══════════════════════════════════════════════════════════════ */
+
+   export interface RegisterSelfInput {
+     email: string;
+     password: string;
+     name: string;
+     preferredTeamId?: TeamId | null;
+     note?: string;
+   }
+
+   function translateError(code: string): string {
+     if (code.includes('EMAIL_EXISTS') || code.includes('email-already-in-use')) {
+       return 'This email is already registered. Try logging in instead.';
+     }
+     if (code.includes('WEAK_PASSWORD') || code.includes('weak-password')) {
+       return 'Password is too weak (min 6 characters)';
+     }
+     if (code.includes('INVALID_EMAIL') || code.includes('invalid-email')) {
+       return 'Invalid email address';
+     }
+     if (code.includes('TOO_MANY_REQUESTS')) {
+       return 'Too many attempts. Please wait and try again.';
+     }
+     if (code.includes('OPERATION_NOT_ALLOWED')) {
+       return 'Registration is currently disabled in Firebase Console';
+     }
+     if (code.includes('NETWORK')) {
+       return 'Network error. Check your connection.';
+     }
+     return code || 'Registration failed';
+   }
+
+   export async function registerSelf(
+     input: RegisterSelfInput,
+   ): Promise<{ uid: string; email: string }> {
+     const email = input.email.trim().toLowerCase();
+     const name = input.name.trim();
+     const password = input.password;
+
+     if (!email || !name) throw new Error('Email and name are required');
+     if (password.length < 6) throw new Error('Password must be at least 6 characters');
+
+     /* Create the Firebase Auth user on MAIN app — user will be auto-logged-in
+        No need for secondary app here because there's no other session */
+     let uid = '';
+     try {
+       const cred = await createUserWithEmailAndPassword(auth, email, password);
+       uid = cred.user.uid;
+     } catch (err) {
+       const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
+       const msg = err instanceof Error ? err.message : String(err);
+       throw new Error(translateError(code || msg));
+     }
+
+     if (!uid) throw new Error('Registration failed');
+
+     /* Create user doc with PENDING status */
+     const userData: AppUser = {
+       uid,
+       email,
+       displayName: name,
+       role: 'VIEWER',                 /* No role until approved */
+       teamId: null,
+       committeeIds: [],
+       memberId: null,
+       createdAt: new Date().toISOString(),
+       emailVerified: false,
+       mustChangePassword: false,
+       status: 'pending',              /* ⚑ Awaiting admin approval */
+       preferredTeamId: input.preferredTeamId ?? null,
+       registrationNote: input.note?.trim() || undefined,
+     };
+
+     await setDoc(doc(db, 'users', uid), userData);
+
+     return { uid, email };
+   }
+
+   /* ═══════════════════════════════════════════════════════════════
+      ADMIN: Approve pending user
+      — Sets role, team, committees
+      — Creates member doc
+      — Updates status → active
+      ═══════════════════════════════════════════════════════════════ */
+
+   export interface ApproveUserInput {
+     role: RoleId;
+     teamIds: TeamId[];
+     committeeIds: string[];
+     bio?: string;
+   }
+
+   export async function adminApproveUser(
+     pendingUser: AppUser,
+     input: ApproveUserInput,
+     adminUid: string,
+   ): Promise<{ memberId: string }> {
+     const uid = pendingUser.uid;
+
+     if (!input.teamIds || input.teamIds.length === 0) {
+       throw new Error('At least one team is required');
+     }
+     if (!input.committeeIds || input.committeeIds.length === 0) {
+       throw new Error('At least one committee is required');
+     }
+
+     const memberId = 'M-' + uid.slice(0, 8).toUpperCase();
+
+     /* Update user doc → active */
+     await updateDoc(doc(db, 'users', uid), {
+       role: input.role,
+       teamId: input.teamIds[0] ?? null,
+       committeeIds: safeArray(input.committeeIds),
+       memberId,
+       status: 'active',
+       approvedAt: new Date().toISOString(),
+       approvedBy: adminUid,
+       rejectionReason: null,
+     });
+
+     /* Create member doc */
+     const memberData: Member = {
+       id: memberId,
+       name: pendingUser.displayName,
+       role: input.role,
+       teamIds: input.teamIds,
+       committeeIds: safeArray(input.committeeIds),
+       joinedSeason: 7,
+       hours: 0,
+       points: 0,
+       status: 'active',
+       bio: input.bio?.trim() || undefined,
+       email: pendingUser.email,
+       linkedUserId: uid,
+     };
+
+     await setDoc(doc(db, 'members', memberId), memberData);
+
+     return { memberId };
+   }
+
+   /* ═══════════════════════════════════════════════════════════════
+      ADMIN: Reject pending user
+      ═══════════════════════════════════════════════════════════════ */
+
+   export async function adminRejectUser(
+     uid: string,
+     reason: string,
+     adminUid: string,
+   ): Promise<void> {
+     if (!reason.trim()) throw new Error('Reason required');
+     await updateDoc(doc(db, 'users', uid), {
+       status: 'rejected',
+       rejectionReason: reason.trim(),
+       approvedBy: adminUid,
+     });
+   }
+
+   /* ═══════════════════════════════════════════════════════════════
+      ADMIN: reset another user's password
       ═══════════════════════════════════════════════════════════════ */
 
    export async function adminResetUserPassword(email: string): Promise<void> {
      if (!email) throw new Error('Email required');
-     try {
-       await sendPasswordResetEmail(auth, email);
-     } catch (err) {
-       const msg = err instanceof Error ? err.message : 'Failed to send reset email';
-       throw new Error(msg);
-     }
+     await sendPasswordResetEmail(auth, email);
    }
 
    /* ═══════════════════════════════════════════════════════════════
-      Admin: update user profile (name, role, team, committees, bio)
+      ADMIN: update user profile
       ═══════════════════════════════════════════════════════════════ */
 
    export interface UpdateUserInput {
@@ -72,7 +228,6 @@
 
      await updateDoc(doc(db, 'users', uid), payload);
 
-     /* Sync to linked member doc if exists */
      try {
        const userSnap = await getDoc(doc(db, 'users', uid));
        if (userSnap.exists()) {
@@ -89,11 +244,11 @@
            }
          }
        }
-     } catch { /* silent — user doc still updated */ }
+     } catch { /* silent */ }
    }
 
    /* ═══════════════════════════════════════════════════════════════
-      Create member (with secondary app — admin session untouched)
+      ADMIN: create member directly (with secondary app)
       ═══════════════════════════════════════════════════════════════ */
 
    export interface CreateMemberInput {
@@ -104,28 +259,6 @@
      teamIds: TeamId[];
      committeeIds: string[];
      bio?: string;
-   }
-
-   function translateAuthError(code: string): string {
-     if (code.includes('EMAIL_EXISTS') || code.includes('email-already-in-use')) {
-       return 'This email is already registered';
-     }
-     if (code.includes('WEAK_PASSWORD') || code.includes('weak-password')) {
-       return 'Password is too weak (min 6 characters)';
-     }
-     if (code.includes('INVALID_EMAIL') || code.includes('invalid-email')) {
-       return 'Invalid email address';
-     }
-     if (code.includes('TOO_MANY_REQUESTS')) {
-       return 'Too many requests. Try again later.';
-     }
-     if (code.includes('OPERATION_NOT_ALLOWED')) {
-       return 'Email/Password sign-in is disabled in Firebase Console';
-     }
-     if (code.includes('NETWORK')) {
-       return 'Network error. Check your connection.';
-     }
-     return code || 'Failed to create account';
    }
 
    export async function adminCreateMember(
@@ -143,7 +276,6 @@
 
      const secondaryAuth = getSecondaryAuth();
      let uid = '';
-
      try {
        const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
        uid = cred.user.uid;
@@ -153,7 +285,7 @@
        await destroySecondaryApp();
        const code = err && typeof err === 'object' && 'code' in err ? String(err.code) : '';
        const msg = err instanceof Error ? err.message : String(err);
-       throw new Error(translateAuthError(code || msg));
+       throw new Error(translateError(code || msg));
      }
 
      if (!uid) throw new Error('Failed to create user account');
@@ -172,6 +304,7 @@
        emailVerified: false,
        mustChangePassword: true,
        createdByAdmin: adminUid,
+       status: 'active',
      };
      await setDoc(doc(db, 'users', uid), userData);
 
@@ -203,7 +336,13 @@
      const snap = await getDoc(ref);
      if (snap.exists()) {
        const data = snap.data() as Omit<AppUser, 'uid'>;
-       return { uid: fbUser.uid, ...data, emailVerified: fbUser.emailVerified };
+       return {
+         uid: fbUser.uid,
+         ...data,
+         emailVerified: fbUser.emailVerified,
+         /* Existing users with no status → active */
+         status: data.status ?? 'active',
+       };
      }
      const fallback: AppUser = {
        uid: fbUser.uid,
@@ -216,6 +355,7 @@
        createdAt: new Date().toISOString(),
        emailVerified: fbUser.emailVerified,
        mustChangePassword: false,
+       status: 'pending',
      };
      await setDoc(ref, fallback);
      return fallback;

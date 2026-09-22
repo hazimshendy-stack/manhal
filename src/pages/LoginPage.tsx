@@ -1,35 +1,104 @@
-import { useState, type FormEvent } from 'react';
+   import { useState, type FormEvent } from 'react';
    import { useNavigate, Link } from 'react-router-dom';
    import { login } from '@/lib/auth';
+   import { useAuth } from '@/lib/useAuth';
 
    export function LoginPage() {
      const nav = useNavigate();
+     const { user } = useAuth();
      const [email, setEmail] = useState('');
      const [password, setPassword] = useState('');
      const [error, setError] = useState('');
      const [busy, setBusy] = useState(false);
+
      const onSubmit = async (e: FormEvent) => {
-       e.preventDefault(); setError(''); setBusy(true);
-       try { await login(email.trim(), password); nav('/dashboard'); }
-       catch (err: unknown) { setError(err instanceof Error ? err.message : 'Login failed'); }
-       finally { setBusy(false); }
+       e.preventDefault();
+       setError('');
+       setBusy(true);
+       try {
+         const appUser = await login(email.trim(), password);
+
+         /* Route based on status */
+         if (appUser.status === 'pending' || appUser.status === 'rejected') {
+           nav('/pending-approval');
+         } else if (appUser.mustChangePassword) {
+           nav('/change-password');
+         } else {
+           nav('/dashboard');
+         }
+       } catch (err) {
+         setError(err instanceof Error ? err.message : 'Login failed');
+       } finally {
+         setBusy(false);
+       }
      };
+
+     /* If already logged in */
+     if (user) {
+       if (user.status === 'pending' || user.status === 'rejected') {
+         nav('/pending-approval');
+       } else {
+         nav('/dashboard');
+       }
+       return null;
+     }
+
      return (
        <div className="login-page">
          <div className="login-card">
            <form onSubmit={onSubmit}>
              <div className="login-field">
                <label className="login-label">Email</label>
-               <input className="login-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@resala-stem.org" autoComplete="email" required dir="ltr" />
+               <input
+                 className="login-input"
+                 type="email"
+                 value={email}
+                 onChange={(e) => setEmail(e.target.value)}
+                 placeholder="name@resala-stem.org"
+                 autoComplete="email"
+                 required
+                 dir="ltr"
+               />
              </div>
              <div className="login-field">
                <label className="login-label">Password</label>
-               <input className="login-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="........" autoComplete="current-password" required dir="ltr" />
+               <input
+                 className="login-input"
+                 type="password"
+                 value={password}
+                 onChange={(e) => setPassword(e.target.value)}
+                 placeholder="........"
+                 autoComplete="current-password"
+                 required
+                 dir="ltr"
+               />
              </div>
              {error ? <div className="login-error">{error}</div> : null}
-             <button type="submit" className="login-submit" disabled={busy || !email || !password}>{busy ? '...' : 'Sign In'}</button>
+             <button
+               type="submit"
+               className="login-submit"
+               disabled={busy || !email || !password}
+             >
+               {busy ? '...' : 'Sign In'}
+             </button>
            </form>
-           <p className="login-back"><Link to="/">Back to Home</Link></p>
+
+           <p
+             className="login-back"
+             style={{ marginTop: 20, lineHeight: 1.7 }}
+           >
+             New here?{' '}
+             <Link
+               to="/register"
+               style={{ color: 'var(--c-red)', fontWeight: 700 }}
+             >
+               Create an account
+             </Link>
+           </p>
+
+           <p className="login-back" style={{ marginTop: 6 }}>
+             <Link to="/">Back to Home</Link>
+           </p>
          </div>
        </div>
      );

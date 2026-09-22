@@ -1,20 +1,21 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+   import { NavLink, useNavigate } from 'react-router-dom';
    import { useEffect, useState } from 'react';
    import { useAuth } from '@/lib/useAuth';
    import { logout } from '@/lib/auth';
    import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
    import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
    import { cx } from '@/lib/format';
-   import type { ApprovalStep } from '@/types';
+   import type { ApprovalStep, AppUser } from '@/types';
 
    interface NavItem { to: string; label: string; count?: number; }
    interface SidebarProps { open: boolean; onClose: () => void; }
 
-   function buildAdminNav(pending: number): NavItem[] {
+   function buildAdminNav(pendingApprovals: number, pendingUsers: number): NavItem[] {
      return [
        { to: '/admin', label: 'Admin Dashboard' },
        { to: '/admin/analytics', label: 'Analytics' },
-       { to: '/admin/requests', label: 'Requests', count: pending },
+       { to: '/admin/pending-users', label: 'Pending Users', count: pendingUsers },
+       { to: '/admin/requests', label: 'Requests', count: pendingApprovals },
        { to: '/admin/users', label: 'Users' },
        { to: '/admin/members', label: 'Members' },
        { to: '/admin/contributions', label: 'Contributions' },
@@ -68,7 +69,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
      const { user } = useAuth();
      const nav = useNavigate();
      const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
+     const { data: users } = useRealtimeCollection<AppUser>('users');
      const [isMobile, setIsMobile] = useState(false);
+
      useEffect(() => {
        const mq = window.matchMedia('(max-width: 900px)');
        const update = () => setIsMobile(mq.matches);
@@ -76,20 +79,27 @@ import { NavLink, useNavigate } from 'react-router-dom';
        mq.addEventListener('change', update);
        return () => mq.removeEventListener('change', update);
      }, []);
+
      if (!user) return null;
-     const pending = approvals.filter((a) => {
+
+     const pendingApprovals = approvals.filter((a) => {
        if (a.status !== 'PENDING') return false;
        if (isAdmin(user)) return true;
        if (a.requiredRole !== user.role) return false;
        if (a.requiredTeamId !== null && a.requiredTeamId !== user.teamId) return false;
        return true;
      }).length;
+
+     const pendingUsers = users.filter((u) => u.status === 'pending').length;
+
      let items: NavItem[];
-     if (isAdmin(user)) items = buildAdminNav(pending);
+     if (isAdmin(user)) items = buildAdminNav(pendingApprovals, pendingUsers);
      else if (user.role === 'MEMBER' || user.role === 'VIEWER') items = buildMemberNav();
-     else items = buildManagerNav(pending);
+     else items = buildManagerNav(pendingApprovals);
+
      const handleLogout = async () => { onClose(); await logout(); nav('/'); };
      const handleNavClick = () => { if (isMobile) onClose(); };
+
      return (
        <>
          <div className={'sidebar-overlay' + (open ? ' is-open' : '')} onClick={onClose} aria-hidden="true" />
@@ -108,7 +118,9 @@ import { NavLink, useNavigate } from 'react-router-dom';
                  onClick={handleNavClick}
                  className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}>
                  <span>{it.label}</span>
-                 {it.count && it.count > 0 ? <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span> : null}
+                 {it.count && it.count > 0 ? (
+                   <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span>
+                 ) : null}
                </NavLink>
              ))}
            </div>

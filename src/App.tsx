@@ -1,4 +1,4 @@
-import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+   import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
    import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
    import { Layout } from '@/components/layout/Layout';
    import { RequireAuth } from '@/components/layout/RequireAuth';
@@ -8,6 +8,8 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 
    import { HomePage } from '@/pages/HomePage';
    import { LoginPage } from '@/pages/LoginPage';
+   import { RegisterPage } from '@/pages/RegisterPage';
+   import { PendingApprovalPage } from '@/pages/PendingApprovalPage';
    import { ChangePasswordPage } from '@/pages/ChangePasswordPage';
    import { AboutPage } from '@/pages/AboutPage';
    import { MembersPage } from '@/pages/MembersPage';
@@ -39,6 +41,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 
    import { AdminHomePage } from '@/pages/admin/AdminHomePage';
    import { AdminUsersPage } from '@/pages/admin/AdminUsersPage';
+   import { AdminPendingUsersPage } from '@/pages/admin/AdminPendingUsersPage';
    import { AdminMembersPage } from '@/pages/admin/AdminMembersPage';
    import { AdminContributionsPage } from '@/pages/admin/AdminContributionsPage';
    import { AdminCommitteesPage } from '@/pages/admin/AdminCommitteesPage';
@@ -58,8 +61,11 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
          <HashRouter>
            <Routes>
              <Route element={<Layout />}>
+               {/* ═══ Public ═══ */}
                <Route path="/" element={<HomePage />} />
                <Route path="/login" element={<LoginPage />} />
+               <Route path="/register" element={<RegisterPage />} />
+               <Route path="/pending-approval" element={<PendingApprovalPage />} />
                <Route path="/change-password" element={<ChangePasswordPage />} />
                <Route path="/about" element={<AboutPage />} />
                <Route path="/members" element={<MembersPage />} />
@@ -73,6 +79,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
                <Route path="/governance" element={<GovernancePage />} />
                <Route path="/search" element={<SearchPage />} />
 
+               {/* ═══ Protected ═══ */}
                <Route path="/dashboard" element={<RequireAuth><DashboardPage /></RequireAuth>} />
                <Route path="/profile" element={<RequireAuth><MyProfilePage /></RequireAuth>} />
                <Route path="/my-contributions" element={<RequireAuth><MyContributionsPage /></RequireAuth>} />
@@ -88,8 +95,10 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
                <Route path="/reports" element={<RequireAuth><ReportsPage /></RequireAuth>} />
                <Route path="/audit" element={<RequireAuth roles={['HEAD', 'VICE']}><AuditPage /></RequireAuth>} />
 
+               {/* ═══ Admin ═══ */}
                <Route path="/admin" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminHomePage /></RequireAuth>} />
                <Route path="/admin/analytics" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminAnalyticsPage /></RequireAuth>} />
+               <Route path="/admin/pending-users" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminPendingUsersPage /></RequireAuth>} />
                <Route path="/admin/requests" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminRequestsPage /></RequireAuth>} />
                <Route path="/admin/users" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminUsersPage /></RequireAuth>} />
                <Route path="/admin/members" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminMembersPage /></RequireAuth>} />
