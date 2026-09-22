@@ -12,3 +12,11 @@ interface IconProps { size?: number; className?: string; }
    export function IconBell({ size = 24, className }: IconProps) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true"><path d="M12 2a2 2 0 0 0-2 2v.6A6.5 6.5 0 0 0 5 11v4.2L3.3 17.8a1 1 0 0 0 .9 1.5h15.6a1 1 0 0 0 .9-1.5L19 15.2V11a6.5 6.5 0 0 0-5-6.4V4a2 2 0 0 0-2-2z" /><path d="M10 21.2a2 2 0 0 0 4 0h-4z" /></svg>; }
    export function IconAdmin({ size = 24, className }: IconProps) { return <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true"><path d="M12 2 3.5 5.5v6.2c0 5.3 3.7 9.7 8.5 10.8 4.8-1.1 8.5-5.5 8.5-10.8V5.5L12 2zm0 5.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6z" /></svg>; }
    
+   export function IconTrophy({ size = 24, className }: IconProps) {
+     return (
+       <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+         <path d="M6 3h12v3h3v3c0 2.5-2 4.5-4.5 4.5h-.7A6 6 0 0 1 13 16.9V19h3a1 1 0 0 1 1 1v1H7v-1a1 1 0 0 1 1-1h3v-2.1A6 6 0 0 1 8.2 13.5H7.5C5 13.5 3 11.5 3 9V6h3V3zm0 5H4v1c0 1.7 1.3 3 3 3V8zm14 1V8h-2v4c1.7 0 3-1.3 3-3z" />
+       </svg>
+     );
+   }
+   

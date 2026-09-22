@@ -1,9 +1,8 @@
-   import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
-   import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
    import { Layout } from '@/components/layout/Layout';
    import { RequireAuth } from '@/components/layout/RequireAuth';
+   import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
    import { ToastContainer } from '@/components/ui/Toast';
-   import { Onboarding } from '@/components/onboarding/Onboarding';
    import { PwaInstallBanner } from '@/components/pwa/PwaInstallBanner';
 
    import { HomePage } from '@/pages/HomePage';
@@ -34,7 +33,6 @@
    import { ApprovalsPage } from '@/pages/ApprovalsPage';
    import { ContributionsPage } from '@/pages/ContributionsPage';
    import { NotificationsPage } from '@/pages/NotificationsPage';
-   import { ConversationsPage } from '@/pages/ConversationsPage';
    import { CalendarPage } from '@/pages/CalendarPage';
    import { ReportsPage } from '@/pages/ReportsPage';
    import { AuditPage } from '@/pages/AuditPage';
@@ -48,33 +46,11 @@
    import { AdminAchievementsPage } from '@/pages/admin/AdminAchievementsPage';
    import { AdminWarningsPage } from '@/pages/admin/AdminWarningsPage';
    import { AdminCalendarPage } from '@/pages/admin/AdminCalendarPage';
-   import { AdminConversationsPage } from '@/pages/admin/AdminConversationsPage';
    import { AdminNotificationsPage } from '@/pages/admin/AdminNotificationsPage';
    import { AdminAnalyticsPage } from '@/pages/admin/AdminAnalyticsPage';
    import { AdminGovernancePage } from '@/pages/admin/AdminGovernancePage';
    import { AdminRequestsPage } from '@/pages/admin/AdminRequestsPage';
    import { AdminAuditPage } from '@/pages/admin/AdminAuditPage';
-import { Navigate } from 'react-router-dom';
-import { HashRouter, Routes, Route } from 'react-router-dom';
-import { ToastContainer } from '@/components/ui/Toast';
-import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
-import { Layout } from '@/components/layout/Layout';
-import { RequireAuth } from '@/components/layout/RequireAuth';
-import { Onboarding } from '@/components/onboarding/Onboarding';
-import { PwaInstallBanner } from '@/components/pwa/PwaInstallBanner';
-import { login } from '@/lib/auth';
-import { teams } from '@/data/teams';
-import { committees } from '@/data/committees';
-import { members } from '@/data/members';
-import { contributions } from '@/data/contributions';
-import { requests } from '@/data/requests';
-import { approvals } from '@/data/approvals';
-import { warnings } from '@/data/warnings';
-import { achievements } from '@/data/achievements';
-import { notifications } from '@/data/notifications';
-import { conversations } from '@/data/conversations';
-import { audit } from '@/data/audit';
-import { roles } from '@/data/roles';
 
    export default function App() {
      return (
@@ -111,7 +87,6 @@ import { roles } from '@/data/roles';
                <Route path="/approvals" element={<RequireAuth><ApprovalsPage /></RequireAuth>} />
                <Route path="/contributions" element={<RequireAuth><ContributionsPage /></RequireAuth>} />
                <Route path="/notifications" element={<RequireAuth><NotificationsPage /></RequireAuth>} />
-               <Route path="/conversations" element={<RequireAuth><ConversationsPage /></RequireAuth>} />
                <Route path="/calendar" element={<RequireAuth><CalendarPage /></RequireAuth>} />
                <Route path="/reports" element={<RequireAuth><ReportsPage /></RequireAuth>} />
                <Route path="/audit" element={<RequireAuth roles={['HEAD', 'VICE']}><AuditPage /></RequireAuth>} />
@@ -128,7 +103,6 @@ import { roles } from '@/data/roles';
                <Route path="/admin/achievements" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminAchievementsPage /></RequireAuth>} />
                <Route path="/admin/warnings" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminWarningsPage /></RequireAuth>} />
                <Route path="/admin/calendar" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminCalendarPage /></RequireAuth>} />
-               <Route path="/admin/conversations" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminConversationsPage /></RequireAuth>} />
                <Route path="/admin/notifications" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminNotificationsPage /></RequireAuth>} />
                <Route path="/admin/governance" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminGovernancePage /></RequireAuth>} />
                <Route path="/admin/audit" element={<RequireAuth roles={['HEAD', 'VICE']}><AdminAuditPage /></RequireAuth>} />
@@ -138,7 +112,6 @@ import { roles } from '@/data/roles';
              </Route>
            </Routes>
            <ToastContainer />
-           <Onboarding />
            <PwaInstallBanner />
          </HashRouter>
        </ErrorBoundary>

@@ -1,7 +1,6 @@
 /* ═══════════════════════════════════════════════════════════════════════
-      DESKTOP — Mobile-like experience
-      Same Navbar, BottomNav, Sidebar drawer as mobile.
-      Mobile: untouched.
+      DESKTOP — نفس تجربة الموبايل تمامًا
+      البوتوم ناف يبقى full width بنفس التصميم، بدون إطار عائم
       ═══════════════════════════════════════════════════════════════════════ */
 
    @media (min-width: 1024px) {
@@ -35,7 +34,7 @@
    }
 
    /* ═══════════════════════════════════════════════════════════════════════
-      DESKTOP (≥901px) — floating pill BottomNav + drawer Sidebar
+      DESKTOP (≥901px) — BottomNav يبقى full width تمامًا زي الموبايل
       ═══════════════════════════════════════════════════════════════════════ */
 
    @media (min-width: 901px) {
@@ -59,35 +58,33 @@
        }
      }
 
-     /* Menu button visible on desktop */
+     /* زر القائمة ظاهر على الديسكتوب زي الموبايل */
      .show-mobile {
        display: inline-flex !important;
      }
 
-     /* ─── BottomNav — floating pill ─── */
+     /* ─── BottomNav: full width بالظبط زي الموبايل ─── */
      .bottom-nav {
        display: flex !important;
        position: fixed !important;
-       bottom: 20px !important;
-       left: 50% !important;
-       right: auto !important;
+       bottom: 0 !important;
+       left: 0 !important;
+       right: 0 !important;
        top: auto !important;
-       transform: translateX(-50%) !important;
-       width: auto !important;
-       min-width: 480px !important;
-       max-width: 640px !important;
-       height: 64px !important;
-       border-radius: 999px !important;
-       border: 1px solid var(--c-line) !important;
+       transform: none !important;
+       width: 100% !important;
+       min-width: 100% !important;
+       max-width: 100% !important;
+       height: 68px !important;
+       border-radius: 0 !important;
+       border: none !important;
+       border-top: 1px solid var(--c-line) !important;
        background: var(--c-white) !important;
-       box-shadow:
-         0 12px 40px -12px rgba(21, 26, 69, 0.28),
-         0 4px 12px -4px rgba(21, 26, 69, 0.10) !important;
-       padding: 6px !important;
+       box-shadow: 0 -2px 12px rgba(21, 26, 69, 0.06) !important;
+       padding: 6px 8px !important;
        padding-bottom: 6px !important;
        margin: 0 !important;
        z-index: 60 !important;
-       overflow: visible !important;
      }
 
      .bottom-nav__inner {
@@ -95,8 +92,9 @@
        align-items: stretch !important;
        justify-content: space-around !important;
        width: 100% !important;
-       max-width: 100% !important;
-       padding-inline: 4px !important;
+       max-width: 900px !important;
+       margin-inline: auto !important;
+       padding-inline: 6px !important;
        gap: 2px !important;
      }
 
@@ -106,34 +104,43 @@
        flex-direction: column !important;
        align-items: center !important;
        justify-content: center !important;
-       gap: 3px !important;
-       padding: 8px 10px !important;
-       border-radius: 999px !important;
+       gap: 4px !important;
+       padding: 8px 10px 6px !important;
+       border-radius: 0 !important;
        color: var(--c-ink-muted) !important;
-       font-size: 0.72rem !important;
+       font-size: 0.78rem !important;
        font-weight: 700 !important;
        text-decoration: none !important;
        position: relative !important;
-       transition: background 0.15s var(--ease), color 0.15s var(--ease) !important;
+       transition: color 0.15s var(--ease) !important;
        cursor: pointer !important;
        border: none !important;
        background: transparent !important;
-       max-width: 120px !important;
+       max-width: 140px !important;
+       font-family: inherit !important;
      }
 
      .bottom-nav__item:hover {
-       background: var(--c-off-white) !important;
        color: var(--c-navy) !important;
+       background: transparent !important;
      }
 
      .bottom-nav__item.is-active {
        color: var(--c-red) !important;
-       background: var(--c-red-tint) !important;
+       background: transparent !important;
      }
 
      .bottom-nav__item.is-active::before {
-       display: none !important;
-       content: none !important;
+       content: '' !important;
+       display: block !important;
+       position: absolute !important;
+       top: 0 !important;
+       left: 50% !important;
+       transform: translateX(-50%) !important;
+       width: 28px !important;
+       height: 3px !important;
+       background: var(--c-red) !important;
+       border-radius: 0 0 4px 4px !important;
      }
 
      .bottom-nav__icon {
@@ -151,40 +158,46 @@
      }
 
      .bottom-nav__label {
+       display: block !important;
        white-space: nowrap !important;
        overflow: hidden !important;
        text-overflow: ellipsis !important;
        max-width: 100% !important;
        line-height: 1.2 !important;
+       font-size: 0.78rem !important;
+       color: inherit !important;
+       visibility: visible !important;
+       opacity: 1 !important;
      }
 
      .bottom-nav__badge {
        position: absolute !important;
-       top: 4px !important;
-       right: 18% !important;
-       min-width: 16px !important;
-       height: 16px !important;
-       padding: 0 4px !important;
+       top: 5px !important;
+       right: 50% !important;
+       margin-right: -22px !important;
+       min-width: 18px !important;
+       height: 18px !important;
+       padding: 0 5px !important;
        border-radius: 999px !important;
        background: var(--c-red) !important;
        color: #fff !important;
-       font-size: 0.6rem !important;
+       font-size: 0.62rem !important;
        font-weight: 800 !important;
        display: grid !important;
        place-items: center !important;
        border: 2px solid var(--c-white) !important;
      }
 
-     /* Make room for the floating pill */
+     /* خلي المحتوى يتنفس مكان الناف بار */
      .app-main {
-       padding-bottom: 110px !important;
+       padding-bottom: 90px !important;
      }
 
      .footer {
-       padding-bottom: 130px !important;
+       padding-bottom: 100px !important;
      }
 
-     /* ─── Sidebar drawer (same as mobile) ─── */
+     /* ─── Sidebar drawer (نفس الموبايل) ─── */
      .sidebar {
        position: fixed !important;
        top: 0 !important;
@@ -209,9 +222,7 @@
        display: block !important;
      }
 
-     .sidebar.is-open {
-       left: 0 !important;
-     }
+     .sidebar.is-open { left: 0 !important; }
 
      .sidebar-overlay {
        display: block !important;
@@ -226,14 +237,9 @@
        -webkit-backdrop-filter: blur(3px) !important;
      }
 
-     .sidebar-overlay.is-open {
-       opacity: 1 !important;
-       pointer-events: auto !important;
-     }
+     .sidebar-overlay.is-open { opacity: 1 !important; pointer-events: auto !important; }
 
-     .sidebar-close {
-       display: flex !important;
-     }
+     .sidebar-close { display: flex !important; }
 
      .dashboard-layout {
        grid-template-columns: 1fr !important;
@@ -253,20 +259,9 @@
      .pwa-install-banner {
        left: auto !important;
        right: 24px !important;
-       bottom: 110px !important;
+       bottom: 90px !important;
        max-width: 420px !important;
        inset-inline: auto !important;
-     }
-   }
-
-   @media (min-width: 1440px) {
-     .bottom-nav {
-       min-width: 520px !important;
-       max-width: 700px !important;
-       height: 68px !important;
-     }
-     .bottom-nav__item {
-       font-size: 0.76rem !important;
      }
    }
    

@@ -16,9 +16,7 @@
    @import './footer.css';
    @import './profile.css';
    @import './login.css';
-   @import './onboarding.css';
    @import './calendar.css';
-   @import './chat.css';
    @import './pwa.css';
    @import './states.css';
    @import './timeline.css';
@@ -28,5 +26,6 @@
    @import './admin.css';
    @import './committee.css';
    @import './v52-fix.css';
+@import './league.css';
    @import './desktop.css';
    
