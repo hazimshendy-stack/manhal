@@ -1,4 +1,4 @@
-   import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
    import { useNavigate, Link } from 'react-router-dom';
    import { login, translateAuthError } from '@/lib/auth';
    import { useAuth } from '@/lib/useAuth';
@@ -17,7 +17,6 @@
        setBusy(true);
        try {
          const appUser = await login(email.trim(), password);
-
          if (appUser.status === 'pending' || appUser.status === 'rejected') {
            nav('/pending-approval');
          } else if (appUser.mustChangePassword) {
@@ -26,14 +25,12 @@
            nav('/dashboard');
          }
        } catch (err) {
-         /* Friendly message */
          setError(translateAuthError(err));
        } finally {
          setBusy(false);
        }
      };
 
-     /* If already logged in, redirect */
      if (user) {
        if (user.status === 'pending' || user.status === 'rejected') {
          nav('/pending-approval');

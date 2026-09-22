@@ -3,15 +3,27 @@ import { Link } from 'react-router-dom';
 
    export function Footer() {
      const year = new Date().getFullYear();
+
      return (
        <footer className="footer no-print">
          <div className="container">
            <div className="footer__inner">
              <div className="footer__brand-col">
-               <div className="footer__brand">{site.name}</div>
+               <img
+                 src="./logo.png"
+                 alt={site.name}
+                 className="footer__logo"
+                 onError={(e) => {
+                   const img = e.currentTarget as HTMLImageElement;
+                   img.style.display = 'none';
+                 }}
+               />
                <p className="footer__tagline">{site.description}</p>
-               <div className="footer__copyright">© {year} {site.organization} — {activeSeason.label}</div>
+               <div className="footer__copyright">
+                 © {year} {site.organization} — {activeSeason.label}
+               </div>
              </div>
+
              <div className="footer__links-col">
                <div>
                  <div className="footer__group-title">Browse</div>

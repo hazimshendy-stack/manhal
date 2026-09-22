@@ -13,3 +13,22 @@
    .footer__link { font-size: 0.92rem; color: var(--c-paper-soft); }
    .footer__link:hover { color: var(--c-red); }
    
+
+   /* ─── Footer logo ─── */
+   .footer__logo {
+     height: 44px;
+     width: auto;
+     max-width: 200px;
+     object-fit: contain;
+     margin-bottom: 14px;
+     filter: brightness(0) invert(1);
+     opacity: 0.95;
+   }
+
+   @media (max-width: 640px) {
+     .footer__logo {
+       height: 38px;
+       max-width: 170px;
+     }
+   }
+   

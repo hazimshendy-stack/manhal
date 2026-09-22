@@ -1,7 +1,8 @@
-const BUILD_ID = 'sbapiaryy-v6';
-   const CACHE_NAME = 'sbapiaryy-' + BUILD_ID;
-   const RUNTIME_CACHE = 'sbapiaryy-runtime-' + BUILD_ID;
-   const PRECACHE_URLS = ['./', './index.html', './manifest.json', './favicon.svg'];
+/* Manhal Service Worker */
+   const BUILD_ID = 'manhal-v7';
+   const CACHE_NAME = 'manhal-' + BUILD_ID;
+   const RUNTIME_CACHE = 'manhal-runtime-' + BUILD_ID;
+   const PRECACHE_URLS = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
 
    self.addEventListener('install', (event) => {
      self.skipWaiting();
@@ -11,7 +12,11 @@ const BUILD_ID = 'sbapiaryy-v6';
    self.addEventListener('activate', (event) => {
      event.waitUntil((async () => {
        const keys = await caches.keys();
-       await Promise.all(keys.filter((k) => k !== CACHE_NAME && k !== RUNTIME_CACHE).map((k) => caches.delete(k)));
+       await Promise.all(
+         keys
+           .filter((k) => k !== CACHE_NAME && k !== RUNTIME_CACHE)
+           .map((k) => caches.delete(k))
+       );
        await self.clients.claim();
      })());
    });
@@ -23,8 +28,14 @@ const BUILD_ID = 'sbapiaryy-v6';
      if (url.origin !== self.location.origin) return;
      if (url.hostname.includes('firebase') || url.hostname.includes('googleapis') || url.hostname.includes('gstatic')) return;
 
-     const isAppFile = request.destination === 'document' || request.destination === 'script' || request.destination === 'style'
-       || url.pathname.endsWith('.html') || url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.json');
+     const isAppFile =
+       request.destination === 'document' ||
+       request.destination === 'script' ||
+       request.destination === 'style' ||
+       url.pathname.endsWith('.html') ||
+       url.pathname.endsWith('.js') ||
+       url.pathname.endsWith('.css') ||
+       url.pathname.endsWith('.json');
 
      if (isAppFile) {
        event.respondWith(

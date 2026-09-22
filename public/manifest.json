@@ -1,7 +1,7 @@
 {
-  "name": "sbapiaryy — Resala STEM Sub Branches",
-  "short_name": "sbapiaryy",
-  "description": "Official platform for Resala STEM Sub Branches",
+  "name": "Manhal — Resala STEM Sub Branches",
+  "short_name": "Manhal",
+  "description": "Manhal — the official platform for Resala STEM Sub Branches",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -22,6 +22,17 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "./apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
     }
+  ],
+  "categories": [
+    "productivity",
+    "education",
+    "social"
   ]
 }

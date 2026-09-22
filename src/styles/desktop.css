@@ -1,12 +1,9 @@
-   /* ═══════════════════════════════════════════════════════════════
+/* ═══════════════════════════════════════════════════════════════
       DESKTOP — Mobile-like experience
       Same Navbar, BottomNav, Sidebar drawer as mobile.
-      Only difference: wider container + more cards per row
-      + floating pill style BottomNav (nicer on a wide screen).
       Mobile: untouched.
       ═══════════════════════════════════════════════════════════════ */
 
-   /* ─── Wider container ─── */
    @media (min-width: 1024px) {
      .container {
        max-width: 1200px;
@@ -21,7 +18,7 @@
      }
    }
 
-   /* ─── Wider card grids (same card design) ─── */
+   /* ─── Wider card grids ─── */
    @media (min-width: 1024px) {
      .home-teams-grid { grid-template-columns: repeat(3, 1fr); }
      .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -38,14 +35,13 @@
    }
 
    /* ═══════════════════════════════════════════════════════════════
-      DESKTOP (≥901px) — Mobile-like Navbar + floating pill BottomNav
+      DESKTOP (≥901px) — floating pill BottomNav
       ═══════════════════════════════════════════════════════════════ */
 
    @media (min-width: 901px) {
 
-     /* ─── Navbar: same as mobile (with menu button) ─── */
+     /* ─── Navbar ─── */
      .navbar {
-       /* Keep it sticky, same height as mobile */
        height: var(--navbar-h);
        padding-top: 0;
      }
@@ -63,12 +59,12 @@
        }
      }
 
-     /* Make sure the mobile menu button is visible on desktop */
+     /* Menu button visible on desktop */
      .show-mobile {
        display: inline-flex !important;
      }
 
-     /* ─── BottomNav: floating pill at bottom center ─── */
+     /* ─── BottomNav — floating pill ─── */
      .bottom-nav {
        display: flex !important;
        position: fixed !important;
@@ -77,23 +73,16 @@
        right: auto !important;
        top: auto !important;
        transform: translateX(-50%) !important;
-
-       /* Pill size */
        width: auto !important;
        min-width: 480px !important;
        max-width: 640px !important;
        height: 64px !important;
-
-       /* Rounded pill */
        border-radius: 999px !important;
        border: 1px solid var(--c-line) !important;
        background: var(--c-white) !important;
-
-       /* Nice floating shadow */
        box-shadow:
          0 12px 40px -12px rgba(21, 26, 69, 0.28),
          0 4px 12px -4px rgba(21, 26, 69, 0.10) !important;
-
        padding: 6px !important;
        padding-bottom: 6px !important;
        margin: 0 !important;
@@ -143,7 +132,6 @@
      }
 
      .bottom-nav__item.is-active::before {
-       /* Hide the mobile underline indicator on the pill */
        display: none !important;
        content: none !important;
      }
@@ -187,7 +175,7 @@
        border: 2px solid var(--c-white) !important;
      }
 
-     /* ─── Make room for the floating pill ─── */
+     /* Make room for the floating pill */
      .app-main {
        padding-bottom: 110px !important;
      }
@@ -219,7 +207,6 @@
        border-inline-start: none !important;
        border-inline-end: 1px solid var(--c-line) !important;
        display: block !important;
-       position: fixed !important;
      }
 
      .sidebar.is-open {
@@ -248,13 +235,12 @@
        display: flex !important;
      }
 
-     /* Dashboard layout: single column, sidebar is a drawer */
      .dashboard-layout {
        grid-template-columns: 1fr !important;
        gap: 20px !important;
      }
 
-     /* ─── Toast at top-right (desktop convention) ─── */
+     /* ─── Toast top-right ─── */
      .toast-container {
        bottom: auto !important;
        top: 90px !important;
@@ -273,17 +259,12 @@
      }
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      EXTRA LARGE (≥1440px) — a bit more breathing room
-      ═══════════════════════════════════════════════════════════════ */
-
    @media (min-width: 1440px) {
      .bottom-nav {
        min-width: 520px !important;
        max-width: 700px !important;
        height: 68px !important;
      }
-
      .bottom-nav__item {
        font-size: 0.76rem !important;
      }
