@@ -1,71 +1,76 @@
+import { useState } from 'react';
+   import { useCollection } from '@/lib/useRealtimeCollection';
+   import { useAuth } from '@/lib/useAuth';
+   import { notifyUser, notifyUsers } from '@/lib/notifications';
+   import { PageHeader } from '@/components/ui/PageHeader';
+   import { SectionHeader } from '@/components/ui/SectionHeader';
+   import { FormField, TextInput, TextArea, Select } from '@/components/ui/FormField';
+   import { EmptyState } from '@/components/ui/EmptyState';
+   import { SkeletonList } from '@/components/ui/Loading';
+   import { Badge } from '@/components/ui/Badge';
+   import { toast } from '@/components/ui/Toast';
+   import { relativeTime } from '@/lib/format';
+   import type { AppUser, Notification } from '@/types';
 
-
-import type { AppUser, Notification } from '@/types';
-
-export function AdminNotificationsPage() {
-  const { user: me } = useAuth();
-  const { data: users } = useCollection<AppUser>('users');
-  const { data: notifs, loading } = useCollection<Notification>('notifications');
-  const [target, setTarget] = useState<string>('all');
-  const [title, setTitle] = useState('');
-  const [message, setMessage] = useState('');
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high'>('normal');
-  const [busy, setBusy] = useState(false);
-  const send = async () => {
-    if (!title.trim() || !message.trim()) { toast.error('Title and message are required'); return; }
-    setBusy(true);
-    try {
-      if (target === 'all') await notifyUsers(users, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
-      else if (target === 'managers') {
-        const managers = users.filter((u) => ['HEAD', 'VICE', 'HEAD_HR', 'PRESIDENT', 'VICE_PRESIDENT', 'HR'].includes(u.role));
-        await notifyUsers(managers, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
-      } else {
-        if (!users.find((u) => u.uid === target)) { toast.error('User not found'); setBusy(false); return; }
-        await notifyUser(target, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
-      }
-      setTitle('');
-      setMessage('');
-      toast.success('Sent');
-    } catch { toast.error('Failed'); }
-    finally { setBusy(false); }
-  };
-  const sorted = [...notifs].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
-  return (
-    <div className="admin-page">
-      <PageHeader eyebrow="Admin" title="Send Notification" description="Real-time notifications to members and managers." />
-      <SectionHeader eyebrow="Send" title="New Notification" />
-      <div className="card no-click" style={{ maxWidth: 760 }}>
-        <FormField label="Recipient" required>
-          <Select value={target} onChange={setTarget} options={[
-            { value: 'all', label: 'Everyone (' + users.length + ')' },
-            { value: 'managers', label: 'Managers only' },
-            ...users.map((u) => ({ value: u.uid, label: u.displayName + ' (' + u.email + ')' })),
-          ]} />
-        </FormField>
-        <FormField label="Title" required><TextInput value={title} onChange={setTitle} /></FormField>
-        <FormField label="Message" required><TextArea value={message} onChange={setMessage} rows={4} /></FormField>
-        <FormField label="Priority"><Select value={priority} onChange={(v) => setPriority(v as 'low' | 'normal' | 'high')} options={[
-          { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' },
-        ]} /></FormField>
-        <button type="button" className="btn btn--primary btn--block" onClick={send} disabled={busy}>{busy ? '...' : 'Send Notification'}</button>
-      </div>
-      <SectionHeader eyebrow="History" title={'Recent Notifications (' + notifs.length + ')'} />
-      {loading ? <SkeletonList count={6} /> : sorted.length === 0 ? <EmptyState title="No notifications" message="No notifications sent yet." /> : (
-        <div className="stack">
-          {sorted.map((n) => (
-            <div key={n.id} className="card no-click">
-              <div className="row row--between">
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div className="card__title">{n.title}</div>
-                  <div className="card__meta">{n.message}</div>
-                </div>
-                {!n.read ? <Badge variant="red">New</Badge> : <Badge variant="success">Read</Badge>}
-              </div>
-              <div className="tiny muted mt-2">{relativeTime(n.date)}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+   export function AdminNotificationsPage() {
+     const { user: me } = useAuth();
+     const { data: users } = useCollection<AppUser>('users');
+     const { data: notifs, loading } = useCollection<Notification>('notifications');
+     const [target, setTarget] = useState<string>('all');
+     const [title, setTitle] = useState('');
+     const [message, setMessage] = useState('');
+     const [priority, setPriority] = useState<'low' | 'normal' | 'high'>('normal');
+     const [busy, setBusy] = useState(false);
+     const send = async () => {
+       if (!title.trim() || !message.trim()) { toast.error('Title & message required'); return; }
+       setBusy(true);
+       try {
+         if (target === 'all') await notifyUsers(users, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
+         else if (target === 'managers') {
+           const managers = users.filter((u) => ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HEAD_HR_TEAM', 'HR', 'COMMITTEE_HR'].includes(u.role));
+           await notifyUsers(managers, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
+         } else {
+           if (!users.find((u) => u.uid === target)) { toast.error('User not found'); setBusy(false); return; }
+           await notifyUser(target, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
+         }
+         setTitle(''); setMessage('');
+         toast.success('Sent');
+       } catch { toast.error('Failed'); }
+       finally { setBusy(false); }
+     };
+     const sorted = [...notifs].sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 30);
+     return (
+       <div className="admin-page">
+         <PageHeader eyebrow="Admin" title="Send Notification" description="Real-time notifications." />
+         <SectionHeader eyebrow="Send" title="New Notification" />
+         <div className="card no-click" style={{ maxWidth: 760 }}>
+           <FormField label="Recipient" required>
+             <Select value={target} onChange={setTarget} options={[
+               { value: 'all', label: 'Everyone (' + users.length + ')' },
+               { value: 'managers', label: 'Managers only' },
+               ...users.map((u) => ({ value: u.uid, label: u.displayName + ' (' + u.email + ')' })),
+             ]} />
+           </FormField>
+           <FormField label="Title" required><TextInput value={title} onChange={setTitle} /></FormField>
+           <FormField label="Message" required><TextArea value={message} onChange={setMessage} rows={4} /></FormField>
+           <FormField label="Priority"><Select value={priority} onChange={(v) => setPriority(v as 'low' | 'normal' | 'high')} options={[
+             { value: 'low', label: 'Low' }, { value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' },
+           ]} /></FormField>
+           <button type="button" className="btn btn--primary btn--block" onClick={send} disabled={busy}>{busy ? '...' : 'Send'}</button>
+         </div>
+         <SectionHeader eyebrow="History" title={'Recent (' + notifs.length + ')'} />
+         {loading ? <SkeletonList count={6} /> : sorted.length === 0 ? <EmptyState title="No notifications" message="No notifications sent." /> : (
+           <div className="stack">{sorted.map((n) => (
+             <div key={n.id} className="card no-click">
+               <div className="row row--between">
+                 <div style={{ flex: 1, minWidth: 0 }}><div className="card__title">{n.title}</div><div className="card__meta">{n.message}</div></div>
+                 {!n.read ? <Badge variant="red">New</Badge> : <Badge variant="success">Read</Badge>}
+               </div>
+               <div className="tiny muted mt-2">{relativeTime(n.date)}</div>
+             </div>
+           ))}</div>
+         )}
+       </div>
+     );
+   }
+   

@@ -1,12 +1,5 @@
 import type { ReactNode } from 'react';
-
-   interface SectionHeaderProps {
-     eyebrow?: string;
-     title: string;
-     description?: string;
-     action?: ReactNode;
-   }
-
+   interface SectionHeaderProps { eyebrow?: string; title: string; description?: string; action?: ReactNode; }
    export function SectionHeader({ eyebrow, title, description, action }: SectionHeaderProps) {
      return (
        <div className="section-head">

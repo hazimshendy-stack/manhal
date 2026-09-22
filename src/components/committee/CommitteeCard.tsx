@@ -1,27 +1,35 @@
-import type { Committee } from '@/types';
+import { Link } from 'react-router-dom';
+   import type { Committee, Member } from '@/types';
+   import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+   import { getCommitteeTotalPoints } from '@/lib/rankings';
+   import { teams } from '@/data/teams';
+   import type { Contribution } from '@/types';
 
-import type { Member } from '@/types';
-
-interface CommitteeCardProps { committee: Committee; }
-
-export function CommitteeCard({ committee }: CommitteeCardProps) {
-  const { data: members } = useRealtimeCollection<Member>('members');
-  const count = members.filter((m) => m.committeeIds.includes(committee.id)).length;
-
-  return (
-    <div className="card no-click">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <div style={{ width: 48, height: 48, borderRadius: 14, background: committee.color + '15', border: '1px solid ' + committee.color + '30', display: 'grid', placeItems: 'center', fontSize: '1.4rem', flexShrink: 0 }}>
-          {committee.icon || committee.nameAr.charAt(0)}
-        </div>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="card__title">{committee.nameAr}</div>
-          <div className="card__meta">{committee.description}</div>
-        </div>
-      </div>
-      <div className="row mt-4" style={{ gap: 6 }}>
-        <Badge variant="neutral">{count} members</Badge>
-      </div>
-    </div>
-  );
-}
+   interface CommitteeCardProps { committee: Committee; rank?: number; }
+   export function CommitteeCard({ committee, rank }: CommitteeCardProps) {
+     const { data: members } = useRealtimeCollection<Member>('members');
+     const { data: contributions } = useRealtimeCollection<Contribution>('contributions');
+     const cm = members.filter((m) => Array.isArray(m.committeeIds) && m.committeeIds.includes(committee.id));
+     const totalPoints = getCommitteeTotalPoints(members, contributions, committee.id);
+     const avgPoints = cm.length === 0 ? 0 : Math.round(totalPoints / cm.length);
+     const team = committee.teamId ? teams.find((t) => t.id === committee.teamId) : null;
+     return (
+       <Link to={'/committees/' + committee.id} className="committee-card">
+         <div className="committee-card__head">
+           <div>
+             <div className="committee-card__name">{committee.nameAr}</div>
+             {team ? <div className="committee-card__team">Team: {team.name}</div> : null}
+           </div>
+           {rank !== undefined ? (
+             <span className={'committee-rank-badge' + (rank === 1 ? ' committee-rank-badge--first' : '')}>#{rank}</span>
+           ) : <span className="committee-card__color" style={{ background: committee.color }} />}
+         </div>
+         <div className="committee-card__stats">
+           <div className="committee-card__stat"><span className="committee-card__stat-value">{totalPoints}</span><span className="committee-card__stat-label">Points</span></div>
+           <div className="committee-card__stat"><span className="committee-card__stat-value">{cm.length}</span><span className="committee-card__stat-label">Members</span></div>
+           <div className="committee-card__stat"><span className="committee-card__stat-value">{avgPoints}</span><span className="committee-card__stat-label">Average</span></div>
+         </div>
+       </Link>
+     );
+   }
+   

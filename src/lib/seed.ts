@@ -1,55 +1,26 @@
+import { teams } from '@/data/teams';
+   import { committees } from '@/data/committees';
+   import { createOne, listAll } from './db';
 
+   export interface SeedResult {
+     teams: number;
+     committees: number;
+     members: number;
+     contributions: number;
+   }
 
-export interface SeedResult {
-  teams: number;
-  committees: number;
-  members: number;
-  contributions: number;
-  requests: number;
-  approvals: number;
-  warnings: number;
-  achievements: number;
-  notifications: number;
-  conversations: number;
-  messages: number;
-  calendar: number;
-  governance: number;
-}
-
-export async function seedAll(): Promise<SeedResult> {
-  const existingTeams = await listAll('teams').catch(() => []);
-  if (existingTeams.length > 0) {
-    throw new Error(
-      'البيانات موجودة مسبقًا. امسح المجموعات من Firebase Console إن أردت إعادة الرفع.',
-    );
-  }
-
-  for (const t of teams) await createOne('teams', t);
-  for (const m of members) await createOne('members', m);
-  for (const c of contributions) await createOne('contributions', c);
-  for (const r of requests) await createOne('requests', r);
-  for (const a of approvals) await createOne('approvals', a);
-  for (const w of warnings) await createOne('warnings', w);
-  for (const a of achievements) await createOne('achievements', a);
-  for (const n of notifications) await createOne('notifications', n);
-  for (const c of conversations) await createOne('conversations', c);
-  for (const m of messages) await createOne('messages', m);
-  for (const e of calendarEvents) await createOne('calendar', e);
-  for (const g of governanceDocuments) await createOne('governance', g);
-
-  return {
-    teams: teams.length,
-    committees: 0,
-    members: members.length,
-    contributions: contributions.length,
-    requests: requests.length,
-    approvals: approvals.length,
-    warnings: warnings.length,
-    achievements: achievements.length,
-    notifications: notifications.length,
-    conversations: conversations.length,
-    messages: messages.length,
-    calendar: calendarEvents.length,
-    governance: governanceDocuments.length,
-  };
-}
+   export async function seedAll(): Promise<SeedResult> {
+     const existing = await listAll('teams').catch(() => []);
+     if (existing.length > 0) {
+       throw new Error('Data already exists. Clear Firestore collections to re-seed.');
+     }
+     for (const t of teams) await createOne('teams', t);
+     for (const c of committees) await createOne('committees', c);
+     return {
+       teams: teams.length,
+       committees: committees.length,
+       members: 0,
+       contributions: 0,
+     };
+   }
+   

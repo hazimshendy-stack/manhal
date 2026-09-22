@@ -1,90 +1,100 @@
 import type { AppUser, Contribution } from '@/types';
-import { safeArray } from './safe';
-import { isAdmin } from './permissions';
+   import { safeArray } from './safe';
+   import { isAdmin } from './permissions';
 
-function hasCommittee(user: AppUser | null, committeeId: string): boolean {
-  if (!user) return false;
-  return safeArray(user.committeeIds).includes(committeeId);
-}
+   /* ═══════════════════════════════════════════════════════════════
+      3-Stage Flexible Approval:
+      ─────────────────────────────────────────────────────────────
+      STAGE 1: Committee HR (mandatory) — assigns points flexibly
+      STAGE 2: Team Head HR OR Team Head (one of them)
+      STAGE 3: Head HR Global OR Head Sub Branches OR Vice (one of them)
+      ─────────────────────────────────────────────────────────────
+      After all 3 approved → points awarded, notifications sent, rankings update.
+      ═══════════════════════════════════════════════════════════════ */
 
-export function isCommitteeHR(user: AppUser | null, committeeId: string): boolean {
-  if (!user || !committeeId) return false;
-  if (user.role !== 'HR' && user.role !== 'COMMITTEE_HR') return false;
-  return hasCommittee(user, committeeId);
-}
+   function hasCommittee(user: AppUser | null, committeeId: string): boolean {
+     if (!user) return false;
+     return safeArray(user.committeeIds).includes(committeeId);
+   }
 
-export function isTeamHeadHR(user: AppUser | null, teamId: string): boolean {
-  if (!user) return false;
-  if (user.role === 'PRESIDENT' || user.role === 'VICE_PRESIDENT') return user.teamId === teamId;
-  if (user.role === 'HR') return user.teamId === teamId;
-  return false;
-}
+   export function userIsCommitteeHR(user: AppUser | null, committeeId: string): boolean {
+     if (!user || !committeeId) return false;
+     if (user.role !== 'COMMITTEE_HR') return false;
+     return hasCommittee(user, committeeId);
+   }
 
-export function isTeamHead(user: AppUser | null, teamId: string): boolean {
-  if (!user) return false;
-  return user.role === 'PRESIDENT' && user.teamId === teamId;
-}
+   export function userIsTeamHeadHR(user: AppUser | null, teamId: string): boolean {
+     if (!user || !teamId) return false;
+     if (user.role !== 'HEAD_HR_TEAM') return false;
+     return user.teamId === teamId;
+   }
 
-export function isGlobalHR(user: AppUser | null): boolean {
-  return user?.role === 'HEAD_HR';
-}
+   export function userIsTeamHead(user: AppUser | null, teamId: string): boolean {
+     if (!user || !teamId) return false;
+     return (user.role === 'PRESIDENT' || user.role === 'VICE_PRESIDENT') && user.teamId === teamId;
+   }
 
-export function isSubBranchesHead(user: AppUser | null): boolean {
-  if (!user) return false;
-  return user.role === 'HEAD' || user.role === 'VICE';
-}
+   export function userIsGlobalHR(user: AppUser | null): boolean {
+     return user?.role === 'HEAD_HR_GLOBAL';
+   }
 
-function getStage(c: Contribution): 1 | 2 | 3 | 4 {
-  const s = c.currentStage;
-  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
-  if (c.status === 'approved' || c.status === 'rejected') return 4;
-  return 1;
-}
+   export function userIsSubBranchesHead(user: AppUser | null): boolean {
+     if (!user) return false;
+     return user.role === 'HEAD' || user.role === 'VICE';
+   }
 
-export interface StageInfo {
-  stage: 1 | 2 | 3 | 4;
-  label: string;
-  canApprove: boolean;
-  assignPoints: boolean;
-}
+   export function getStage(c: Contribution): 1 | 2 | 3 | 4 {
+     const s = c.currentStage;
+     if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+     if (c.status === 'approved' || c.status === 'rejected') return 4;
+     return 1;
+   }
 
-export function getContributionStage(user: AppUser | null, c: Contribution): StageInfo {
-  const stage = getStage(c);
-  if (!user) return { stage, label: 'Unknown', canApprove: false, assignPoints: false };
+   export interface StageInfo {
+     stage: 1 | 2 | 3 | 4;
+     label: string;
+     canApprove: boolean;
+     assignPoints: boolean;
+   }
 
-  if (stage === 1) {
-    return {
-      stage: 1,
-      label: 'Committee HR Approval',
-      canApprove: isCommitteeHR(user, c.committeeId || '') || isAdmin(user),
-      assignPoints: true,
-    };
-  }
-  if (stage === 2) {
-    return {
-      stage: 2,
-      label: 'Team Head / Team Head HR',
-      canApprove: isTeamHeadHR(user, c.teamId) || isTeamHead(user, c.teamId) || isAdmin(user),
-      assignPoints: false,
-    };
-  }
-  if (stage === 3) {
-    return {
-      stage: 3,
-      label: 'Global Review',
-      canApprove: isGlobalHR(user) || isSubBranchesHead(user) || isAdmin(user),
-      assignPoints: false,
-    };
-  }
-  return { stage: 4, label: 'Completed', canApprove: false, assignPoints: false };
-}
+   export function getContributionStage(user: AppUser | null, c: Contribution): StageInfo {
+     const stage = getStage(c);
+     if (!user) return { stage, label: 'Unknown', canApprove: false, assignPoints: false };
 
-export function canReviewContribution(user: AppUser | null, c: Contribution): boolean {
-  if (!user) return false;
-  if (isAdmin(user)) return true;
-  const stage = getStage(c);
-  if (stage === 1) return isCommitteeHR(user, c.committeeId || '');
-  if (stage === 2) return isTeamHeadHR(user, c.teamId) || isTeamHead(user, c.teamId);
-  if (stage === 3) return isGlobalHR(user) || isSubBranchesHead(user);
-  return false;
-}
+     if (stage === 1) {
+       return {
+         stage: 1,
+         label: 'Committee HR — assign points',
+         canApprove: userIsCommitteeHR(user, c.committeeId || '') || isAdmin(user),
+         assignPoints: true,
+       };
+     }
+     if (stage === 2) {
+       return {
+         stage: 2,
+         label: 'Team Head HR or Team Head',
+         canApprove: userIsTeamHeadHR(user, c.teamId) || userIsTeamHead(user, c.teamId) || isAdmin(user),
+         assignPoints: false,
+       };
+     }
+     if (stage === 3) {
+       return {
+         stage: 3,
+         label: 'Head HR Global / Head Sub Branches / Vice',
+         canApprove: userIsGlobalHR(user) || userIsSubBranchesHead(user) || isAdmin(user),
+         assignPoints: false,
+       };
+     }
+     return { stage: 4, label: 'Completed', canApprove: false, assignPoints: false };
+   }
+
+   export function canReviewContribution(user: AppUser | null, c: Contribution): boolean {
+     if (!user) return false;
+     if (isAdmin(user)) return true;
+     const stage = getStage(c);
+     if (stage === 1) return userIsCommitteeHR(user, c.committeeId || '');
+     if (stage === 2) return userIsTeamHeadHR(user, c.teamId) || userIsTeamHead(user, c.teamId);
+     if (stage === 3) return userIsGlobalHR(user) || userIsSubBranchesHead(user);
+     return false;
+   }
+   

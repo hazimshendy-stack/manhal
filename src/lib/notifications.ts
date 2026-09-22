@@ -1,4 +1,5 @@
-
+import { createOne, newId, now } from './db';
+   import { safeArray } from './safe';
    import type { Notification, NotificationType, AppUser } from '@/types';
 
    export async function notifyUser(
@@ -11,7 +12,6 @@
      fromName?: string,
    ): Promise<void> {
      if (!userId) return;
-
      const notif: Notification = {
        id: newId('N'),
        userId,
@@ -24,12 +24,7 @@
        priority,
        fromName,
      };
-
-     try {
-       await createOne('notifications', notif);
-     } catch {
-       // silent
-     }
+     try { await createOne('notifications', notif); } catch { /* ignore */ }
    }
 
    export async function notifyUsers(
@@ -41,14 +36,10 @@
      priority: 'low' | 'normal' | 'high' = 'normal',
      fromName?: string,
    ): Promise<void> {
-     for (const u of users) {
+     for (const u of safeArray(users)) {
        await notifyUser(u.uid, title, message, type, route, priority, fromName);
      }
    }
-
-   /* ═══════════════════════════════════════════════════════════════
-      إشعارات الأحداث الإدارية — تُرسل لذوي المناصب فقط
-      ═══════════════════════════════════════════════════════════════ */
 
    export async function notifyManagers(
      allUsers: AppUser[],
@@ -59,8 +50,8 @@
      priority: 'low' | 'normal' | 'high' = 'normal',
      fromName?: string,
    ): Promise<void> {
-     const managers = allUsers.filter((u) =>
-       ['HEAD', 'VICE', 'HEAD_HR', 'PRESIDENT', 'VICE_PRESIDENT', 'HR'].includes(u.role),
+     const managers = safeArray(allUsers).filter((u) =>
+       ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HEAD_HR_TEAM', 'HR', 'COMMITTEE_HR'].includes(u.role),
      );
      await notifyUsers(managers, title, message, type, route, priority, fromName);
    }
@@ -75,10 +66,8 @@
      priority: 'low' | 'normal' | 'high' = 'normal',
      fromName?: string,
    ): Promise<void> {
-     const targets = allUsers.filter(
-       (u) =>
-         (u.role === 'PRESIDENT' || u.role === 'VICE_PRESIDENT' || u.role === 'HR') &&
-         u.teamId === teamId,
+     const targets = safeArray(allUsers).filter(
+       (u) => (u.role === 'PRESIDENT' || u.role === 'VICE_PRESIDENT' || u.role === 'HR' || u.role === 'HEAD_HR_TEAM') && u.teamId === teamId,
      );
      await notifyUsers(targets, title, message, type, route, priority, fromName);
    }

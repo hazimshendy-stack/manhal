@@ -1,0 +1,31 @@
+/* ═══════════════════════════════════════════════════════════════
+      Committee Card — styled exactly like Team Card
+      ═══════════════════════════════════════════════════════════════ */
+
+   .committee-card {
+     display: flex;
+     flex-direction: column;
+     gap: 18px;
+     padding: 24px;
+     background: var(--c-white);
+     border: 1px solid var(--c-line);
+     border-radius: var(--radius);
+     text-decoration: none;
+     color: var(--c-ink);
+     transition: all 0.18s var(--ease);
+     box-shadow: var(--shadow-xs);
+   }
+   .committee-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-sm); border-color: var(--c-line-mid); }
+   .committee-card__head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+   .committee-card__name { font-size: 1.15rem; color: var(--c-navy); line-height: 1.25; font-weight: 600; }
+   .committee-card__team { font-size: 0.78rem; color: var(--c-ink-muted); }
+   .committee-card__color { width: 14px; height: 14px; border-radius: 4px; flex-shrink: 0; }
+   .committee-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding-top: 16px; border-top: 1px solid var(--c-line); }
+   .committee-card__stat { display: flex; flex-direction: column; gap: 4px; }
+   .committee-card__stat-value { font-size: 1.15rem; color: var(--c-navy); line-height: 1; }
+   .committee-card__stat-label { font-size: 0.72rem; color: var(--c-ink-muted); }
+
+   /* Committee rank badge */
+   .committee-rank-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; padding: 5px 12px; border-radius: var(--radius-full); background: var(--c-navy); color: #fff; font-size: 0.78rem; font-weight: 800; flex-shrink: 0; }
+   .committee-rank-badge--first { background: var(--c-red); box-shadow: 0 4px 12px rgba(193, 39, 45, 0.35); }
+   

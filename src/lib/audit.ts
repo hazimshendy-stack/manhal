@@ -1,4 +1,4 @@
-
+import { createOne, newId, now } from './db';
    import type { AuditRecord, AppUser } from '@/types';
 
    export async function logAudit(
@@ -11,17 +11,13 @@
      const record: AuditRecord = {
        id: newId('AUD'),
        actorUid: user?.uid ?? 'system',
-       actorName: user?.displayName ?? 'النظام',
+       actorName: user?.displayName ?? 'System',
        action,
        entity,
        entityId,
        date: now(),
        description,
      };
-     try {
-       await createOne('audit', record);
-     } catch {
-       // silent
-     }
+     try { await createOne('audit', record); } catch { /* ignore */ }
    }
    

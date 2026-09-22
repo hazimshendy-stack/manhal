@@ -1,33 +1,30 @@
+import { useRealtimeCollection, useCollection } from '@/lib/useRealtimeCollection';
+   import { getCommitteeTotalPoints } from '@/lib/rankings';
+   import { CommitteeCard } from '@/components/committee/CommitteeCard';
+   import { PageHeader } from '@/components/ui/PageHeader';
+   import { SectionHeader } from '@/components/ui/SectionHeader';
+   import { Stat, StatRow } from '@/components/ui/Stat';
+   import { EmptyState } from '@/components/ui/EmptyState';
+   import { SkeletonList } from '@/components/ui/Loading';
+   import type { Committee, Member, Contribution } from '@/types';
 
-
-import type { Committee, Member } from '@/types';
-
-export function CommitteesPage() {
-  const { data: committees, loading: lc } = useRealtimeCollection<Committee>('committees');
-  const { data: members, loading: lm } = useRealtimeCollection<Member>('members');
-
-  const list = committees.length > 0 ? committees : defaultCommittees;
-  const totalMembersInCommittees = new Set(members.flatMap((m) => m.committeeIds)).size;
-  const totalCommitteePoints = members.filter((m) => m.committeeIds.length > 0).reduce((s, m) => s + hoursToPoints(m.hours || 0), 0);
-
-  return (
-    <div className="container">
-      <PageHeader eyebrow="Governance" title="Committees" description="Organization committees and their members." />
-      <section className="section--tight">
-        {lc || lm ? <Loading /> : (
-          <StatRow>
-            <Stat value={list.length} label="Committees" />
-            <Stat value={totalMembersInCommittees} label="Members" />
-            <Stat value={totalCommitteePoints} label="Total Points" />
-          </StatRow>
-        )}
-      </section>
-      <section className="section">
-        <SectionHeader eyebrow="List" title="All Committees" />
-        <div className="grid grid--wide">
-          {list.map((c) => <CommitteeCard key={c.id} committee={c} />)}
-        </div>
-      </section>
-    </div>
-  );
-}
+   export function CommitteesPage() {
+     const { data: committees, loading } = useCollection<Committee>('committees');
+     const { data: members } = useRealtimeCollection<Member>('members');
+     const { data: contributions } = useRealtimeCollection<Contribution>('contributions');
+     const ranking = committees.map((c) => ({ committee: c, points: getCommitteeTotalPoints(members, contributions, c.id) }))
+       .sort((a, b) => b.points - a.points).map((r, i) => ({ committee: r.committee, rank: i + 1 }));
+     return (
+       <div className="container">
+         <PageHeader eyebrow="Governance" title="Committees" description="Committees are like teams — each member belongs to at least one." />
+         <section className="section--tight"><StatRow><Stat value={committees.length} label="Committees" /><Stat value={members.length} label="Members" /><Stat value={ranking.reduce((s, r) => s + r.points, 0)} label="Total Points" /></StatRow></section>
+         <section className="section">
+           <SectionHeader eyebrow="Ranking" title="All Committees" />
+           {loading ? <SkeletonList count={4} /> : ranking.length === 0 ? <EmptyState title="No committees" message="No committees yet." /> : (
+             <div className="grid grid--wide">{ranking.map((r) => <CommitteeCard key={r.committee.id} committee={r.committee} rank={r.rank} />)}</div>
+           )}
+         </section>
+       </div>
+     );
+   }
+   

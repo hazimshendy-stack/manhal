@@ -1,26 +1,26 @@
 import type { Achievement } from '@/types';
+   import { Badge } from '@/components/ui/Badge';
+   import { teams } from '@/data/teams';
+   import { formatDate } from '@/lib/format';
 
-interface AchievementCardProps { achievement: Achievement; }
-
-export function AchievementCard({ achievement }: AchievementCardProps) {
-  return (
-    <div className="achievement-card">
-      <div className="achievement-card__head">
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div className="achievement-card__title">{achievement.title}</div>
-          <div className="achievement-card__date">{formatDate(achievement.date)}</div>
-        </div>
-      </div>
-      <p className="achievement-card__desc">{achievement.description}</p>
-      {achievement.teamIds.length > 0 || achievement.memberNames.length > 0 ? (
-        <div className="achievement-card__tags">
-          {achievement.teamIds.map((id) => {
-            const t = teams.find((x) => x.id === id);
-            return t ? <Badge key={id} variant="navy">{t.name}</Badge> : null;
-          })}
-          {achievement.memberNames.map((n, i) => <Badge key={'m-' + i} variant="info">{n}</Badge>)}
-        </div>
-      ) : null}
-    </div>
-  );
-}
+   interface AchievementCardProps { achievement: Achievement; }
+   export function AchievementCard({ achievement }: AchievementCardProps) {
+     return (
+       <div className="card no-click">
+         <div className="row row--between">
+           <div style={{ flex: 1, minWidth: 0 }}>
+             <div className="card__title">{achievement.title}</div>
+             <div className="card__meta">{formatDate(achievement.date)}</div>
+           </div>
+           {achievement.level ? <Badge variant="warning">{achievement.level}</Badge> : null}
+         </div>
+         <p className="mt-3 small soft">{achievement.description}</p>
+         {achievement.teamIds && achievement.teamIds.length > 0 ? (
+           <div className="row mt-3" style={{ gap: 6 }}>
+             {achievement.teamIds.map((id) => { const t = teams.find((x) => x.id === id); return t ? <Badge key={id}>{t.name}</Badge> : null; })}
+           </div>
+         ) : null}
+       </div>
+     );
+   }
+   

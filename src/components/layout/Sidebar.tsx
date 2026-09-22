@@ -1,116 +1,123 @@
+import { NavLink, useNavigate } from 'react-router-dom';
+   import { useEffect, useState } from 'react';
+   import { useAuth } from '@/lib/useAuth';
+   import { logout } from '@/lib/auth';
+   import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
+   import { ROLE_LABEL, isAdmin, seesAllTeams } from '@/lib/permissions';
+   import { cx } from '@/lib/format';
+   import type { ApprovalStep } from '@/types';
 
+   interface NavItem { to: string; label: string; count?: number; }
+   interface SidebarProps { open: boolean; onClose: () => void; }
 
-import type { ApprovalStep } from '@/types';
+   function buildAdminNav(pending: number): NavItem[] {
+     return [
+       { to: '/admin', label: 'Admin Dashboard' },
+       { to: '/admin/analytics', label: 'Analytics' },
+       { to: '/admin/requests', label: 'Requests', count: pending },
+       { to: '/admin/users', label: 'Users' },
+       { to: '/admin/members', label: 'Members' },
+       { to: '/admin/contributions', label: 'Contributions' },
+       { to: '/admin/committees', label: 'Committees' },
+       { to: '/admin/achievements', label: 'Achievements' },
+       { to: '/admin/warnings', label: 'Warnings' },
+       { to: '/admin/calendar', label: 'Calendar' },
+       { to: '/admin/conversations', label: 'Conversations' },
+       { to: '/admin/notifications', label: 'Send Notification' },
+       { to: '/admin/governance', label: 'Governance' },
+       { to: '/admin/audit', label: 'Audit Log' },
+     ];
+   }
 
-interface NavItem { to: string; label: string; count?: number; }
-interface SidebarProps { open: boolean; onClose: () => void; }
+   function buildManagerNav(pending: number): NavItem[] {
+     return [
+       { to: '/dashboard', label: 'Dashboard' },
+       { to: '/members', label: 'Members' },
+       { to: '/requests', label: 'Requests' },
+       { to: '/approvals', label: 'Approvals', count: pending },
+       { to: '/contributions', label: 'Contributions' },
+       { to: '/committees', label: 'Committees' },
+       { to: '/league', label: 'League' },
+       { to: '/achievements', label: 'Achievements' },
+       { to: '/warnings', label: 'Warnings' },
+       { to: '/conversations', label: 'Conversations' },
+       { to: '/calendar', label: 'Calendar' },
+       { to: '/notifications', label: 'Notifications' },
+       { to: '/reports', label: 'Reports' },
+     ];
+   }
 
-function buildAdminNav(pending: number): NavItem[] {
-  return [
-    { to: '/admin', label: 'Admin Dashboard' },
-    { to: '/admin/analytics', label: 'Analytics' },
-    { to: '/admin/requests', label: 'Requests', count: pending },
-    { to: '/admin/users', label: 'Users' },
-    { to: '/admin/members', label: 'Members' },
-    { to: '/admin/contributions', label: 'Contributions' },
-    { to: '/admin/committees', label: 'Committees' },
-    { to: '/admin/achievements', label: 'Achievements' },
-    { to: '/admin/warnings', label: 'Warnings' },
-    { to: '/admin/calendar', label: 'Calendar' },
-    { to: '/admin/conversations', label: 'Conversations' },
-    { to: '/admin/notifications', label: 'Send Notification' },
-    { to: '/admin/governance', label: 'Governance' },
-    { to: '/admin/audit', label: 'Audit Log' },
-  ];
-}
-function buildManagerNav(pending: number): NavItem[] {
-  return [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/members', label: 'Members' },
-    { to: '/requests', label: 'Requests' },
-    { to: '/approvals', label: 'Approvals', count: pending },
-    { to: '/contributions', label: 'Contributions' },
-    { to: '/committees', label: 'Committees' },
-    { to: '/league', label: 'League' },
-    { to: '/achievements', label: 'Achievements' },
-    { to: '/warnings', label: 'Warnings' },
-    { to: '/conversations', label: 'Conversations' },
-    { to: '/calendar', label: 'Calendar' },
-    { to: '/notifications', label: 'Notifications' },
-    { to: '/reports', label: 'Reports' },
-    { to: '/governance', label: 'Governance' },
-  ];
-}
-function buildMemberNav(): NavItem[] {
-  return [
-    { to: '/dashboard', label: 'Dashboard' },
-    { to: '/profile', label: 'My Profile' },
-    { to: '/my-contributions', label: 'My Contributions' },
-    { to: '/requests/new', label: 'New Request' },
-    { to: '/my-requests', label: 'My Requests' },
-    { to: '/committees', label: 'Committees' },
-    { to: '/league', label: 'League' },
-    { to: '/achievements', label: 'Achievements' },
-    { to: '/conversations', label: 'Conversations' },
-    { to: '/calendar', label: 'Calendar' },
-    { to: '/notifications', label: 'Notifications' },
-    { to: '/governance', label: 'Governance' },
-  ];
-}
+   function buildMemberNav(): NavItem[] {
+     return [
+       { to: '/dashboard', label: 'Dashboard' },
+       { to: '/profile', label: 'My Profile' },
+       { to: '/my-contributions', label: 'My Contributions' },
+       { to: '/requests/new', label: 'New Request' },
+       { to: '/my-requests', label: 'My Requests' },
+       { to: '/committees', label: 'Committees' },
+       { to: '/league', label: 'League' },
+       { to: '/achievements', label: 'Achievements' },
+       { to: '/conversations', label: 'Conversations' },
+       { to: '/calendar', label: 'Calendar' },
+       { to: '/notifications', label: 'Notifications' },
+       { to: '/governance', label: 'Governance' },
+     ];
+   }
 
-export function Sidebar({ open, onClose }: SidebarProps) {
-  const { user } = useAuth();
-  const nav = useNavigate();
-  const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 900px)');
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-  if (!user) return null;
-  const pending = approvals.filter((a) => {
-    if (a.status !== 'PENDING') return false;
-    if (isAdmin(user)) return true;
-    if (a.requiredRole !== user.role) return false;
-    if (a.requiredTeamId !== null && a.requiredTeamId !== user.teamId) return false;
-    return true;
-  }).length;
-  let items: NavItem[];
-  if (isAdmin(user)) items = buildAdminNav(pending);
-  else if (user.role === 'MEMBER' || user.role === 'VIEWER') items = buildMemberNav();
-  else items = buildManagerNav(pending);
-  const handleLogout = async () => { onClose(); await logout(); nav('/'); };
-  const handleNavClick = () => { if (isMobile) onClose(); };
-  return (
-    <>
-      <div className={'sidebar-overlay' + (open ? ' is-open' : '')} onClick={onClose} aria-hidden="true" />
-      <aside className={'sidebar no-print' + (open ? ' is-open' : '')}>
-        <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close menu">×</button>
-        <div className="sidebar__user">
-          <div className="sidebar__user-info">
-            <div className="sidebar__user-name">{user.displayName}</div>
-            <div className="sidebar__user-role">{ROLE_LABEL[user.role]}</div>
-          </div>
-        </div>
-        <div className="sidebar__group">
-          <div className="sidebar__title">{seesAllTeams(user) ? 'Administration' : 'Menu'}</div>
-          {items.map((it) => (
-            <NavLink key={it.to} to={it.to} end={it.to === '/dashboard' || it.to === '/admin' || it.to === '/'}
-              onClick={handleNavClick}
-              className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}>
-              <span>{it.label}</span>
-              {it.count && it.count > 0 ? <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span> : null}
-            </NavLink>
-          ))}
-        </div>
-        <div className="sidebar__group">
-          <div className="sidebar__title">Account</div>
-          <button type="button" className="sidebar__link sidebar__link--danger" onClick={handleLogout}>Logout</button>
-        </div>
-      </aside>
-    </>
-  );
-}
+   export function Sidebar({ open, onClose }: SidebarProps) {
+     const { user } = useAuth();
+     const nav = useNavigate();
+     const { data: approvals } = useRealtimeCollection<ApprovalStep>('approvals');
+     const [isMobile, setIsMobile] = useState(false);
+     useEffect(() => {
+       const mq = window.matchMedia('(max-width: 900px)');
+       const update = () => setIsMobile(mq.matches);
+       update();
+       mq.addEventListener('change', update);
+       return () => mq.removeEventListener('change', update);
+     }, []);
+     if (!user) return null;
+     const pending = approvals.filter((a) => {
+       if (a.status !== 'PENDING') return false;
+       if (isAdmin(user)) return true;
+       if (a.requiredRole !== user.role) return false;
+       if (a.requiredTeamId !== null && a.requiredTeamId !== user.teamId) return false;
+       return true;
+     }).length;
+     let items: NavItem[];
+     if (isAdmin(user)) items = buildAdminNav(pending);
+     else if (user.role === 'MEMBER' || user.role === 'VIEWER') items = buildMemberNav();
+     else items = buildManagerNav(pending);
+     const handleLogout = async () => { onClose(); await logout(); nav('/'); };
+     const handleNavClick = () => { if (isMobile) onClose(); };
+     return (
+       <>
+         <div className={'sidebar-overlay' + (open ? ' is-open' : '')} onClick={onClose} aria-hidden="true" />
+         <aside className={'sidebar no-print' + (open ? ' is-open' : '')}>
+           <button type="button" className="sidebar-close" onClick={onClose} aria-label="Close menu">×</button>
+           <div className="sidebar__user">
+             <div className="sidebar__user-info">
+               <div className="sidebar__user-name">{user.displayName}</div>
+               <div className="sidebar__user-role">{ROLE_LABEL[user.role]}</div>
+             </div>
+           </div>
+           <div className="sidebar__group">
+             <div className="sidebar__title">{seesAllTeams(user) ? 'Administration' : 'Menu'}</div>
+             {items.map((it) => (
+               <NavLink key={it.to} to={it.to} end={it.to === '/dashboard' || it.to === '/admin' || it.to === '/'}
+                 onClick={handleNavClick}
+                 className={({ isActive }) => cx('sidebar__link', isActive && 'is-active')}>
+                 <span>{it.label}</span>
+                 {it.count && it.count > 0 ? <span className="sidebar__count">{it.count > 99 ? '99+' : it.count}</span> : null}
+               </NavLink>
+             ))}
+           </div>
+           <div className="sidebar__group">
+             <div className="sidebar__title">Account</div>
+             <button type="button" className="sidebar__link sidebar__link--danger" onClick={handleLogout}>Logout</button>
+           </div>
+         </aside>
+       </>
+     );
+   }
+   
