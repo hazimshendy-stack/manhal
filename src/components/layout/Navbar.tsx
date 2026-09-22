@@ -27,7 +27,6 @@ import { Link, useNavigate } from 'react-router-dom';
                alt="Manhal"
                className="brand__logo"
                onError={(e) => {
-                 /* Fallback to text if logo is missing */
                  const img = e.currentTarget as HTMLImageElement;
                  img.style.display = 'none';
                  const parent = img.parentElement;

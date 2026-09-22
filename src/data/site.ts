@@ -9,7 +9,7 @@ import type { SiteConfig, Season } from '@/types';
    };
 
    export const seasons: Season[] = [
-     { id: 'S7', label: 'Season 7', labelEn: 'Season 7', start: '2025-09-01', end: '2026-06-30', isActive: true, theme: 'Build. Teach. Give.' },
+     { id: 'S7', label: 'Season 7', labelEn: 'Season 7', start: '2025-09-01', end: '2026-06-30', isActive: true,  theme: 'Build. Teach. Give.' },
      { id: 'S6', label: 'Season 6', labelEn: 'Season 6', start: '2024-09-01', end: '2025-06-30', isActive: false, theme: 'Reach further.' },
    ];
 

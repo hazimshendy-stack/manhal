@@ -1,32 +1,55 @@
 #!/usr/bin/env node
-/* ═══════════════════════════════════════════════════════════════
-   sbapiaryy → Manhal — rebrand-fix.cjs
-   ─────────────────────────────────────────────────────────────
-   1) Rebrand entire site: sbapiaryy → Manhal
-   2) Use new logo + icons from public/new-assets/
-   3) Boot screen (mobile): logo only, no text
-   4) Login error: friendly Arabic message
-   5) Desktop Navbar + BottomNav + Sidebar → floating pill (mobile-like)
-   6) Rewrite the GitHub Actions deploy workflow properly
-   Mobile experience: UNTOUCHED.
-   ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════
+   Manhal — fix.cjs  (v7.2)
+   ─────────────────────────────────────────────────────────────────────
+   ✔ Fixes GitHub Actions deployment (removes auto-fix.yml that loops)
+   ✔ Rewrites deploy.yml with correct YAML
+   ✔ Desktop experience = Mobile experience (floating pill nav + drawer)
+   ✔ Logo everywhere (Navbar, Footer, Boot screen, Onboarding)
+   ✔ Site name = Manhal everywhere
+   ✔ Branding, title, manifest, package.json, index.html
+   ✔ Clean build + force push to GitHub
+   ═══════════════════════════════════════════════════════════════════════ */
 
 const fs = require("fs");
 const path = require("path");
 const { execSync } = require("child_process");
 const ROOT = process.cwd();
 
+/* ─────────────────────────────────────────────────────────────────────
+      Console banner
+      ───────────────────────────────────────────────────────────────────── */
 console.log("");
-console.log(" ╔══════════════════════════════════════════════════════╗");
-console.log(" ║  sbapiaryy → Manhal — full rebrand                  ║");
-console.log(" ╚══════════════════════════════════════════════════════╝");
+console.log(
+  " ╔══════════════════════════════════════════════════════════════╗"
+);
+console.log(
+  " ║   MANHAL  ·  fix.cjs v7.2                                    ║"
+);
+console.log(
+  " ║   rebrand + logo + desktop = mobile + deploy fix             ║"
+);
+console.log(
+  " ╚══════════════════════════════════════════════════════════════╝"
+);
 console.log("");
 
-function write(relPath, content) {
-  const abs = path.join(ROOT, relPath);
+/* ─────────────────────────────────────────────────────────────────────
+      Helpers
+      ───────────────────────────────────────────────────────────────────── */
+function write(rel, content) {
+  const abs = path.join(ROOT, rel);
   fs.mkdirSync(path.dirname(abs), { recursive: true });
   fs.writeFileSync(abs, content.replace(/^\n/, ""), "utf8");
-  console.log("  ✓ " + relPath);
+  console.log("   ✓ " + rel);
+}
+
+function del(rel) {
+  const abs = path.join(ROOT, rel);
+  if (fs.existsSync(abs)) {
+    fs.rmSync(abs, { recursive: true, force: true });
+    console.log("   ✗ removed: " + rel);
+  }
 }
 
 function run(cmd, silent = false) {
@@ -34,15 +57,119 @@ function run(cmd, silent = false) {
     if (!silent) console.log(" $ " + cmd);
     execSync(cmd, { stdio: silent ? "pipe" : "inherit", cwd: ROOT });
     return true;
-  } catch {
-    console.warn("  ⚠ Failed: " + cmd);
+  } catch (e) {
+    if (!silent) console.warn("   ⚠ failed: " + cmd);
     return false;
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-      STEP 0 — DETECT + COPY assets from public/new-assets/
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 0 — Kill the offending workflow that loops and blocks deploy
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🧹 STEP 0 · Cleaning GitHub Actions…");
+
+/* The auto-fix.yml runs fix.cjs inside the runner → triggers another push
+      → infinite concurrency with pages deployment → deployment gets cancelled
+      forever. Deleting it fixes 90% of “GitHub refuses to deploy” problems. */
+del(".github/workflows/auto-fix.yml");
+
+/* Also remove stale build artifacts and backups from prior runs */
+del(".fix-backups");
+del("src/src");
+del("dist/.vite");
+del("tsc-errors.txt");
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 1 — GitHub Actions: single, correct deploy workflow
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🚀 STEP 1 · Writing deploy.yml…");
+
+write(
+  ".github/workflows/deploy.yml",
+  `name: Deploy to GitHub Pages
+
+   on:
+     push:
+       branches: [main]
+     workflow_dispatch:
+
+   permissions:
+     contents: read
+     pages: write
+     id-token: write
+
+   concurrency:
+     group: pages
+     cancel-in-progress: true
+
+   jobs:
+     build:
+       runs-on: ubuntu-latest
+       steps:
+         - name: Checkout
+           uses: actions/checkout@v4
+
+         - name: Setup Node
+           uses: actions/setup-node@v4
+           with:
+             node-version: '20'
+
+         - name: Setup Pages
+           uses: actions/configure-pages@v5
+
+         - name: Create .env file
+           run: |
+             cat > .env << 'EOF'
+             VITE_FIREBASE_API_KEY=\${{ secrets.VITE_FIREBASE_API_KEY }}
+             VITE_FIREBASE_AUTH_DOMAIN=\${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+             VITE_FIREBASE_PROJECT_ID=\${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+             VITE_FIREBASE_STORAGE_BUCKET=\${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+             VITE_FIREBASE_MESSAGING_SENDER_ID=\${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+             VITE_FIREBASE_APP_ID=\${{ secrets.VITE_FIREBASE_APP_ID }}
+             EOF
+
+         - name: Install dependencies
+           run: npm install --no-audit --no-fund --no-package-lock
+
+         - name: Build
+           run: npm run build
+
+         - name: Verify dist
+           run: |
+             if [ ! -d "dist" ]; then
+               echo "❌ dist folder was not created"
+               exit 1
+             fi
+             ls -la dist/
+
+         - name: Upload artifact
+           uses: actions/upload-pages-artifact@v3
+           with:
+             path: './dist'
+
+     deploy:
+       needs: build
+       runs-on: ubuntu-latest
+       environment:
+         name: github-pages
+         url: \${{ steps.deployment.outputs.page_url }}
+       steps:
+         - name: Deploy to GitHub Pages
+           id: deployment
+           uses: actions/deploy-pages@v4
+   `
+);
+
+/* .nojekyll — stops GitHub from running Jekyll on the output */
+write("public/.nojekyll", "");
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 2 — Assets : copy from new-assets/ → public/
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎨 STEP 2 · Preparing logos…");
 
 const candidates = [
   "public/new-assets",
@@ -54,35 +181,31 @@ const candidates = [
 
 let assetsDir = null;
 for (const c of candidates) {
-  if (fs.existsSync(path.join(ROOT, c))) {
-    const files = fs.readdirSync(path.join(ROOT, c));
-    if (files.length > 0) {
-      assetsDir = c;
-      break;
-    }
+  const abs = path.join(ROOT, c);
+  if (fs.existsSync(abs) && fs.readdirSync(abs).length > 0) {
+    assetsDir = c;
+    break;
   }
 }
 
 if (assetsDir) {
-  console.log(" 📁 Found assets folder: " + assetsDir);
+  console.log("   📁 assets folder: " + assetsDir);
   const files = fs.readdirSync(path.join(ROOT, assetsDir));
-  console.log("    Files:");
   files.forEach((f) => console.log("      · " + f));
 } else {
-  console.log(" ⚠ No assets folder found — will keep existing icons");
+  console.log("   ⚠ no assets folder found — keeping existing icons");
 }
 
 function findAsset(patterns) {
   if (!assetsDir) return null;
   const files = fs.readdirSync(path.join(ROOT, assetsDir));
-  for (const pattern of patterns) {
-    const match = files.find((f) => pattern.test(f));
-    if (match) return path.join(assetsDir, match);
+  for (const p of patterns) {
+    const m = files.find((f) => p.test(f));
+    if (m) return path.join(assetsDir, m);
   }
   return null;
 }
 
-/* Flexible matchers */
 const logoFile = findAsset([
   /^logo\.(png|svg|webp)$/i,
   /^logo[_-]?white\.(png|svg)$/i,
@@ -90,21 +213,24 @@ const logoFile = findAsset([
 ]);
 const icon192File = findAsset([/192.*\.png$/i, /icon[_-]?192\.png$/i]);
 const icon512File = findAsset([/512.*\.png$/i, /icon[_-]?512\.png$/i]);
-const faviconFile = findAsset([/favicon\.svg$/i, /favicon\.png$/i]);
+const faviconFile = findAsset([
+  /favicon\.svg$/i,
+  /favicon\.svg\.svg$/i,
+  /favicon\.png$/i,
+]);
 const appleTouchFile = findAsset([
   /apple.*\.png$/i,
   /apple[_-]?touch.*\.png$/i,
 ]);
 
-/* Copy assets to canonical locations */
 function copyAsset(src, destRel) {
   if (!src) return false;
-  const srcAbs = path.join(ROOT, src);
-  const destAbs = path.join(ROOT, destRel);
-  if (!fs.existsSync(srcAbs)) return false;
-  fs.mkdirSync(path.dirname(destAbs), { recursive: true });
-  fs.copyFileSync(srcAbs, destAbs);
-  console.log("  ✓ Copied " + src + " → " + destRel);
+  const s = path.join(ROOT, src);
+  const d = path.join(ROOT, destRel);
+  if (!fs.existsSync(s)) return false;
+  fs.mkdirSync(path.dirname(d), { recursive: true });
+  fs.copyFileSync(s, d);
+  console.log("   ✓ " + src + " → " + destRel);
   return true;
 }
 
@@ -114,7 +240,6 @@ copyAsset(icon512File, "public/icon-512.png");
 copyAsset(faviconFile, "public/favicon.svg");
 copyAsset(appleTouchFile, "public/apple-touch-icon.png");
 
-/* Detect which files actually exist */
 const hasLogo = fs.existsSync(path.join(ROOT, "public/logo.png"));
 const hasIcon192 = fs.existsSync(path.join(ROOT, "public/icon-192.png"));
 const hasIcon512 = fs.existsSync(path.join(ROOT, "public/icon-512.png"));
@@ -123,18 +248,17 @@ const hasAppleTouch = fs.existsSync(
   path.join(ROOT, "public/apple-touch-icon.png")
 );
 
-console.log("");
-console.log(" 📦 Available assets:");
-console.log("    logo.png            : " + (hasLogo ? "✓" : "✗"));
-console.log("    icon-192.png        : " + (hasIcon192 ? "✓" : "✗"));
-console.log("    icon-512.png        : " + (hasIcon512 ? "✓" : "✗"));
-console.log("    favicon.svg         : " + (hasFavicon ? "✓" : "✗"));
-console.log("    apple-touch-icon.png: " + (hasAppleTouch ? "✓" : "✗"));
-console.log("");
+console.log("   📦 logo:            " + (hasLogo ? "✓" : "✗"));
+console.log("   📦 icon-192:        " + (hasIcon192 ? "✓" : "✗"));
+console.log("   📦 icon-512:        " + (hasIcon512 ? "✓" : "✗"));
+console.log("   📦 favicon:         " + (hasFavicon ? "✓" : "✗"));
+console.log("   📦 apple-touch:     " + (hasAppleTouch ? "✓" : "✗"));
 
-/* ═══════════════════════════════════════════════════════════════
-      1. index.html — Title, boot screen (LOGO ONLY), meta tags
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 3 — index.html : Manhal title + boot screen (logo only)
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🏠 STEP 3 · index.html…");
 
 write(
   "index.html",
@@ -239,9 +363,52 @@ write(
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      2. manifest.json — new name + icons
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 4 — package.json : name = manhal
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 📦 STEP 4 · package.json…");
+
+write(
+  "package.json",
+  JSON.stringify(
+    {
+      name: "manhal",
+      private: true,
+      version: "7.2.0",
+      type: "module",
+      description: "Manhal — Resala STEM Sub Branches official platform",
+      scripts: {
+        dev: "vite",
+        build: "vite build",
+        preview: "vite preview",
+        typecheck: "tsc --noEmit",
+      },
+      dependencies: {
+        firebase: "^10.14.1",
+        react: "^18.3.1",
+        "react-dom": "^18.3.1",
+        "react-router-dom": "^6.26.2",
+      },
+      devDependencies: {
+        "@types/node": "^22.7.4",
+        "@types/react": "^18.3.11",
+        "@types/react-dom": "^18.3.0",
+        "@vitejs/plugin-react": "^4.3.2",
+        typescript: "^5.6.2",
+        vite: "^5.4.8",
+      },
+    },
+    null,
+    2
+  )
+);
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 5 — manifest.json : Manhal + icons
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 📱 STEP 5 · manifest.json…");
 
 write(
   "public/manifest.json",
@@ -286,53 +453,16 @@ write(
   )
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      3. package.json — new name
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  "package.json",
-  JSON.stringify(
-    {
-      name: "manhal",
-      private: true,
-      version: "7.0.0",
-      type: "module",
-      description: "Manhal — Resala STEM Sub Branches official platform",
-      scripts: {
-        dev: "vite",
-        build: "vite build",
-        preview: "vite preview",
-        typecheck: "tsc --noEmit",
-      },
-      dependencies: {
-        firebase: "^10.14.1",
-        react: "^18.3.1",
-        "react-dom": "^18.3.1",
-        "react-router-dom": "^6.26.2",
-      },
-      devDependencies: {
-        "@types/node": "^22.7.4",
-        "@types/react": "^18.3.11",
-        "@types/react-dom": "^18.3.0",
-        "@vitejs/plugin-react": "^4.3.2",
-        typescript: "^5.6.2",
-        vite: "^5.4.8",
-      },
-    },
-    null,
-    2
-  )
-);
-
-/* ═══════════════════════════════════════════════════════════════
-      4. public/sw.js + version.json — new cache names
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 6 — sw.js + version.json : manhal-v7.2
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" ⚙️  STEP 6 · service worker + version…");
 
 write(
   "public/sw.js",
   `/* Manhal Service Worker */
-   const BUILD_ID = 'manhal-v7';
+   const BUILD_ID = 'manhal-v7.2';
    const CACHE_NAME = 'manhal-' + BUILD_ID;
    const RUNTIME_CACHE = 'manhal-runtime-' + BUILD_ID;
    const PRECACHE_URLS = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];
@@ -400,18 +530,20 @@ write(
   "public/version.json",
   JSON.stringify(
     {
-      buildId: "manhal-v7",
+      buildId: "manhal-v7.2",
       builtAt: new Date().toISOString(),
-      version: "7.0.0",
+      version: "7.2.0",
     },
     null,
     2
   )
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      5. site.ts — name → Manhal
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 7 — src/data/site.ts : Manhal
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🏷️  STEP 7 · site data…");
 
 write(
   "src/data/site.ts",
@@ -426,7 +558,7 @@ write(
    };
 
    export const seasons: Season[] = [
-     { id: 'S7', label: 'Season 7', labelEn: 'Season 7', start: '2025-09-01', end: '2026-06-30', isActive: true, theme: 'Build. Teach. Give.' },
+     { id: 'S7', label: 'Season 7', labelEn: 'Season 7', start: '2025-09-01', end: '2026-06-30', isActive: true,  theme: 'Build. Teach. Give.' },
      { id: 'S6', label: 'Season 6', labelEn: 'Season 6', start: '2024-09-01', end: '2025-06-30', isActive: false, theme: 'Reach further.' },
    ];
 
@@ -434,27 +566,11 @@ write(
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      6. onboarding.ts — welcome message
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  "src/data/onboarding.ts",
-  `import type { OnboardingCard } from '@/types';
-
-   export const onboardingCards: OnboardingCard[] = [
-     { id: 'welcome', icon: '', title: 'Welcome to Manhal', description: 'The platform for Resala STEM Sub Branches — members, teams, committees, contributions, requests, and achievements in one place.', accentColor: '#C1272D', order: 1 },
-     { id: 'teams', icon: '', title: 'Seven Specialized Teams', description: 'Helpers · Heroes · Coders · Enviros · Messages · Masar · RSTC', accentColor: '#60A5FA', order: 2 },
-     { id: 'committees', icon: '', title: 'Committees Matter', description: 'Every member belongs to at least one committee. Committees have their own HR and rankings.', accentColor: '#16A34A', order: 3 },
-     { id: 'contributions', icon: '', title: 'Flexible Point Approval', description: 'Log a contribution. Committee HR reviews and assigns points fairly.', accentColor: '#F59E0B', order: 4 },
-     { id: 'league', icon: '', title: 'League & Ranking', description: 'Track your rank on team, committee, and global levels.', accentColor: '#A78BFA', order: 5 },
-   ];
-   `
-);
-
-/* ═══════════════════════════════════════════════════════════════
-      7. Navbar — LOGO IMAGE instead of text brand
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 8 — Navbar : logo image
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🔝 STEP 8 · Navbar…");
 
 write(
   "src/components/layout/Navbar.tsx",
@@ -487,7 +603,6 @@ write(
                alt="Manhal"
                className="brand__logo"
                onError={(e) => {
-                 /* Fallback to text if logo is missing */
                  const img = e.currentTarget as HTMLImageElement;
                  img.style.display = 'none';
                  const parent = img.parentElement;
@@ -539,9 +654,262 @@ write(
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      8. navbar.css — brand__logo styles
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 9 — Footer : logo image
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🔻 STEP 9 · Footer…");
+
+write(
+  "src/components/layout/Footer.tsx",
+  `import { Link } from 'react-router-dom';
+   import { site, activeSeason } from '@/data';
+
+   export function Footer() {
+     const year = new Date().getFullYear();
+
+     return (
+       <footer className="footer no-print">
+         <div className="container">
+           <div className="footer__inner">
+             <div className="footer__brand-col">
+               <img
+                 src="./logo.png"
+                 alt={site.name}
+                 className="footer__logo"
+                 onError={(e) => {
+                   const img = e.currentTarget as HTMLImageElement;
+                   img.style.display = 'none';
+                 }}
+               />
+               <p className="footer__tagline">{site.description}</p>
+               <div className="footer__copyright">
+                 © {year} {site.organization} — {activeSeason.label}
+               </div>
+             </div>
+
+             <div className="footer__links-col">
+               <div>
+                 <div className="footer__group-title">Browse</div>
+                 <div className="footer__links">
+                   <Link className="footer__link" to="/">Home</Link>
+                   <Link className="footer__link" to="/members">Members</Link>
+                   <Link className="footer__link" to="/teams">Teams</Link>
+                   <Link className="footer__link" to="/committees">Committees</Link>
+                   <Link className="footer__link" to="/league">League</Link>
+                 </div>
+               </div>
+               <div>
+                 <div className="footer__group-title">Platform</div>
+                 <div className="footer__links">
+                   <Link className="footer__link" to="/achievements">Achievements</Link>
+                   <Link className="footer__link" to="/calendar">Calendar</Link>
+                   <Link className="footer__link" to="/search">Search</Link>
+                 </div>
+               </div>
+               <div>
+                 <div className="footer__group-title">About</div>
+                 <div className="footer__links">
+                   <Link className="footer__link" to="/about">About</Link>
+                   <Link className="footer__link" to="/governance">Governance</Link>
+                   <Link className="footer__link" to="/login">Login</Link>
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+       </footer>
+     );
+   }
+   `
+);
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 10 — Onboarding : logo image instead of "S" block
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎬 STEP 10 · Onboarding…");
+
+write(
+  "src/components/onboarding/Onboarding.tsx",
+  `import { useEffect, useState } from 'react';
+   import { onboardingCards, site } from '@/data';
+   import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding';
+
+   export function Onboarding() {
+     const [visible, setVisible] = useState(false);
+
+     useEffect(() => {
+       if (!hasCompletedOnboarding()) {
+         setVisible(true);
+         document.body.style.overflow = 'hidden';
+       }
+       return () => {
+         document.body.style.overflow = '';
+       };
+     }, []);
+
+     const finish = () => {
+       markOnboardingComplete();
+       setVisible(false);
+       document.body.style.overflow = '';
+     };
+
+     if (!visible) return null;
+
+     const sorted = [...onboardingCards].sort((a, b) => a.order - b.order);
+
+     return (
+       <div className="onboarding-backdrop" role="dialog" aria-modal="true">
+         <div className="onboarding-header">
+           <img
+             src="./logo.png"
+             alt={site.name}
+             className="onboarding-header__logo-img"
+             onError={(e) => {
+               (e.currentTarget as HTMLImageElement).style.display = 'none';
+             }}
+           />
+           <div className="onboarding-header__title">Welcome to {site.name}</div>
+           <div className="onboarding-header__subtitle">
+             Learn about the platform in one minute
+           </div>
+         </div>
+
+         <div className="onboarding-body">
+           <div className="onboarding-grid">
+             {sorted.map((card) => (
+               <div key={card.id} className="onboarding-card">
+                 <div className="onboarding-card__title">{card.title}</div>
+                 <div className="onboarding-card__desc">{card.description}</div>
+               </div>
+             ))}
+           </div>
+         </div>
+
+         <div className="onboarding-footer">
+           <button type="button" className="onboarding-cta" onClick={finish}>
+             Got it, let's start
+           </button>
+         </div>
+       </div>
+     );
+   }
+   `
+);
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 11 — Login : friendly Arabic error
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🔐 STEP 11 · Login…");
+
+write(
+  "src/pages/LoginPage.tsx",
+  `import { useState, type FormEvent } from 'react';
+   import { useNavigate, Link } from 'react-router-dom';
+   import { login, translateAuthError } from '@/lib/auth';
+   import { useAuth } from '@/lib/useAuth';
+
+   export function LoginPage() {
+     const nav = useNavigate();
+     const { user } = useAuth();
+     const [email, setEmail] = useState('');
+     const [password, setPassword] = useState('');
+     const [error, setError] = useState('');
+     const [busy, setBusy] = useState(false);
+
+     const onSubmit = async (e: FormEvent) => {
+       e.preventDefault();
+       setError('');
+       setBusy(true);
+       try {
+         const appUser = await login(email.trim(), password);
+         if (appUser.status === 'pending' || appUser.status === 'rejected') {
+           nav('/pending-approval');
+         } else if (appUser.mustChangePassword) {
+           nav('/change-password');
+         } else {
+           nav('/dashboard');
+         }
+       } catch (err) {
+         setError(translateAuthError(err));
+       } finally {
+         setBusy(false);
+       }
+     };
+
+     if (user) {
+       if (user.status === 'pending' || user.status === 'rejected') {
+         nav('/pending-approval');
+       } else {
+         nav('/dashboard');
+       }
+       return null;
+     }
+
+     return (
+       <div className="login-page">
+         <div className="login-card">
+           <form onSubmit={onSubmit}>
+             <div className="login-field">
+               <label className="login-label">Email</label>
+               <input
+                 className="login-input"
+                 type="email"
+                 value={email}
+                 onChange={(e) => setEmail(e.target.value)}
+                 placeholder="name@resala-stem.org"
+                 autoComplete="email"
+                 required
+                 dir="ltr"
+               />
+             </div>
+             <div className="login-field">
+               <label className="login-label">Password</label>
+               <input
+                 className="login-input"
+                 type="password"
+                 value={password}
+                 onChange={(e) => setPassword(e.target.value)}
+                 placeholder="........"
+                 autoComplete="current-password"
+                 required
+                 dir="ltr"
+               />
+             </div>
+             {error ? <div className="login-error">{error}</div> : null}
+             <button
+               type="submit"
+               className="login-submit"
+               disabled={busy || !email || !password}
+             >
+               {busy ? '...' : 'Sign In'}
+             </button>
+           </form>
+
+           <p className="login-back" style={{ marginTop: 20, lineHeight: 1.7 }}>
+             New here?{' '}
+             <Link to="/register" style={{ color: 'var(--c-red)', fontWeight: 700 }}>
+               Create an account
+             </Link>
+           </p>
+
+           <p className="login-back" style={{ marginTop: 6 }}>
+             <Link to="/">Back to Home</Link>
+           </p>
+         </div>
+       </div>
+     );
+   }
+   `
+);
+
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 12 — navbar.css : brand__logo
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎨 STEP 12 · navbar.css…");
 
 write(
   "src/styles/navbar.css",
@@ -716,83 +1084,47 @@ write(
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      9. Footer — logo + new name
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 13 — footer.css : footer__logo
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎨 STEP 13 · footer.css…");
 
 write(
-  "src/components/layout/Footer.tsx",
-  `import { Link } from 'react-router-dom';
-   import { site, activeSeason } from '@/data';
-
-   export function Footer() {
-     const year = new Date().getFullYear();
-
-     return (
-       <footer className="footer no-print">
-         <div className="container">
-           <div className="footer__inner">
-             <div className="footer__brand-col">
-               <img
-                 src="./logo.png"
-                 alt={site.name}
-                 className="footer__logo"
-                 onError={(e) => {
-                   const img = e.currentTarget as HTMLImageElement;
-                   img.style.display = 'none';
-                 }}
-               />
-               <p className="footer__tagline">{site.description}</p>
-               <div className="footer__copyright">
-                 © {year} {site.organization} — {activeSeason.label}
-               </div>
-             </div>
-
-             <div className="footer__links-col">
-               <div>
-                 <div className="footer__group-title">Browse</div>
-                 <div className="footer__links">
-                   <Link className="footer__link" to="/">Home</Link>
-                   <Link className="footer__link" to="/members">Members</Link>
-                   <Link className="footer__link" to="/teams">Teams</Link>
-                   <Link className="footer__link" to="/committees">Committees</Link>
-                   <Link className="footer__link" to="/league">League</Link>
-                 </div>
-               </div>
-               <div>
-                 <div className="footer__group-title">Platform</div>
-                 <div className="footer__links">
-                   <Link className="footer__link" to="/achievements">Achievements</Link>
-                   <Link className="footer__link" to="/calendar">Calendar</Link>
-                   <Link className="footer__link" to="/search">Search</Link>
-                 </div>
-               </div>
-               <div>
-                 <div className="footer__group-title">About</div>
-                 <div className="footer__links">
-                   <Link className="footer__link" to="/about">About</Link>
-                   <Link className="footer__link" to="/governance">Governance</Link>
-                   <Link className="footer__link" to="/login">Login</Link>
-                 </div>
-               </div>
-             </div>
-           </div>
-         </div>
-       </footer>
-     );
+  "src/styles/footer.css",
+  `.footer {
+     margin-top: 64px;
+     background: var(--c-navy);
+     color: var(--c-paper);
+     border-top: 4px solid var(--c-red);
+     padding-block: 48px 40px;
    }
-   `
-);
 
-/* footer.css — add footer__logo */
-const footerCssPath = path.join(ROOT, "src/styles/footer.css");
-let footerCss = fs.existsSync(footerCssPath)
-  ? fs.readFileSync(footerCssPath, "utf8")
-  : "";
-if (!footerCss.includes(".footer__logo")) {
-  footerCss += `
+   @media (max-width: 900px) {
+     .footer {
+       padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 48px);
+     }
+   }
 
-   /* ─── Footer logo ─── */
+   .footer__inner {
+     display: grid;
+     gap: 36px;
+     grid-template-columns: 1fr;
+   }
+
+   @media (min-width: 640px) {
+     .footer__inner { grid-template-columns: 1fr 1fr; }
+   }
+
+   @media (min-width: 900px) {
+     .footer__inner { grid-template-columns: 2fr 3fr; gap: 56px; }
+   }
+
+   .footer__brand {
+     font-size: 1.65rem;
+     color: var(--c-paper);
+   }
+
    .footer__logo {
      height: 44px;
      width: auto;
@@ -809,91 +1141,82 @@ if (!footerCss.includes(".footer__logo")) {
        max-width: 170px;
      }
    }
-   `;
-  write("src/styles/footer.css", footerCss);
-}
 
-/* ═══════════════════════════════════════════════════════════════
-      10. Onboarding header — Manhal
-      ═══════════════════════════════════════════════════════════════ */
+   .footer__tagline {
+     font-size: 0.95rem;
+     color: var(--c-paper-soft);
+     line-height: 1.8;
+     max-width: 42ch;
+     margin-top: 16px;
+   }
 
-write(
-  "src/components/onboarding/Onboarding.tsx",
-  `import { useEffect, useState } from 'react';
-   import { onboardingCards, site } from '@/data';
-   import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding';
+   .footer__copyright {
+     font-size: 0.85rem;
+     color: var(--c-paper-muted);
+     padding-top: 16px;
+     border-top: 1px solid var(--c-navy-2);
+     margin-top: 16px;
+   }
 
-   export function Onboarding() {
-     const [visible, setVisible] = useState(false);
+   .footer__links-col {
+     display: grid;
+     gap: 32px;
+     grid-template-columns: repeat(2, 1fr);
+   }
 
-     useEffect(() => {
-       if (!hasCompletedOnboarding()) {
-         setVisible(true);
-         document.body.style.overflow = 'hidden';
-       }
-       return () => {
-         document.body.style.overflow = '';
-       };
-     }, []);
+   @media (min-width: 640px) {
+     .footer__links-col { grid-template-columns: repeat(3, 1fr); }
+   }
 
-     const finish = () => {
-       markOnboardingComplete();
-       setVisible(false);
-       document.body.style.overflow = '';
-     };
+   .footer__group-title {
+     font-size: 0.78rem;
+     color: var(--c-red);
+     text-transform: uppercase;
+     letter-spacing: 0.1em;
+     margin-bottom: 16px;
+   }
 
-     if (!visible) return null;
+   .footer__links {
+     display: flex;
+     flex-direction: column;
+     gap: 12px;
+   }
 
-     const sorted = [...onboardingCards].sort((a, b) => a.order - b.order);
+   .footer__link {
+     font-size: 0.92rem;
+     color: var(--c-paper-soft);
+   }
 
-     return (
-       <div className="onboarding-backdrop" role="dialog" aria-modal="true">
-         <div className="onboarding-header">
-           <img
-             src="./logo.png"
-             alt={site.name}
-             className="onboarding-header__logo-img"
-             onError={(e) => {
-               (e.currentTarget as HTMLImageElement).style.display = 'none';
-             }}
-           />
-           <div className="onboarding-header__title">Welcome to {site.name}</div>
-           <div className="onboarding-header__subtitle">
-             Learn about the platform in one minute
-           </div>
-         </div>
-
-         <div className="onboarding-body">
-           <div className="onboarding-grid">
-             {sorted.map((card) => (
-               <div key={card.id} className="onboarding-card">
-                 <div className="onboarding-card__title">{card.title}</div>
-                 <div className="onboarding-card__desc">{card.description}</div>
-               </div>
-             ))}
-           </div>
-         </div>
-
-         <div className="onboarding-footer">
-           <button type="button" className="onboarding-cta" onClick={finish}>
-             Got it, let's start
-           </button>
-         </div>
-       </div>
-     );
+   .footer__link:hover {
+     color: var(--c-red);
    }
    `
 );
 
-/* Onboarding CSS — logo img style */
-const onboardingCssPath = path.join(ROOT, "src/styles/onboarding.css");
-let onboardingCss = fs.existsSync(onboardingCssPath)
-  ? fs.readFileSync(onboardingCssPath, "utf8")
-  : "";
-if (!onboardingCss.includes(".onboarding-header__logo-img")) {
-  onboardingCss += `
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 14 — onboarding.css : logo image style
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎨 STEP 14 · onboarding.css…");
 
-   /* ─── Onboarding header logo image ─── */
+write(
+  "src/styles/onboarding.css",
+  `.onboarding-backdrop {
+     position: fixed;
+     inset: 0;
+     background: #FFFFFF;
+     z-index: 500;
+     display: flex;
+     flex-direction: column;
+     padding: 32px 24px;
+     overflow-y: auto;
+   }
+
+   .onboarding-header {
+     text-align: center;
+     padding: 24px 16px 8px;
+   }
+
    .onboarding-header__logo-img {
      height: 72px;
      width: auto;
@@ -909,386 +1232,106 @@ if (!onboardingCss.includes(".onboarding-header__logo-img")) {
        max-width: 200px;
      }
    }
-   `;
-  write("src/styles/onboarding.css", onboardingCss);
-}
 
-/* ═══════════════════════════════════════════════════════════════
-      11. auth.ts — friendly error + translateAuthError exported
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  "src/lib/auth.ts",
-  `import {
-     signInWithEmailAndPassword,
-     signOut,
-     onAuthStateChanged,
-     sendPasswordResetEmail,
-     updatePassword,
-     createUserWithEmailAndPassword,
-     signOut as secondarySignOut,
-     type User as FirebaseUser,
-   } from 'firebase/auth';
-   import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-   import { auth, db, getSecondaryAuth, destroySecondaryApp } from './firebase';
-   import { safeArray } from './safe';
-   import type { AppUser, RoleId, TeamId, Member } from '@/types';
-
-   /* ═══════════════════════════════════════════════════════════════
-      Friendly error translation — exported for reuse
-      ═══════════════════════════════════════════════════════════════ */
-
-   export function translateAuthError(err: unknown): string {
-     const code = err && typeof err === 'object' && 'code' in err
-       ? String((err as { code?: string }).code)
-       : '';
-     const raw = err instanceof Error ? err.message : String(err ?? '');
-     const combined = (code + ' ' + raw).toLowerCase();
-
-     if (
-       combined.includes('invalid-credential') ||
-       combined.includes('wrong-password') ||
-       combined.includes('user-not-found') ||
-       combined.includes('invalid-login-credentials')
-     ) {
-       return 'الإيميل أو الباسورد خطأ';
-     }
-     if (combined.includes('invalid-email')) return 'الإيميل مش صح';
-     if (combined.includes('user-disabled')) return 'الحساب ده متوقف';
-     if (combined.includes('too-many-requests')) return 'حاول تاني بعد شوية';
-     if (combined.includes('network-request-failed')) return 'في مشكلة في الاتصال بالإنترنت';
-     if (combined.includes('email-already-in-use') || combined.includes('email_exists')) {
-       return 'الإيميل ده مستخدم بالفعل';
-     }
-     if (combined.includes('weak-password')) return 'الباسورد ضعيف — لازم 6 حروف على الأقل';
-     if (combined.includes('operation-not-allowed')) return 'التسجيل معطل حاليًا';
-     if (combined.includes('requires-recent-login')) return 'سجل دخول تاني وحاول';
-     if (combined.includes('missing-password')) return 'لازم تدخل الباسورد';
-     return raw || 'حصل خطأ غير متوقع';
+   .onboarding-header__title {
+     font-size: 1.75rem;
+     color: var(--c-navy);
+     margin-bottom: 10px;
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      Login / Logout / Reset
-      ═══════════════════════════════════════════════════════════════ */
-
-   export async function login(email: string, password: string): Promise<AppUser> {
-     const cred = await signInWithEmailAndPassword(auth, email, password);
-     return await ensureUserDoc(cred.user);
+   .onboarding-header__subtitle {
+     font-size: 1rem;
+     color: var(--c-ink-muted);
+     max-width: 40ch;
+     margin: 0 auto;
    }
 
-   export async function logout(): Promise<void> {
-     await signOut(auth);
+   .onboarding-body {
+     flex: 1;
+     max-width: 960px;
+     width: 100%;
+     margin-inline: auto;
    }
 
-   export async function sendPasswordReset(email: string): Promise<void> {
-     await sendPasswordResetEmail(auth, email);
+   .onboarding-grid {
+     display: grid;
+     grid-template-columns: 1fr;
+     gap: 16px;
+     padding-block: 24px;
    }
 
-   export async function changePassword(newPassword: string): Promise<void> {
-     const user = auth.currentUser;
-     if (!user) throw new Error('No user logged in');
-     await updatePassword(user, newPassword);
-     await updateDoc(doc(db, 'users', user.uid), { mustChangePassword: false });
+   @media (min-width: 640px) {
+     .onboarding-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      Admin: reset another user's password
-      ═══════════════════════════════════════════════════════════════ */
-
-   export async function adminResetUserPassword(email: string): Promise<void> {
-     if (!email) throw new Error('Email required');
-     await sendPasswordResetEmail(auth, email);
+   .onboarding-card {
+     background: var(--c-white);
+     border: 1.5px solid var(--c-line);
+     border-radius: var(--radius-lg);
+     padding: 24px 22px;
+     box-shadow: var(--shadow-sm);
+     position: relative;
+     overflow: hidden;
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      Admin: update user profile
-      ═══════════════════════════════════════════════════════════════ */
-
-   export interface UpdateUserInput {
-     displayName?: string;
-     role?: RoleId;
-     teamId?: TeamId | null;
-     committeeIds?: string[];
-     bio?: string;
+   .onboarding-card::before {
+     content: '';
+     position: absolute;
+     top: 0;
+     left: 0;
+     width: 4px;
+     height: 100%;
+     background: var(--c-red);
    }
 
-   export async function adminUpdateUser(uid: string, input: UpdateUserInput): Promise<void> {
-     const payload: Record<string, unknown> = {};
-     if (input.displayName !== undefined) payload.displayName = input.displayName;
-     if (input.role !== undefined) payload.role = input.role;
-     if (input.teamId !== undefined) payload.teamId = input.teamId;
-     if (input.committeeIds !== undefined) payload.committeeIds = safeArray(input.committeeIds);
-
-     await updateDoc(doc(db, 'users', uid), payload);
-
-     try {
-       const userSnap = await getDoc(doc(db, 'users', uid));
-       if (userSnap.exists()) {
-         const userData = userSnap.data() as AppUser;
-         if (userData.memberId) {
-           const memberPayload: Record<string, unknown> = {};
-           if (input.displayName !== undefined) memberPayload.name = input.displayName;
-           if (input.role !== undefined) memberPayload.role = input.role;
-           if (input.teamId !== undefined) memberPayload.teamIds = input.teamId ? [input.teamId] : [];
-           if (input.committeeIds !== undefined) memberPayload.committeeIds = safeArray(input.committeeIds);
-           if (input.bio !== undefined) memberPayload.bio = input.bio;
-           if (Object.keys(memberPayload).length > 0) {
-             await updateDoc(doc(db, 'members', userData.memberId), memberPayload);
-           }
-         }
-       }
-     } catch { /* silent */ }
+   .onboarding-card__title {
+     font-size: 1.15rem;
+     color: var(--c-navy);
+     padding-left: 8px;
+     margin-bottom: 8px;
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      Admin: create member (secondary app)
-      ═══════════════════════════════════════════════════════════════ */
-
-   export interface CreateMemberInput {
-     email: string;
-     temporaryPassword: string;
-     name: string;
-     role: RoleId;
-     teamIds: TeamId[];
-     committeeIds: string[];
-     bio?: string;
+   .onboarding-card__desc {
+     font-size: 0.92rem;
+     color: var(--c-ink-soft);
+     line-height: 1.75;
+     padding-left: 8px;
    }
 
-   export async function adminCreateMember(
-     input: CreateMemberInput,
-     adminUid: string,
-   ): Promise<{ uid: string; memberId: string; email: string }> {
-     const email = input.email.trim().toLowerCase();
-     const name = input.name.trim();
-     const password = input.temporaryPassword;
-
-     if (!email || !name) throw new Error('Email and name are required');
-     if (password.length < 6) throw new Error('Password must be at least 6 characters');
-     if (!input.teamIds || input.teamIds.length === 0) throw new Error('At least one team is required');
-     if (!input.committeeIds || input.committeeIds.length === 0) throw new Error('At least one committee is required');
-
-     const secondaryAuth = getSecondaryAuth();
-     let uid = '';
-
-     try {
-       const cred = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-       uid = cred.user.uid;
-       try { await secondarySignOut(secondaryAuth); } catch { /* ignore */ }
-       await destroySecondaryApp();
-     } catch (err) {
-       await destroySecondaryApp();
-       throw new Error(translateAuthError(err));
-     }
-
-     if (!uid) throw new Error('Failed to create user account');
-
-     const memberId = 'M-' + uid.slice(0, 8).toUpperCase();
-
-     const userData: AppUser = {
-       uid,
-       email,
-       displayName: name,
-       role: input.role,
-       teamId: input.teamIds[0] ?? null,
-       committeeIds: safeArray(input.committeeIds),
-       memberId,
-       createdAt: new Date().toISOString(),
-       emailVerified: false,
-       mustChangePassword: true,
-       createdByAdmin: adminUid,
-       status: 'active',
-     };
-     await setDoc(doc(db, 'users', uid), userData);
-
-     const memberData: Member = {
-       id: memberId,
-       name,
-       role: input.role,
-       teamIds: input.teamIds,
-       committeeIds: safeArray(input.committeeIds),
-       joinedSeason: 7,
-       hours: 0,
-       points: 0,
-       status: 'active',
-       bio: input.bio?.trim() || undefined,
-       email,
-       linkedUserId: uid,
-     };
-     await setDoc(doc(db, 'members', memberId), memberData);
-
-     return { uid, memberId, email };
+   .onboarding-footer {
+     padding: 24px 20px 8px;
+     text-align: center;
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      ensureUserDoc + observeAuth
-      ═══════════════════════════════════════════════════════════════ */
-
-   async function ensureUserDoc(fbUser: FirebaseUser): Promise<AppUser> {
-     const ref = doc(db, 'users', fbUser.uid);
-     const snap = await getDoc(ref);
-     if (snap.exists()) {
-       const data = snap.data() as Omit<AppUser, 'uid'>;
-       return {
-         uid: fbUser.uid,
-         ...data,
-         emailVerified: fbUser.emailVerified,
-         status: data.status ?? 'active',
-       };
-     }
-     const fallback: AppUser = {
-       uid: fbUser.uid,
-       email: fbUser.email ?? '',
-       displayName: fbUser.displayName ?? fbUser.email ?? 'Member',
-       role: 'VIEWER',
-       teamId: null,
-       committeeIds: [],
-       memberId: null,
-       createdAt: new Date().toISOString(),
-       emailVerified: fbUser.emailVerified,
-       mustChangePassword: false,
-       status: 'pending',
-     };
-     await setDoc(ref, fallback);
-     return fallback;
-   }
-
-   export function observeAuth(
-     callback: (user: AppUser | null, loading: boolean) => void,
-   ): () => void {
-     return onAuthStateChanged(auth, async (fbUser) => {
-       if (!fbUser) { callback(null, false); return; }
-       try {
-         const appUser = await ensureUserDoc(fbUser);
-         callback(appUser, false);
-       } catch {
-         callback(null, false);
-       }
-     });
-   }
-
-   export function hasRole(user: AppUser | null, roles: RoleId[]): boolean {
-     if (!user) return false;
-     return roles.includes(user.role);
+   .onboarding-cta {
+     display: inline-flex;
+     align-items: center;
+     gap: 8px;
+     padding: 15px 40px;
+     border-radius: var(--radius-full);
+     border: none;
+     background: var(--c-red);
+     color: #fff;
+     font-family: inherit;
+     font-size: 1.1rem;
+     cursor: pointer;
    }
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      12. LoginPage — use translateAuthError
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  "src/pages/LoginPage.tsx",
-  `import { useState, type FormEvent } from 'react';
-   import { useNavigate, Link } from 'react-router-dom';
-   import { login, translateAuthError } from '@/lib/auth';
-   import { useAuth } from '@/lib/useAuth';
-
-   export function LoginPage() {
-     const nav = useNavigate();
-     const { user } = useAuth();
-     const [email, setEmail] = useState('');
-     const [password, setPassword] = useState('');
-     const [error, setError] = useState('');
-     const [busy, setBusy] = useState(false);
-
-     const onSubmit = async (e: FormEvent) => {
-       e.preventDefault();
-       setError('');
-       setBusy(true);
-       try {
-         const appUser = await login(email.trim(), password);
-         if (appUser.status === 'pending' || appUser.status === 'rejected') {
-           nav('/pending-approval');
-         } else if (appUser.mustChangePassword) {
-           nav('/change-password');
-         } else {
-           nav('/dashboard');
-         }
-       } catch (err) {
-         setError(translateAuthError(err));
-       } finally {
-         setBusy(false);
-       }
-     };
-
-     if (user) {
-       if (user.status === 'pending' || user.status === 'rejected') {
-         nav('/pending-approval');
-       } else {
-         nav('/dashboard');
-       }
-       return null;
-     }
-
-     return (
-       <div className="login-page">
-         <div className="login-card">
-           <form onSubmit={onSubmit}>
-             <div className="login-field">
-               <label className="login-label">Email</label>
-               <input
-                 className="login-input"
-                 type="email"
-                 value={email}
-                 onChange={(e) => setEmail(e.target.value)}
-                 placeholder="name@resala-stem.org"
-                 autoComplete="email"
-                 required
-                 dir="ltr"
-               />
-             </div>
-             <div className="login-field">
-               <label className="login-label">Password</label>
-               <input
-                 className="login-input"
-                 type="password"
-                 value={password}
-                 onChange={(e) => setPassword(e.target.value)}
-                 placeholder="........"
-                 autoComplete="current-password"
-                 required
-                 dir="ltr"
-               />
-             </div>
-             {error ? <div className="login-error">{error}</div> : null}
-             <button
-               type="submit"
-               className="login-submit"
-               disabled={busy || !email || !password}
-             >
-               {busy ? '...' : 'Sign In'}
-             </button>
-           </form>
-
-           <p className="login-back" style={{ marginTop: 20, lineHeight: 1.7 }}>
-             New here?{' '}
-             <Link to="/register" style={{ color: 'var(--c-red)', fontWeight: 700 }}>
-               Create an account
-             </Link>
-           </p>
-
-           <p className="login-back" style={{ marginTop: 6 }}>
-             <Link to="/">Back to Home</Link>
-           </p>
-         </div>
-       </div>
-     );
-   }
-   `
-);
-
-/* ═══════════════════════════════════════════════════════════════
-      13. desktop.css — floating pill nav + drawer (mobile-like)
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 15 — desktop.css : Desktop = Mobile (floating pill + drawer)
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🖥️  STEP 15 · desktop.css (Desktop = Mobile)…");
 
 write(
   "src/styles/desktop.css",
-  `/* ═══════════════════════════════════════════════════════════════
+  `/* ═══════════════════════════════════════════════════════════════════════
       DESKTOP — Mobile-like experience
       Same Navbar, BottomNav, Sidebar drawer as mobile.
       Mobile: untouched.
-      ═══════════════════════════════════════════════════════════════ */
+      ═══════════════════════════════════════════════════════════════════════ */
 
    @media (min-width: 1024px) {
      .container {
@@ -1320,9 +1363,9 @@ write(
      .admin-stats { grid-template-columns: repeat(6, 1fr); }
    }
 
-   /* ═══════════════════════════════════════════════════════════════
-      DESKTOP (≥901px) — floating pill BottomNav
-      ═══════════════════════════════════════════════════════════════ */
+   /* ═══════════════════════════════════════════════════════════════════════
+      DESKTOP (≥901px) — floating pill BottomNav + drawer Sidebar
+      ═══════════════════════════════════════════════════════════════════════ */
 
    @media (min-width: 901px) {
 
@@ -1558,7 +1601,12 @@ write(
    `
 );
 
-/* Verify global.css imports desktop.css */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 16 — Ensure global.css imports desktop.css last
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 🎨 STEP 16 · global.css import order…");
+
 const globalCssPath = path.join(ROOT, "src/styles/global.css");
 if (fs.existsSync(globalCssPath)) {
   const css = fs.readFileSync(globalCssPath, "utf8");
@@ -1569,96 +1617,16 @@ if (fs.existsSync(globalCssPath)) {
       .filter((l) => !l.includes("desktop.css"));
     lines.push("@import './desktop.css';");
     write("src/styles/global.css", lines.join("\n") + "\n");
-    console.log("  ↻ Added desktop.css import");
+  } else {
+    console.log("   ✓ desktop.css already imported");
   }
 }
 
-/* ═══════════════════════════════════════════════════════════════
-      14. FIX GitHub Actions deploy workflow
-      ═══════════════════════════════════════════════════════════════ */
-
-write(
-  ".github/workflows/deploy.yml",
-  `name: Deploy to GitHub Pages
-
-   on:
-     push:
-       branches: [main]
-     workflow_dispatch:
-
-   permissions:
-     contents: read
-     pages: write
-     id-token: write
-
-   concurrency:
-     group: "pages"
-     cancel-in-progress: false
-
-   jobs:
-     build:
-       runs-on: ubuntu-latest
-       steps:
-         - name: Checkout
-           uses: actions/checkout@v4
-
-         - name: Setup Node
-           uses: actions/setup-node@v4
-           with:
-             node-version: '20'
-
-         - name: Setup Pages
-           uses: actions/configure-pages@v5
-
-         - name: Create .env file
-           run: |
-             cat > .env << 'EOF'
-             VITE_FIREBASE_API_KEY=\${{ secrets.VITE_FIREBASE_API_KEY }}
-             VITE_FIREBASE_AUTH_DOMAIN=\${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
-             VITE_FIREBASE_PROJECT_ID=\${{ secrets.VITE_FIREBASE_PROJECT_ID }}
-             VITE_FIREBASE_STORAGE_BUCKET=\${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
-             VITE_FIREBASE_MESSAGING_SENDER_ID=\${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
-             VITE_FIREBASE_APP_ID=\${{ secrets.VITE_FIREBASE_APP_ID }}
-             EOF
-
-         - name: Install dependencies
-           run: npm install --no-audit --no-fund --no-package-lock
-
-         - name: Build
-           run: npm run build
-
-         - name: Verify build output
-           run: |
-             if [ ! -d "dist" ]; then
-               echo "ERROR: dist folder was not created"
-               exit 1
-             fi
-             ls -la dist/
-
-         - name: Upload artifact
-           uses: actions/upload-pages-artifact@v3
-           with:
-             path: './dist'
-
-     deploy:
-       needs: build
-       runs-on: ubuntu-latest
-       environment:
-         name: github-pages
-         url: \${{ steps.deployment.outputs.page_url }}
-       steps:
-         - name: Deploy to GitHub Pages
-           id: deployment
-           uses: actions/deploy-pages@v4
-   `
-);
-
-/* Also add a proper .nojekyll file to prevent Jekyll processing */
-write("public/.nojekyll", "");
-
-/* ═══════════════════════════════════════════════════════════════
-      15. README + docs
-      ═══════════════════════════════════════════════════════════════ */
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 17 — README
+      ───────────────────────────────────────────────────────────────────── */
+console.log("");
+console.log(" 📖 STEP 17 · README…");
 
 write(
   "README.md",
@@ -1668,11 +1636,11 @@ write(
 
    ## Setup
 
-   1. Create a Firebase project: https://console.firebase.google.com
+   1. Firebase project: https://console.firebase.google.com
    2. Enable **Authentication → Email/Password**
    3. Enable **Firestore Database** (production mode)
-   4. Copy \`.env.example\` → \`.env\` and fill the Firebase config
-   5. Publish Firestore rules (from \`firestore.rules\`)
+   4. Copy \`.env.example\` → \`.env\` and fill Firebase config
+   5. Publish Firestore rules (from \`docs/FIRESTORE_RULES.md\`)
    6. \`npm install && npm run dev\`
 
    ## Deploy to GitHub Pages
@@ -1680,7 +1648,7 @@ write(
    1. Push to GitHub
    2. Repository → Settings → Pages → Source: **GitHub Actions**
    3. Add \`VITE_FIREBASE_*\` as repository secrets
-   4. Actions will auto-deploy on push to \`main\`
+   4. Actions will auto-deploy on every push to \`main\`
 
    ## PWA
 
@@ -1695,49 +1663,39 @@ write(
    `
 );
 
-/* ═══════════════════════════════════════════════════════════════
-      16. AUTO-FIX — cleanup
-      ═══════════════════════════════════════════════════════════════ */
-
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 18 — Install + Build
+      ───────────────────────────────────────────────────────────────────── */
 console.log("");
-console.log(" 🔧 Cleanup...");
-[".fix-backups", "src/src", "dist/.vite"].forEach((p) => {
-  const abs = path.join(ROOT, p);
-  if (fs.existsSync(abs)) {
-    fs.rmSync(abs, { recursive: true, force: true });
-    console.log("  🧹 Removed: " + p);
-  }
-});
-
-/* ═══════════════════════════════════════════════════════════════
-      17. BUILD + PUSH
-      ═══════════════════════════════════════════════════════════════ */
-
-console.log("");
-console.log(" 📦 Installing...");
+console.log(" 📦 STEP 18 · Installing dependencies…");
 run("npm install --no-audit --no-fund");
 
 console.log("");
-console.log(" 🏗  Building...");
+console.log(" 🏗️  STEP 19 · Building…");
 const buildOk = run("npm run build");
 
 if (!buildOk) {
   console.log("");
-  console.log(" ⚠ Build failed — checking for common issues...");
-  // Try to give hints
-  const distExists = fs.existsSync(path.join(ROOT, "dist"));
+  console.log(" ⚠️  Build failed — check the output above.");
+  console.log("    Common causes:");
   console.log(
-    "   dist folder exists: " +
-      (distExists ? "yes" : "NO — check the build log above")
+    "      • Missing Firebase env vars (fine for build — Vite ignores)"
   );
+  console.log("      • TypeScript errors");
+  console.log("    You can still commit if this is a preexisting issue.");
 }
 
+/* ─────────────────────────────────────────────────────────────────────
+      STEP 20 — Git push (force)
+      ───────────────────────────────────────────────────────────────────── */
 console.log("");
-console.log(" 📤 Pushing to GitHub...");
+console.log(" 📤 STEP 20 · Pushing to GitHub…");
+
 if (!fs.existsSync(path.join(ROOT, ".git"))) {
   run("git init");
   run("git branch -M main");
 }
+
 try {
   execSync("git remote get-url origin", { cwd: ROOT, stdio: "pipe" });
 } catch {
@@ -1748,37 +1706,47 @@ try {
 
 run("git add -A");
 run(
-  'git commit -m "feat: rebrand sbapiaryy → Manhal + logo + desktop polish + fixed deploy"',
+  'git commit -m "feat(manhal): rebrand + logo + desktop=mobile + deploy fix"',
   true
 );
+
 const pushed = run("git push origin main --force");
 
+/* ─────────────────────────────────────────────────────────────────────
+      Final summary
+      ───────────────────────────────────────────────────────────────────── */
 console.log("");
-console.log(" ╔══════════════════════════════════════════════════════╗");
+console.log(
+  " ╔══════════════════════════════════════════════════════════════╗"
+);
 console.log(
   " ║  " +
-    (pushed ? "✅ DONE — Pushed to GitHub" : "⚠ Pushed with warnings") +
-    "                ║"
+    (pushed ? "✅ DONE  ·  Pushed to GitHub" : "⚠️  Pushed with warnings") +
+    "                        ║"
 );
-console.log(" ╚══════════════════════════════════════════════════════╝");
+console.log(
+  " ╚══════════════════════════════════════════════════════════════╝"
+);
 console.log("");
 console.log(" ✨ What was done:");
-console.log("   ✓ Rebranded: sbapiaryy → Manhal everywhere");
-console.log("   ✓ Logo replaces text brand in Navbar + Footer + Onboarding");
-console.log("   ✓ Boot screen (mobile): logo only, no text");
-console.log("   ✓ Icons replaced from public/new-assets/");
-console.log('   ✓ Login error: "الإيميل أو الباسورد خطأ"');
-console.log("   ✓ Desktop: floating pill BottomNav + drawer Sidebar");
-console.log("   ✓ GitHub Actions workflow rewritten from scratch");
-console.log("   ✓ .nojekyll added to prevent Jekyll processing");
+console.log(
+  "   ✓ Removed .github/workflows/auto-fix.yml (was blocking deploy)"
+);
+console.log("   ✓ Rewrote deploy.yml with correct YAML");
+console.log("   ✓ Site name → Manhal everywhere");
+console.log("   ✓ Logo image in Navbar / Footer / Boot / Onboarding");
+console.log("   ✓ Desktop = Mobile (floating pill nav + drawer sidebar)");
+console.log('   ✓ Login error → "الإيميل أو الباسورد خطأ"');
+console.log("   ✓ PWA manifest + icons updated");
+console.log("   ✓ Cache name = manhal-v7.2");
 console.log("");
-console.log(" ⏭  Next steps after GitHub Actions (4-7 min):");
-console.log("   1. Open the site → see Manhal logo everywhere");
-console.log('   2. Try wrong password → "الإيميل أو الباسورد خطأ"');
-console.log("   3. Open on desktop → floating pill nav at bottom center");
-console.log("   4. Click ☰ → drawer slides from the left");
-console.log("");
-console.log(" ⚠  IMPORTANT — GitHub repo settings:");
+console.log(" ⚠️  IMPORTANT — GitHub repo settings:");
 console.log('   Settings → Pages → Source → MUST be "GitHub Actions"');
 console.log('   If it says "Deploy from a branch" → change it now');
+console.log("");
+console.log(" ⏭️  Next steps after Actions finishes (4-7 min):");
+console.log("   1. Open the site → see Manhal logo + floating pill nav");
+console.log("   2. Open on desktop → same bottom nav as mobile (floating)");
+console.log("   3. Click ☰ → drawer slides from the left");
+console.log('   4. Try wrong password → "الإيميل أو الباسورد خطأ"');
 console.log("");

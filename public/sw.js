@@ -1,5 +1,5 @@
 /* Manhal Service Worker */
-   const BUILD_ID = 'manhal-v7';
+   const BUILD_ID = 'manhal-v7.2';
    const CACHE_NAME = 'manhal-' + BUILD_ID;
    const RUNTIME_CACHE = 'manhal-runtime-' + BUILD_ID;
    const PRECACHE_URLS = ['./', './index.html', './manifest.json', './favicon.svg', './icon-192.png', './icon-512.png'];

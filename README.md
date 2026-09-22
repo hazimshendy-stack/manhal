@@ -4,11 +4,11 @@
 
    ## Setup
 
-   1. Create a Firebase project: https://console.firebase.google.com
+   1. Firebase project: https://console.firebase.google.com
    2. Enable **Authentication → Email/Password**
    3. Enable **Firestore Database** (production mode)
-   4. Copy `.env.example` → `.env` and fill the Firebase config
-   5. Publish Firestore rules (from `firestore.rules`)
+   4. Copy `.env.example` → `.env` and fill Firebase config
+   5. Publish Firestore rules (from `docs/FIRESTORE_RULES.md`)
    6. `npm install && npm run dev`
 
    ## Deploy to GitHub Pages
@@ -16,7 +16,7 @@
    1. Push to GitHub
    2. Repository → Settings → Pages → Source: **GitHub Actions**
    3. Add `VITE_FIREBASE_*` as repository secrets
-   4. Actions will auto-deploy on push to `main`
+   4. Actions will auto-deploy on every push to `main`
 
    ## PWA
 

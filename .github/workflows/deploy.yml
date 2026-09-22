@@ -11,8 +11,8 @@ name: Deploy to GitHub Pages
      id-token: write
 
    concurrency:
-     group: "pages"
-     cancel-in-progress: false
+     group: pages
+     cancel-in-progress: true
 
    jobs:
      build:
@@ -46,10 +46,10 @@ name: Deploy to GitHub Pages
          - name: Build
            run: npm run build
 
-         - name: Verify build output
+         - name: Verify dist
            run: |
              if [ ! -d "dist" ]; then
-               echo "ERROR: dist folder was not created"
+               echo "❌ dist folder was not created"
                exit 1
              fi
              ls -la dist/

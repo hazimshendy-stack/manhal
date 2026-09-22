@@ -1,78 +1,139 @@
-#!/usr/bin/env node
+// make-bundle.cjs
+// شغله بالأمر: node make-bundle.cjs
+// هيطلع ملف bundle.js فيه كل الأكواد النصية من المشروع
+
 const fs = require("fs");
 const path = require("path");
 
 const ROOT = process.cwd();
-const OUTPUT = "project-bundle.md";
+const OUTPUT = path.join(ROOT, "bundle.js");
 
-// المجلدات المستثناة
-const IGNORE_DIRS = [
+// مجلدات مستبعدة افتراضياً لتقليل الحجم
+const EXCLUDE_DIRS = new Set([
   "node_modules",
   ".git",
+  ".next",
   "dist",
   "build",
+  "out",
   "coverage",
-  ".next",
-  ".vscode",
+  ".cache",
+  ".vercel",
   ".idea",
-];
+  ".vscode",
+  ".turbo",
+  ".parcel-cache",
+]);
 
-// الملفات المستثناة
-const IGNORE_FILES = [
-  ".env",
-  ".env.local",
-  ".env.production",
+// ملفات مستبعدة (أقفال + بيئة + المخرج نفسه)
+const EXCLUDE_FILES = new Set([
+  "bundle.js",
   "package-lock.json",
   "yarn.lock",
   "pnpm-lock.yaml",
-];
+  ".env",
+  ".env.local",
+  ".env.development",
+  ".env.production",
+  ".env.test",
+]);
 
-// الامتدادات المطلوبة فقط
-const EXTS = [
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".css",
-  ".html",
-  ".json",
-  ".md",
-  ".rules",
-  ".txt",
-];
-
-function shouldIgnore(full) {
-  const rel = path.relative(ROOT, full);
-  if (rel.split(path.sep).some((p) => IGNORE_DIRS.includes(p))) return true;
-  if (IGNORE_FILES.includes(path.basename(full))) return true;
+function isExcludedFile(name) {
+  if (EXCLUDE_FILES.has(name)) return true;
+  // أي ملف يبدأ بـ .env.
+  if (name.startsWith(".env.")) return true;
   return false;
 }
 
-function walk(dir, out = []) {
-  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, e.name);
-    if (shouldIgnore(full)) continue;
-    if (e.isDirectory()) walk(full, out);
-    else if (EXTS.includes(path.extname(e.name))) out.push(full);
-  }
-  return out;
-}
-
-const files = walk(ROOT).sort();
-
-let bundle = `# Project Bundle — sbapiaryy\n\n`;
-bundle += `Generated: ${new Date().toISOString()}\n`;
-bundle += `Total files: ${files.length}\n\n---\n\n`;
-
-for (const file of files) {
-  const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+function isBinary(filePath) {
   try {
-    const content = fs.readFileSync(file, "utf8");
-    bundle += `\n## FILE: ${rel}\n\n\`\`\`\n${content}\n\`\`\`\n`;
-  } catch (e) {
-    bundle += `\n## FILE: ${rel}\n\n[Cannot read: ${e.message}]\n`;
+    const buf = fs.readFileSync(filePath);
+    const len = Math.min(buf.length, 8000);
+    for (let i = 0; i < len; i++) {
+      if (buf[i] === 0) return true;
+    }
+    return false;
+  } catch {
+    return true;
   }
 }
 
-fs.writeFileSync(OUTPUT, bundle, "utf8");
-console.log(`✓ ${OUTPUT} created (${files.length} files)`);
+function walk(dir, files = []) {
+  let entries;
+  try {
+    entries = fs.readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return files;
+  }
+
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (EXCLUDE_DIRS.has(entry.name)) continue;
+      walk(full, files);
+    } else if (entry.isFile()) {
+      if (isExcludedFile(entry.name)) continue;
+      if (full === OUTPUT) continue;
+      files.push(full);
+    }
+  }
+  return files;
+}
+
+function main() {
+  const allFiles = walk(ROOT);
+  const parts = [];
+  const skippedBinary = [];
+
+  parts.push(
+    `/* ============================================================ */`
+  );
+  parts.push(`/* BUNDLE GENERATED AT: ${new Date().toISOString()} */`);
+  parts.push(`/* ROOT: ${ROOT} */`);
+  parts.push(`/* TOTAL FILES: ${allFiles.length} */`);
+  parts.push(
+    `/* ============================================================ */\n`
+  );
+
+  for (const file of allFiles) {
+    const rel = path.relative(ROOT, file).replace(/\\/g, "/");
+
+    if (isBinary(file)) {
+      skippedBinary.push(rel);
+      continue;
+    }
+
+    let content = "";
+    try {
+      content = fs.readFileSync(file, "utf8");
+    } catch (e) {
+      content = `/* ERROR READING FILE: ${e.message} */`;
+    }
+
+    parts.push(`\n/* ===== FILE: ${rel} ===== */\n`);
+    parts.push(content);
+    parts.push(`\n/* ===== END FILE: ${rel} ===== */\n`);
+  }
+
+  if (skippedBinary.length) {
+    parts.push(`\n/* ===== SKIPPED BINARY FILES ===== */\n`);
+    for (const f of skippedBinary) {
+      parts.push(`/* BINARY: ${f} */\n`);
+    }
+  }
+
+  const output = parts.join("");
+  fs.writeFileSync(OUTPUT, output, "utf8");
+
+  console.log(`✅ تم إنشاء: ${OUTPUT}`);
+  console.log(
+    `📦 عدد الملفات النصية: ${allFiles.length - skippedBinary.length}`
+  );
+  console.log(`⏭️ ملفات باينري تم تخطيها: ${skippedBinary.length}`);
+  if (skippedBinary.length) {
+    console.log("   " + skippedBinary.join("\n   "));
+  }
+}
+
+main();
