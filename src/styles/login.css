@@ -1,12 +1,172 @@
-.login-page { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: 24px; background: radial-gradient(900px 500px at 20% 0%, rgba(193, 39, 45, 0.08), transparent 60%), radial-gradient(700px 400px at 80% 100%, rgba(21, 26, 69, 0.10), transparent 60%), var(--c-navy); }
-   .login-card { width: 100%; max-width: 440px; background: var(--c-white); border-radius: var(--radius-xl); padding: 44px 36px; box-shadow: var(--shadow-lg); border: 1px solid var(--c-line); }
-   .login-field { margin-bottom: 20px; }
-   .login-label { display: block; font-size: 0.92rem; color: var(--c-ink-soft); margin-bottom: 8px; }
-   .login-input { width: 100%; padding: 15px 18px; border-radius: var(--radius-sm); border: 1.5px solid var(--c-line-mid); background: var(--c-white); font-family: inherit; font-size: 1rem; outline: none; direction: ltr; }
-   .login-input:focus { border-color: var(--c-navy); box-shadow: 0 0 0 4px rgba(21, 26, 69, 0.08); }
-   .login-submit { width: 100%; padding: 16px; border-radius: var(--radius-sm); border: none; background: var(--c-red); color: #fff; font-family: inherit; font-size: 1rem; cursor: pointer; }
-   .login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-   .login-error { background: var(--c-red-tint); color: #991B1B; border: 1px solid #FCA5A5; border-radius: var(--radius-sm); padding: 14px 16px; font-size: 0.92rem; margin-bottom: 18px; }
-   .login-back { text-align: center; margin-top: 28px; font-size: 0.9rem; }
-   .login-back a { color: var(--c-ink-muted); }
+   /* ═══════════════════════════════════════════════════════════════
+      Login Page — White background + distinct card
+      ═══════════════════════════════════════════════════════════════ */
+
+   .login-page {
+     min-height: 100vh;
+     min-height: 100dvh;
+     display: grid;
+     place-items: center;
+     padding: 24px;
+     padding-top: calc(24px + var(--safe-top));
+     padding-bottom: calc(24px + var(--safe-bottom));
+     /* Plain white background */
+     background: #FFFFFF;
+   }
+
+   .login-card {
+     width: 100%;
+     max-width: 460px;
+     /* Very light off-white / pale navy tint so the card stands out
+        from the pure white background without being loud */
+     background: #F4F5FA;
+     border-radius: var(--radius-xl);
+     padding: 40px 32px;
+     /* Slightly stronger shadow so the card feels separated */
+     box-shadow:
+       0 1px 0 rgba(255, 255, 255, 0.9) inset,
+       0 20px 50px -22px rgba(21, 26, 69, 0.28),
+       0 4px 14px -6px rgba(21, 26, 69, 0.10);
+     /* Subtle border */
+     border: 1px solid #E4E6F0;
+     animation: login-slide 0.35s var(--ease);
+   }
+
+   @media (min-width: 640px) {
+     .login-card { padding: 48px 40px; }
+   }
+
+   @keyframes login-slide {
+     from { opacity: 0; transform: translateY(20px); }
+     to { opacity: 1; transform: translateY(0); }
+   }
+
+   /* ═══ Form fields — keep clear white inputs on tinted card ═══ */
+
+   .login-field {
+     margin-bottom: 18px;
+   }
+
+   .login-label {
+     display: block;
+     font-size: 0.82rem;
+     font-weight: 700;
+     color: var(--c-ink-soft);
+     margin-bottom: 8px;
+   }
+
+   .login-input {
+     width: 100%;
+     padding: 14px 16px;
+     border-radius: var(--radius-sm);
+     /* Inputs stay pure white for contrast against the tinted card */
+     background: #FFFFFF;
+     border: 1.5px solid #D4D8E8;
+     font-family: inherit;
+     font-size: 0.95rem;
+     color: var(--c-ink);
+     outline: none;
+     transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+   }
+
+   .login-input::placeholder {
+     color: #9AA1BE;
+   }
+
+   .login-input:focus {
+     border-color: var(--c-navy);
+     box-shadow: 0 0 0 4px rgba(21, 26, 69, 0.08);
+   }
+
+   .login-submit {
+     width: 100%;
+     padding: 15px;
+     border-radius: var(--radius-sm);
+     border: none;
+     background: var(--c-red);
+     color: #fff;
+     font-family: inherit;
+     font-size: 0.95rem;
+     font-weight: 700;
+     cursor: pointer;
+     margin-top: 10px;
+     transition: background 0.15s var(--ease), transform 0.1s;
+   }
+
+   .login-submit:hover:not(:disabled) {
+     background: var(--c-red-soft);
+   }
+
+   .login-submit:active:not(:disabled) {
+     transform: scale(0.98);
+   }
+
+   .login-submit:disabled {
+     opacity: 0.5;
+     cursor: not-allowed;
+   }
+
+   .login-error {
+     background: var(--c-red-tint);
+     color: #991B1B;
+     border: 1px solid #FCA5A5;
+     border-radius: var(--radius-sm);
+     padding: 12px 14px;
+     font-size: 0.85rem;
+     line-height: 1.6;
+     margin-bottom: 16px;
+   }
+
+   .login-back {
+     text-align: center;
+     margin-top: 24px;
+     font-size: 0.82rem;
+   }
+
+   .login-back a {
+     color: #7A80A0;
+     transition: color 0.15s;
+   }
+
+   .login-back a:hover {
+     color: var(--c-red);
+   }
+
+   /* ═══ Change-password notice ═══ */
+
+   .change-password-notice {
+     background: var(--c-amber-soft);
+     border: 1px solid #FCD34D;
+     border-radius: var(--radius-sm);
+     padding: 16px;
+     margin-bottom: 24px;
+     font-size: 0.88rem;
+     color: var(--c-amber-text);
+     line-height: 1.7;
+   }
+
+   .change-password-notice strong {
+     display: block;
+     margin-bottom: 6px;
+     font-size: 0.95rem;
+   }
+
+   /* ═══════════════════════════════════════════════════════════════
+      Register page — same card style (consistency)
+      ═══════════════════════════════════════════════════════════════ */
+
+   .login-page.register-page {
+     background: #FFFFFF;
+   }
+
+   .login-page.register-page .login-card {
+     max-width: 520px;
+   }
+
+   /* The pending-approval page uses login-page too — keep it consistent */
+   .login-page .login-card h1 {
+     color: var(--c-navy);
+     font-size: 1.5rem;
+     margin-bottom: 8px;
+   }
    

@@ -1,12 +1,70 @@
-@media (min-width: 901px) {
-     .container { max-width: 1280px; padding-inline: 32px; }
-     .grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
-     .home-teams-grid { grid-template-columns: repeat(3, 1fr); }
-     table.data { display: table; }
-     table.data thead { display: table-header-group; }
-     table.data tbody { display: table-row-group; }
-     table.data tr { display: table-row; padding: 0; margin: 0; background: transparent; border: none; box-shadow: none; }
-     table.data td { display: table-cell; padding: 16px 24px; }
-     table.data td::before { display: none; }
+   /* ═══════════════════════════════════════════════════════════════
+      DESKTOP — Same design as mobile
+      Only widen container + show more cards per row.
+      Mobile remains exactly as-is (all mobile rules untouched).
+      ═══════════════════════════════════════════════════════════════ */
+
+   /* ─── Widen container ─── */
+   @media (min-width: 1024px) {
+     .container {
+       max-width: 1200px;
+       padding-inline: 32px;
+     }
+   }
+
+   @media (min-width: 1440px) {
+     .container {
+       max-width: 1320px;
+       padding-inline: 40px;
+     }
+   }
+
+   /* ─── Wider card grids (still same card design) ─── */
+   @media (min-width: 1024px) {
+     .home-teams-grid {
+       grid-template-columns: repeat(3, 1fr);
+     }
+     .grid {
+       grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+     }
+     .grid--wide {
+       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+     }
+     .grid--narrow {
+       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+     }
+     .admin-cards {
+       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+     }
+     .admin-stats {
+       grid-template-columns: repeat(3, 1fr);
+     }
+     .stat-row {
+       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+     }
+   }
+
+   @media (min-width: 1440px) {
+     .home-teams-grid {
+       grid-template-columns: repeat(4, 1fr);
+     }
+     .admin-stats {
+       grid-template-columns: repeat(6, 1fr);
+     }
+   }
+
+   /* ─── BottomNav on desktop = same as mobile ─── */
+   @media (min-width: 901px) {
+     .bottom-nav {
+       display: flex;
+     }
+
+     .app-main {
+       padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 12px);
+     }
+
+     .footer {
+       padding-bottom: calc(var(--bottom-nav-h) + var(--safe-bottom) + 40px);
+     }
    }
    
