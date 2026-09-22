@@ -49,7 +49,7 @@ name: Deploy to GitHub Pages
          - name: Verify dist
            run: |
              if [ ! -d "dist" ]; then
-               echo "❌ dist folder was not created"
+               echo "ERROR: dist folder was not created"
                exit 1
              fi
              ls -la dist/
