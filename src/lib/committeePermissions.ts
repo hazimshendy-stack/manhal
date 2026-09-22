@@ -1,8 +1,6 @@
 import type { AppUser, Contribution } from '@/types';
-
-function safeArray<T>(arr: T[] | undefined | null): T[] {
-  return Array.isArray(arr) ? arr : [];
-}
+import { safeArray } from './safe';
+import { isAdmin } from './permissions';
 
 function hasCommittee(user: AppUser | null, committeeId: string): boolean {
   if (!user) return false;
@@ -10,23 +8,9 @@ function hasCommittee(user: AppUser | null, committeeId: string): boolean {
 }
 
 export function isCommitteeHR(user: AppUser | null, committeeId: string): boolean {
-  if (!user) return false;
-  if (!committeeId) return false;
+  if (!user || !committeeId) return false;
   if (user.role !== 'HR' && user.role !== 'COMMITTEE_HR') return false;
   return hasCommittee(user, committeeId);
-}
-
-export function isTeamHR(user: AppUser | null, teamId: string): boolean {
-  if (!user) return false;
-  if (user.role !== 'HR' && user.role !== 'HEAD_HR') return false;
-  if (user.role === 'HEAD_HR') return true;
-  return user.teamId === teamId;
-}
-
-export function isTeamHead(user: AppUser | null, teamId: string): boolean {
-  if (!user) return false;
-  if (user.role !== 'PRESIDENT') return false;
-  return user.teamId === teamId;
 }
 
 export function isTeamHeadHR(user: AppUser | null, teamId: string): boolean {
@@ -36,14 +20,25 @@ export function isTeamHeadHR(user: AppUser | null, teamId: string): boolean {
   return false;
 }
 
-export function isGlobalHR(user: AppUser | null): boolean {
+export function isTeamHead(user: AppUser | null, teamId: string): boolean {
   if (!user) return false;
-  return user.role === 'HEAD_HR';
+  return user.role === 'PRESIDENT' && user.teamId === teamId;
+}
+
+export function isGlobalHR(user: AppUser | null): boolean {
+  return user?.role === 'HEAD_HR';
 }
 
 export function isSubBranchesHead(user: AppUser | null): boolean {
   if (!user) return false;
   return user.role === 'HEAD' || user.role === 'VICE';
+}
+
+function getStage(c: Contribution): 1 | 2 | 3 | 4 {
+  const s = c.currentStage;
+  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
+  if (c.status === 'approved' || c.status === 'rejected') return 4;
+  return 1;
 }
 
 export interface StageInfo {
@@ -53,40 +48,26 @@ export interface StageInfo {
   assignPoints: boolean;
 }
 
-function getCurrentStage(contribution: Contribution): 1 | 2 | 3 | 4 {
-  const s = contribution.currentStage;
-  if (s === 1 || s === 2 || s === 3 || s === 4) return s;
-  // Fallback for old contributions
-  if (contribution.status === 'approved') return 4;
-  if (contribution.status === 'rejected') return 4;
-  return 1;
-}
-
-export function getContributionStage(user: AppUser | null, contribution: Contribution): StageInfo {
-  const stage = getCurrentStage(contribution);
-
-  if (!user) {
-    return { stage, label: 'Unknown', canApprove: false, assignPoints: false };
-  }
+export function getContributionStage(user: AppUser | null, c: Contribution): StageInfo {
+  const stage = getStage(c);
+  if (!user) return { stage, label: 'Unknown', canApprove: false, assignPoints: false };
 
   if (stage === 1) {
     return {
       stage: 1,
       label: 'Committee HR Approval',
-      canApprove: isCommitteeHR(user, contribution.committeeId || '') || isAdmin(user),
+      canApprove: isCommitteeHR(user, c.committeeId || '') || isAdmin(user),
       assignPoints: true,
     };
   }
-
   if (stage === 2) {
     return {
       stage: 2,
-      label: 'Team Head HR / Team Head Approval',
-      canApprove: isTeamHeadHR(user, contribution.teamId) || isTeamHead(user, contribution.teamId) || isAdmin(user),
+      label: 'Team Head / Team Head HR',
+      canApprove: isTeamHeadHR(user, c.teamId) || isTeamHead(user, c.teamId) || isAdmin(user),
       assignPoints: false,
     };
   }
-
   if (stage === 3) {
     return {
       stage: 3,
@@ -95,23 +76,15 @@ export function getContributionStage(user: AppUser | null, contribution: Contrib
       assignPoints: false,
     };
   }
-
-  return {
-    stage: 4,
-    label: 'Completed',
-    canApprove: false,
-    assignPoints: false,
-  };
+  return { stage: 4, label: 'Completed', canApprove: false, assignPoints: false };
 }
 
-export function canReviewContribution(user: AppUser | null, contribution: Contribution): boolean {
+export function canReviewContribution(user: AppUser | null, c: Contribution): boolean {
   if (!user) return false;
   if (isAdmin(user)) return true;
-
-  const stage = getCurrentStage(contribution);
-
-  if (stage === 1) return isCommitteeHR(user, contribution.committeeId || '');
-  if (stage === 2) return isTeamHeadHR(user, contribution.teamId) || isTeamHead(user, contribution.teamId);
+  const stage = getStage(c);
+  if (stage === 1) return isCommitteeHR(user, c.committeeId || '');
+  if (stage === 2) return isTeamHeadHR(user, c.teamId) || isTeamHead(user, c.teamId);
   if (stage === 3) return isGlobalHR(user) || isSubBranchesHead(user);
   return false;
 }

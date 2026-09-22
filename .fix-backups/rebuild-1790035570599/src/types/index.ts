@@ -14,25 +14,39 @@ export type ApprovalStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'SKIPPED';
 export type Priority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 export type ContributionStatus = 'pending' | 'in_review' | 'approved' | 'rejected';
 export type ConversationType = 'private' | 'team' | 'general';
-export type NotificationType = 'approval' | 'request' | 'participation' | 'achievement' | 'system' | 'warning' | 'message';
+
+export type NotificationType =
+  | 'approval' | 'request' | 'participation' | 'achievement'
+  | 'system' | 'warning' | 'message';
 
 export interface AppUser {
   uid: string;
   email: string;
   displayName: string;
   role: RoleId;
-  teamId?: TeamId | null;
-  committeeIds?: string[];
-  memberId?: string | null;
-  createdAt?: string;
+  teamId: TeamId | null;
+  committeeIds: string[];
+  memberId: string | null;
+  createdAt: string;
   emailVerified?: boolean;
   mustChangePassword?: boolean;
   createdByAdmin?: string;
 }
 
-export interface Role { id: RoleId; name: string; nameEn: string; level: number; }
+export interface Role {
+  id: RoleId;
+  name: string;
+  nameEn: string;
+  level: number;
+}
 
-export interface Team { id: TeamId; name: string; nameAr: string; description: string; color: string; }
+export interface Team {
+  id: TeamId;
+  name: string;
+  nameAr: string;
+  description: string;
+  color: string;
+}
 
 export interface Committee {
   id: string;
@@ -48,12 +62,12 @@ export interface Member {
   id: string;
   name: string;
   role: RoleId;
-  teamIds?: TeamId[];
-  committeeIds?: string[];
-  joinedSeason?: number;
-  hours?: number;
+  teamIds: TeamId[];
+  committeeIds: string[];
+  joinedSeason: number;
+  hours: number;
   points?: number;
-  status?: 'active' | 'inactive' | 'suspended';
+  status: 'active' | 'inactive' | 'suspended';
   bio?: string;
   email?: string;
   linkedUserId?: string;
@@ -72,18 +86,18 @@ export interface ContributionApproval {
 export interface Contribution {
   id: string;
   memberId: string;
-  memberName?: string;
+  memberName: string;
   teamId: TeamId;
-  committeeId?: string;
-  category?: string;
+  committeeId: string;
+  category: string;
   title: string;
-  description?: string;
+  description: string;
   date: string;
-  hours?: number;
-  points?: number;
-  status?: ContributionStatus;
-  seasonId?: string;
-  createdBy?: string;
+  hours: number;
+  points: number;
+  status: ContributionStatus;
+  seasonId: string;
+  createdBy: string;
   approvals?: ContributionApproval[];
   currentStage?: 1 | 2 | 3 | 4;
 }
@@ -93,7 +107,7 @@ export interface ApprovalStep {
   requestId: string;
   order: number;
   requiredRole: RoleId;
-  requiredTeamId?: TeamId | null;
+  requiredTeamId: TeamId | null;
   approverUid?: string;
   approverName?: string;
   status: ApprovalStatus;
@@ -105,30 +119,30 @@ export interface RequestRecord {
   id: string;
   type: RequestType;
   requesterUid: string;
-  requesterMemberId?: string;
-  requesterName?: string;
+  requesterMemberId: string;
+  requesterName: string;
   subjectMemberId?: string;
   fromTeamId?: TeamId;
   toTeamId?: TeamId;
   title: string;
-  description?: string;
+  description: string;
   status: RequestStatus;
   currentStepOrder: number;
   priority: Priority;
   submittedAt: string;
   updatedAt: string;
-  seasonId?: string;
+  seasonId: string;
 }
 
 export interface WarningRecord {
   id: string;
   memberId: string;
-  memberName?: string;
+  memberName: string;
   type: 'VERBAL' | 'WRITTEN' | 'FINAL';
   reason: string;
   severity: 'LOW' | 'MEDIUM' | 'HIGH';
-  issuedByMemberId?: string;
-  issuedByName?: string;
+  issuedByMemberId: string;
+  issuedByName: string;
   issuedAt: string;
   status: 'active' | 'resolved';
   notes?: string;
@@ -139,11 +153,11 @@ export interface Achievement {
   title: string;
   description: string;
   date: string;
-  level?: 'branch' | 'national' | 'international';
-  teamIds?: TeamId[];
-  memberIds?: string[];
-  memberNames?: string[];
-  seasonId?: string;
+  level: 'branch' | 'national' | 'international';
+  teamIds: TeamId[];
+  memberIds: string[];
+  memberNames: string[];
+  seasonId: string;
 }
 
 export interface Notification {
@@ -153,7 +167,7 @@ export interface Notification {
   message: string;
   type: NotificationType;
   date: string;
-  read?: boolean;
+  read: boolean;
   route?: string;
   priority?: 'low' | 'normal' | 'high';
   fromName?: string;
@@ -162,10 +176,10 @@ export interface Notification {
 export interface Conversation {
   id: string;
   type: ConversationType;
-  title?: string;
-  participantUids?: string[];
+  title: string;
+  participantUids: string[];
   teamId?: TeamId;
-  lastMessageAt?: string;
+  lastMessageAt: string;
   lastMessageText?: string;
   lastMessageSender?: string;
   unreadCounts?: Record<string, number>;
@@ -176,7 +190,7 @@ export interface Message {
   id: string;
   conversationId: string;
   senderUid: string;
-  senderName?: string;
+  senderName: string;
   text: string;
   sentAt: string;
   readBy?: string[];
@@ -190,13 +204,13 @@ export interface CalendarEvent {
   time?: string;
   endTime?: string;
   teamId?: TeamId | null;
-  isPublic?: boolean;
-  type?: 'meeting' | 'event' | 'deadline' | 'workshop';
+  isPublic: boolean;
+  type: 'meeting' | 'event' | 'deadline' | 'workshop';
   location?: string;
   participantUids?: string[];
-  seasonId?: string;
-  createdBy?: string;
-  createdByName?: string;
+  seasonId: string;
+  createdBy: string;
+  createdByName: string;
 }
 
 export interface TimelineEvent {
@@ -204,7 +218,7 @@ export interface TimelineEvent {
   memberId?: string;
   memberName?: string;
   teamId?: TeamId;
-  type: string;
+  type: 'join' | 'contribution' | 'promotion' | 'transfer' | 'achievement' | 'warning' | 'request' | 'approval';
   title: string;
   description?: string;
   date: string;
@@ -213,25 +227,48 @@ export interface TimelineEvent {
 
 export interface AuditRecord {
   id: string;
-  actorUid?: string;
-  actorName?: string;
+  actorUid: string;
+  actorName: string;
   action: string;
-  entity?: string;
-  entityId?: string;
+  entity: string;
+  entityId: string;
   date: string;
-  description?: string;
+  description: string;
 }
 
 export interface GovernanceDocument {
   id: string;
   title: string;
   category: string;
-  description?: string;
+  description: string;
   content: string;
-  version?: string;
+  version: string;
   updatedAt: string;
 }
 
-export interface SiteConfig { name: string; tagline: string; description: string; organization: string; email: string; }
-export interface OnboardingCard { id: string; icon: string; title: string; description: string; accentColor: string; order: number; }
-export interface Season { id: string; label: string; labelEn: string; start: string; end: string; isActive: boolean; theme: string; }
+export interface SiteConfig {
+  name: string;
+  tagline: string;
+  description: string;
+  organization: string;
+  email: string;
+}
+
+export interface OnboardingCard {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  accentColor: string;
+  order: number;
+}
+
+export interface Season {
+  id: string;
+  label: string;
+  labelEn: string;
+  start: string;
+  end: string;
+  isActive: boolean;
+  theme: string;
+}

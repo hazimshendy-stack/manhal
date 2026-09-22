@@ -1,23 +1,16 @@
 import type { Member, Contribution, TeamId } from '@/types';
-
-function approvedPoints(c: Contribution): number {
-  return typeof c.points === 'number' ? c.points : 0;
-}
-
-function approvedHours(c: Contribution): number {
-  return typeof c.hours === 'number' ? c.hours : 0;
-}
+import { safeArray, safeNumber } from './safe';
 
 export function getMemberPoints(memberId: string, contributions: Contribution[]): number {
-  return contributions
+  return safeArray(contributions)
     .filter((c) => c.memberId === memberId && c.status === 'approved')
-    .reduce((sum, c) => sum + approvedPoints(c), 0);
+    .reduce((sum, c) => sum + safeNumber(c.points), 0);
 }
 
 export function getMemberHours(memberId: string, contributions: Contribution[]): number {
-  return contributions
+  return safeArray(contributions)
     .filter((c) => c.memberId === memberId && c.status === 'approved')
-    .reduce((sum, c) => sum + approvedHours(c), 0);
+    .reduce((sum, c) => sum + safeNumber(c.hours), 0);
 }
 
 export interface RankEntry {
@@ -28,7 +21,7 @@ export interface RankEntry {
 }
 
 export function getGlobalRanking(members: Member[], contributions: Contribution[]): RankEntry[] {
-  const eligible = members.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
+  const eligible = safeArray(members).filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
   const withPoints = eligible.map((m) => ({
     member: m,
     points: getMemberPoints(m.id, contributions),
@@ -38,12 +31,8 @@ export function getGlobalRanking(members: Member[], contributions: Contribution[
   return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
-export function getTeamRanking(
-  members: Member[],
-  contributions: Contribution[],
-  teamId: TeamId,
-): RankEntry[] {
-  const teamMembers = members.filter((m) => Array.isArray(m.teamIds) && m.teamIds.includes(teamId));
+export function getTeamRanking(members: Member[], contributions: Contribution[], teamId: TeamId): RankEntry[] {
+  const teamMembers = safeArray(members).filter((m) => safeArray(m.teamIds).includes(teamId));
   const eligible = teamMembers.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
   const withPoints = eligible.map((m) => ({
     member: m,
@@ -54,40 +43,34 @@ export function getTeamRanking(
   return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
-export function getCommitteeRanking(
-  members: Member[],
-  contributions: Contribution[],
-  committeeId: string,
-): RankEntry[] {
-  const committeeMembers = members.filter((m) => Array.isArray(m.committeeIds) && m.committeeIds.includes(committeeId));
-  const eligible = committeeMembers.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
+export function getCommitteeRanking(members: Member[], contributions: Contribution[], committeeId: string): RankEntry[] {
+  const cm = safeArray(members).filter((m) => safeArray(m.committeeIds).includes(committeeId));
+  const eligible = cm.filter((m) => m.role !== 'HEAD' && m.role !== 'VICE');
   const withPoints = eligible.map((m) => ({
     member: m,
-    points: contributions
+    points: safeArray(contributions)
       .filter((c) => c.memberId === m.id && c.committeeId === committeeId && c.status === 'approved')
-      .reduce((sum, c) => sum + approvedPoints(c), 0),
-    hours: contributions
+      .reduce((s, c) => s + safeNumber(c.points), 0),
+    hours: safeArray(contributions)
       .filter((c) => c.memberId === m.id && c.committeeId === committeeId && c.status === 'approved')
-      .reduce((sum, c) => sum + approvedHours(c), 0),
+      .reduce((s, c) => s + safeNumber(c.hours), 0),
   }));
   withPoints.sort((a, b) => b.points - a.points);
   return withPoints.map((e, i) => ({ ...e, rank: i + 1 }));
 }
 
 export function getTeamTotalPoints(members: Member[], contributions: Contribution[], teamId: TeamId): number {
-  const teamMembers = members.filter((m) => Array.isArray(m.teamIds) && m.teamIds.includes(teamId));
-  const teamMemberIds = new Set(teamMembers.map((m) => m.id));
-  return contributions
-    .filter((c) => teamMemberIds.has(c.memberId) && c.status === 'approved')
-    .reduce((sum, c) => sum + approvedPoints(c), 0);
+  const tmIds = new Set(safeArray(members).filter((m) => safeArray(m.teamIds).includes(teamId)).map((m) => m.id));
+  return safeArray(contributions)
+    .filter((c) => tmIds.has(c.memberId) && c.status === 'approved')
+    .reduce((s, c) => s + safeNumber(c.points), 0);
 }
 
 export function getCommitteeTotalPoints(members: Member[], contributions: Contribution[], committeeId: string): number {
-  const cm = members.filter((m) => Array.isArray(m.committeeIds) && m.committeeIds.includes(committeeId));
-  const cmIds = new Set(cm.map((m) => m.id));
-  return contributions
+  const cmIds = new Set(safeArray(members).filter((m) => safeArray(m.committeeIds).includes(committeeId)).map((m) => m.id));
+  return safeArray(contributions)
     .filter((c) => cmIds.has(c.memberId) && c.committeeId === committeeId && c.status === 'approved')
-    .reduce((sum, c) => sum + approvedPoints(c), 0);
+    .reduce((s, c) => s + safeNumber(c.points), 0);
 }
 
 export interface UserRanks {
@@ -96,38 +79,32 @@ export interface UserRanks {
   committees: Array<{ committeeId: string; rank: number; total: number; points: number }>;
 }
 
-export function getUserRanks(userMemberId: string | null, members: Member[], contributions: Contribution[]): UserRanks {
+export function getUserRanks(userMemberId: string | null | undefined, members: Member[], contributions: Contribution[]): UserRanks {
   if (!userMemberId) return { global: null, team: null, committees: [] };
-
-  const member = members.find((m) => m.id === userMemberId);
+  const member = safeArray(members).find((m) => m.id === userMemberId);
   if (!member) return { global: null, team: null, committees: [] };
 
   const global = getGlobalRanking(members, contributions);
-  const globalEntry = global.find((e) => e.member.id === userMemberId);
+  const gEntry = global.find((e) => e.member.id === userMemberId);
 
   let teamData: UserRanks['team'] = null;
-  const teamIds = Array.isArray(member.teamIds) ? member.teamIds : [];
+  const teamIds = safeArray(member.teamIds);
   if (teamIds.length > 0) {
     const tid = teamIds[0];
-    const teamRank = getTeamRanking(members, contributions, tid);
-    const tEntry = teamRank.find((e) => e.member.id === userMemberId);
-    if (tEntry) {
-      teamData = { rank: tEntry.rank, total: teamRank.length, points: tEntry.points, teamId: tid };
-    }
+    const tRank = getTeamRanking(members, contributions, tid);
+    const tEntry = tRank.find((e) => e.member.id === userMemberId);
+    if (tEntry) teamData = { rank: tEntry.rank, total: tRank.length, points: tEntry.points, teamId: tid };
   }
 
   const committeeData: UserRanks['committees'] = [];
-  const committeeIds = Array.isArray(member.committeeIds) ? member.committeeIds : [];
-  for (const cid of committeeIds) {
-    const committeeRank = getCommitteeRanking(members, contributions, cid);
-    const cEntry = committeeRank.find((e) => e.member.id === userMemberId);
-    if (cEntry) {
-      committeeData.push({ committeeId: cid, rank: cEntry.rank, total: committeeRank.length, points: cEntry.points });
-    }
+  for (const cid of safeArray(member.committeeIds)) {
+    const cRank = getCommitteeRanking(members, contributions, cid);
+    const cEntry = cRank.find((e) => e.member.id === userMemberId);
+    if (cEntry) committeeData.push({ committeeId: cid, rank: cEntry.rank, total: cRank.length, points: cEntry.points });
   }
 
   return {
-    global: globalEntry ? { rank: globalEntry.rank, total: global.length, points: globalEntry.points } : null,
+    global: gEntry ? { rank: gEntry.rank, total: global.length, points: gEntry.points } : null,
     team: teamData,
     committees: committeeData,
   };

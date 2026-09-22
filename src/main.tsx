@@ -1,18 +1,21 @@
-
-
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
 import App from './App';
 import './styles/global.css';
 
-const container = document.getElementById('root');
-if (!container) throw new Error('Root element #root was not found');
+const rootEl = document.getElementById('root');
+if (!rootEl) {
+  document.body.innerHTML = '<div style="padding:40px;font-family:system-ui;color:#C1272D"><h1>Fatal: #root not found</h1></div>';
+  throw new Error('#root not found');
+}
 
-createRoot(container).render(
-  <StrictMode>
-    <App />
-  </StrictMode>,
-);
-
-/* Auto-Update — start after render */
-initAutoUpdate().catch((err) => {
-  console.warn('[AutoUpdate] Failed:', err);
-});
+try {
+  createRoot(rootEl).render(
+    <StrictMode>
+      <App />
+    </StrictMode>,
+  );
+} catch (err) {
+  console.error('[Fatal] Render failed:', err);
+  rootEl.innerHTML = '<div style="padding:40px;font-family:system-ui;color:#C1272D"><h1>App crashed</h1><pre>' + String(err) + '</pre></div>';
+}

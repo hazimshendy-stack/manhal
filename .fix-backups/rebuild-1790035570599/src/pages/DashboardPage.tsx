@@ -1,18 +1,9 @@
-import { Link } from 'react-router-dom';
-import { useAuth } from '@/lib/useAuth';
-import { useRealtimeCollection } from '@/lib/useRealtimeCollection';
-import { teams } from '@/data/teams';
-import { committees as defaultCommittees } from '@/data/committees';
-import { isManager, seesAllTeams, canApproveStep } from '@/lib/permissions';
-import { getMemberPoints, getMemberHours, getUserRanks } from '@/lib/rankings';
-import { safeArray } from '@/lib/safe';
-import { formatDate } from '@/lib/format';
-import { Stat, StatRow } from '@/components/ui/Stat';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Badge } from '@/components/ui/Badge';
-import { EmptyState } from '@/components/ui/EmptyState';
-import { Loading } from '@/components/ui/Loading';
-import type { Notification, RequestRecord, Contribution, ApprovalStep, CalendarEvent, Member, Committee } from '@/types';
+
+
+import type {
+  Notification, RequestRecord, Contribution, ApprovalStep,
+  CalendarEvent, Member, Committee,
+} from '@/types';
 
 export function DashboardPage() {
   const { user } = useAuth();
@@ -24,23 +15,37 @@ export function DashboardPage() {
   const { data: events, loading: l6 } = useRealtimeCollection<CalendarEvent>('calendar');
   const { data: liveCommittees } = useRealtimeCollection<Committee>('committees');
 
-  if (!user) return <div className="container"><EmptyState title="Sign in required" message="Please sign in." /></div>;
-  if (l1 || l2 || l3 || l4 || l5 || l6) return <div className="container"><Loading fullHeight message="Loading dashboard..." /></div>;
+  const isLoading = l1 || l2 || l3 || l4 || l5 || l6;
 
-  const myMember = user.memberId ? safeArray(members).find((m) => m.id === user.memberId) : null;
+  if (!user) {
+    return (
+      <div className="container">
+        <EmptyState title="Sign in required" message="Sign in to access your dashboard." />
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return <div className="container"><Loading fullHeight message="Loading dashboard..." /></div>;
+  }
+
+  const myMember = user.memberId ? members.find((m) => m.id === user.memberId) : null;
   const myPoints = user.memberId ? getMemberPoints(user.memberId, contributions) : 0;
   const myHours = user.memberId ? getMemberHours(user.memberId, contributions) : 0;
-  const myContribs = safeArray(contributions).filter((c) => c.memberId === user.memberId);
-  const myRequests = safeArray(requests).filter((r) => r.requesterUid === user.uid);
-  const myNotifs = safeArray(notifs).filter((n) => n.userId === user.uid).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5);
-  const myPendingApprovals = safeArray(approvals).filter((a) => a.status === 'PENDING' && canApproveStep(user, a));
-  const upcomingEvents = safeArray(events)
+  const myContribs = contributions.filter((c) => c.memberId === user.memberId);
+  const myRequests = requests.filter((r) => r.requesterUid === user.uid);
+
+  const myNotifs = notifs.filter((n) => n.userId === user.uid).sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 5);
+  const myPendingApprovals = approvals.filter((a) => a.status === 'PENDING' && canApproveStep(user, a));
+  const upcomingEvents = events
     .filter((e) => e.date >= new Date().toISOString().slice(0, 10))
     .filter((e) => e.isPublic || e.teamId === user.teamId || seesAllTeams(user))
     .sort((a, b) => (a.date > b.date ? 1 : -1))
     .slice(0, 3);
-  const pendingRequestsCount = safeArray(requests).filter((r) => r.status === 'PENDING' || r.status === 'IN_REVIEW').length;
-  const totalOrgPoints = safeArray(members).reduce((s, m) => s + getMemberPoints(m.id, contributions), 0);
+
+  const pendingRequestsCount = requests.filter((r) => r.status === 'PENDING' || r.status === 'IN_REVIEW').length;
+  const totalOrgPoints = members.reduce((s, m) => s + getMemberPoints(m.id, contributions), 0);
+
   const myRanks = getUserRanks(user.memberId, members, contributions);
   const committeeList = liveCommittees.length > 0 ? liveCommittees : defaultCommittees;
 
@@ -54,7 +59,7 @@ export function DashboardPage() {
       {isManager(user) ? (
         <section className="section--tight">
           <StatRow>
-            <Stat value={safeArray(members).length} label="Members" />
+            <Stat value={members.length} label="Members" />
             <Stat value={teams.length} label="Teams" />
             <Stat value={pendingRequestsCount} label="Pending Requests" variant="red" />
             <Stat value={totalOrgPoints} label="Total Points" />
@@ -77,21 +82,34 @@ export function DashboardPage() {
           <div className="grid grid--2">
             {myRanks.global ? (
               <div className="card no-click">
-                <div className="row row--between"><div className="card__title">Global Ranking</div><Badge variant="red">#{myRanks.global.rank}</Badge></div>
-                <div className="card__meta">Out of {myRanks.global.total} · {myRanks.global.points} points</div>
+                <div className="row row--between">
+                  <div className="card__title">Global Ranking</div>
+                  <Badge variant="red">#{myRanks.global.rank}</Badge>
+                </div>
+                <div className="card__meta">Out of {myRanks.global.total} members · {myRanks.global.points} points</div>
               </div>
             ) : null}
+
             {myRanks.team ? (
               <div className="card no-click">
-                <div className="row row--between"><div className="card__title">Team Ranking</div><Badge variant="navy">#{myRanks.team.rank}</Badge></div>
-                <div className="card__meta">{teams.find((t) => t.id === myRanks.team!.teamId)?.name} · out of {myRanks.team.total} · {myRanks.team.points} points</div>
+                <div className="row row--between">
+                  <div className="card__title">Team Ranking</div>
+                  <Badge variant="navy">#{myRanks.team.rank}</Badge>
+                </div>
+                <div className="card__meta">
+                  {teams.find((t) => t.id === myRanks.team!.teamId)?.name} · out of {myRanks.team.total} · {myRanks.team.points} points
+                </div>
               </div>
             ) : null}
+
             {myRanks.committees.map((cr) => {
               const c = committeeList.find((x) => x.id === cr.committeeId);
               return (
                 <div key={cr.committeeId} className="card no-click">
-                  <div className="row row--between"><div className="card__title">{c?.nameAr || cr.committeeId}</div><Badge variant="info">#{cr.rank}</Badge></div>
+                  <div className="row row--between">
+                    <div className="card__title">{c?.nameAr || cr.committeeId} Committee</div>
+                    <Badge variant="info">#{cr.rank}</Badge>
+                  </div>
                   <div className="card__meta">Out of {cr.total} · {cr.points} points</div>
                 </div>
               );
@@ -114,7 +132,7 @@ export function DashboardPage() {
           <SectionHeader eyebrow="Awaiting your decision" title="Pending Approvals" action={<Link to="/approvals" className="btn btn--ghost btn--sm">View All</Link>} />
           <div className="stack">
             {myPendingApprovals.slice(0, 4).map((a) => {
-              const req = safeArray(requests).find((r) => r.id === a.requestId);
+              const req = requests.find((r) => r.id === a.requestId);
               if (!req) return null;
               return (
                 <Link key={a.id} to={'/requests/' + req.id} className="card">
@@ -170,14 +188,19 @@ export function DashboardPage() {
           <SectionHeader eyebrow="My Info" title="My Account" />
           <div className="card no-click">
             <div className="kv"><span className="kv__k">Name</span><span className="kv__v">{myMember.name}</span></div>
-            <div className="kv mt-3"><span className="kv__k">Team</span><span className="kv__v">{user.teamId ? teams.find((t) => t.id === user.teamId)?.name : '—'}</span></div>
-            {safeArray(user.committeeIds).length > 0 ? (
+            <div className="kv mt-3">
+              <span className="kv__k">Team</span>
+              <span className="kv__v">{user.teamId ? teams.find((t) => t.id === user.teamId)?.name : '—'}</span>
+            </div>
+            {Array.isArray(user.committeeIds) && user.committeeIds.length > 0 ? (
               <div className="kv mt-3">
                 <span className="kv__k">Committees</span>
-                <span className="kv__v">{committeeList.filter((c) => safeArray(user.committeeIds).includes(c.id)).map((c) => c.nameAr).join(' · ')}</span>
+                <span className="kv__v">
+                  {committeeList.filter((c) => user.committeeIds.includes(c.id)).map((c) => c.nameAr).join(' · ')}
+                </span>
               </div>
             ) : null}
-            <div className="kv mt-3"><span className="kv__k">Joined</span><span className="kv__v">{user.createdAt ? formatDate(user.createdAt) : '—'}</span></div>
+            <div className="kv mt-3"><span className="kv__k">Joined</span><span className="kv__v">{formatDate(user.createdAt)}</span></div>
           </div>
         </section>
       ) : null}
