@@ -1,17 +1,10 @@
+// [auto-fix] v7 — clean, deduplicated permissions module.
 import type { AppUser, RoleId, TeamId } from '@/types';
-   import { safeArray } from './safe';
 
-   /* ═══════════════════════════════════════════════════════════════
-      Hierarchy (top → bottom):
-      HEAD  →  VICE  →  HEAD_HR_GLOBAL
-      ↓
-      Per Team: PRESIDENT → VICE_PRESIDENT → HEAD_HR_TEAM → HR
-      Per Committee: COMMITTEE_HR
-      ↓
-      MEMBER → VIEWER
-      ═══════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   Role levels (top → bottom)
+   ═══════════════════════════════════════════════════════════════ */
 
-   // [auto-fix] v7 ROLE_LEVEL — HEAD_HR_TEAM removed
 export const ROLE_LEVEL: Record<RoleId, number> = {
   HEAD: 100,
   VICE: 95,
@@ -24,8 +17,11 @@ export const ROLE_LEVEL: Record<RoleId, number> = {
   VIEWER: 10,
 };
 
-   // [auto-fix] v7: admin is HEAD only — VICE has full permissions but no admin-only actions.
-// [auto-fix] v7 isAdmin is HEAD-only
+/* ═══════════════════════════════════════════════════════════════
+   Core role predicates
+   ═══════════════════════════════════════════════════════════════ */
+
+// [auto-fix] v7 isAdmin is HEAD-only.
 export function isAdmin(user: AppUser | null): boolean {
   if (!user) return false;
   return user.role === 'HEAD';
@@ -43,71 +39,82 @@ export function canAccessAdminPanel(user: AppUser | null): boolean {
   return user.role === 'HEAD' || user.role === 'VICE';
 }
 
-// [auto-fix] v7: VICE keeps full permissions except admin-only actions.
-export function isViceHead(user: AppUser | null): boolean {
-  if (!user) return false;
-  return user.role === 'VICE';
-}
-
-// [auto-fix] v7: allow admin-panel access to HEAD + VICE.
-export function canAccessAdminPanel(user: AppUser | null): boolean {
+// [auto-fix] v7 HEAD or VICE — Sub-Branches leadership.
+export function isSubBranchesHead(user: AppUser | null): boolean {
   if (!user) return false;
   return user.role === 'HEAD' || user.role === 'VICE';
 }
 
-   export function isSubBranchesHead(user: AppUser | null): boolean {
-     if (!user) return false;
-     return user.role === 'HEAD' || user.role === 'VICE';
-   }
+// [auto-fix] v7 HEAD_HR_GLOBAL.
+export function isGlobalHR(user: AppUser | null): boolean {
+  return user?.role === 'HEAD_HR_GLOBAL';
+}
 
-   export function isGlobalHR(user: AppUser | null): boolean {
-     return user?.role === 'HEAD_HR_GLOBAL';
-   }
+// [auto-fix] v7 PRESIDENT.
+export function isTeamHead(user: AppUser | null): boolean {
+  return user?.role === 'PRESIDENT';
+}
 
-   export function isTeamHead(user: AppUser | null): boolean {
-     return user?.role === 'PRESIDENT';
-   }
+// [auto-fix] v7 VICE_PRESIDENT.
+export function isTeamViceHead(user: AppUser | null): boolean {
+  return user?.role === 'VICE_PRESIDENT';
+}
 
-   export function isTeamViceHead(user: AppUser | null): boolean {
-     return user?.role === 'VICE_PRESIDENT';
-   }
+// [auto-fix] v7 HR — team HR.
+export function isTeamHR(user: AppUser | null): boolean {
+  return user?.role === 'HR';
+}
 
-   // [auto-fix] v7: isTeamHeadHR removed — team HR role collapsed into HR.
+// [auto-fix] v7 COMMITTEE_HR.
+export function isCommitteeHR(user: AppUser | null): boolean {
+  return user?.role === 'COMMITTEE_HR';
+}
 
-   export function isTeamHR(user: AppUser | null): boolean {
-     return user?.role === 'HR';
-   }
+// [auto-fix] v7 manager — any elevated role.
+export function isManager(user: AppUser | null): boolean {
+  if (!user) return false;
+  return [
+    'HEAD',
+    'VICE',
+    'HEAD_HR_GLOBAL',
+    'PRESIDENT',
+    'VICE_PRESIDENT',
+    'HR',
+    'COMMITTEE_HR',
+  ].includes(user.role);
+}
 
-   export function isCommitteeHR(user: AppUser | null): boolean {
-     return user?.role === 'COMMITTEE_HR';
-   }
+// [auto-fix] v7 sees-all-teams: HEAD, VICE, HEAD_HR_GLOBAL.
+export function seesAllTeams(user: AppUser | null): boolean {
+  if (!user) return false;
+  return ['HEAD', 'VICE', 'HEAD_HR_GLOBAL'].includes(user.role);
+}
 
-   export function isManager(user: AppUser | null): boolean {
-     if (!user) return false;
-     return ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HEAD_HR_TEAM', 'HR', 'COMMITTEE_HR'].includes(user.role);
-   }
+// [auto-fix] v7 managed-team — null means "all teams".
+export function managedTeam(user: AppUser | null): TeamId | null {
+  if (!user) return null;
+  if (seesAllTeams(user)) return null;
+  return user.teamId ?? null;
+}
 
-   export function seesAllTeams(user: AppUser | null): boolean {
-     if (!user) return false;
-     return ['HEAD', 'VICE', 'HEAD_HR_GLOBAL'].includes(user.role);
-   }
+// [auto-fix] v7 can-approve-step.
+export function canApproveStep(
+  user: AppUser | null,
+  step: { status: string; requiredRole: string; requiredTeamId?: TeamId | null },
+): boolean {
+  if (!user) return false;
+  if (step.status !== 'PENDING') return false;
+  if (isAdmin(user)) return true;
+  if (user.role !== step.requiredRole) return false;
+  if (step.requiredTeamId) return user.teamId === step.requiredTeamId;
+  return true;
+}
 
-   export function managedTeam(user: AppUser | null): TeamId | null {
-     if (!user) return null;
-     if (seesAllTeams(user)) return null;
-     return user.teamId ?? null;
-   }
+/* ═══════════════════════════════════════════════════════════════
+   Arabic role labels for the UI
+   ═══════════════════════════════════════════════════════════════ */
 
-   export function canApproveStep(user: AppUser | null, step: { status: string; requiredRole: string; requiredTeamId?: TeamId | null }): boolean {
-     if (!user) return false;
-     if (step.status !== 'PENDING') return false;
-     if (isAdmin(user)) return true;
-     if (user.role !== step.requiredRole) return false;
-     if (step.requiredTeamId) return user.teamId === step.requiredTeamId;
-     return true;
-   }
-
-   // [auto-fix] v7 ROLE_LABEL
+// [auto-fix] v7 ROLE_LABEL.
 export const ROLE_LABEL: Record<RoleId, string> = {
   HEAD: 'رئيس الفروع',
   VICE: 'نائب رئيس الفروع',
@@ -119,4 +126,3 @@ export const ROLE_LABEL: Record<RoleId, string> = {
   MEMBER: 'عضو',
   VIEWER: 'زائر',
 };
-   
