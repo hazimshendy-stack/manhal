@@ -1,5 +1,5 @@
-import type, { Member, Contribution, TeamId } from '@/types';
-import { safeArray, safeNumber } from './safe';
+import type { Member, Contribution, TeamId } from '@/types';
+   import { safeArray, safeNumber } from './safe';
 
    export function getMemberPoints(memberId: string, contributions: Contribution[]): number {
      return safeArray(contributions)

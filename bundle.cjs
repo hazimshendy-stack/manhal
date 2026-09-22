@@ -1,139 +1,117 @@
-// make-bundle.cjs
-// شغله بالأمر: node make-bundle.cjs
-// هيطلع ملف bundle.js فيه كل الأكواد النصية من المشروع
+#!/usr/bin/env node
+/**
+ * bundle.cjs
+ * يجمع كل ملفات المشروع المطلوبة في فايل واحد لتقليل التوكنز عند إرساله للذكاء الاصطناعي.
+ * Usage:
+ *   node bundle.cjs            -> bundle.txt (raw)
+ *   node bundle.cjs --minify   -> bundle.txt (comments & blank lines stripped)
+ *   node bundle.cjs --out custom.txt
+ */
 
 const fs = require("fs");
 const path = require("path");
 
-const ROOT = process.cwd();
-const OUTPUT = path.join(ROOT, "bundle.js");
+// ── الملفات المطلوبة بالترتيب ──
+const FILES = [
+  "src/types.ts",
+  "src/data/teams.ts",
+  "src/lib/useAuth.ts",
+  "src/lib/useRealtimeCollection.ts",
+  "src/lib/rankings.ts",
+  "src/lib/pwa.ts",
+  "src/pages/LoginPage.tsx",
+  "src/pages/DashboardPage.tsx",
+  "src/pages/NotificationsPage.tsx",
+  "src/pages/ApprovalsPage.tsx",
+  "src/pages/NewRequestPage.tsx",
+  "src/pages/admin/AdminMembersPage.tsx",
+  "src/pages/admin/AdminGovernancePage.tsx",
+  "src/pages/admin/AdminAnalyticsPage.tsx",
+  "src/pages/admin/AdminNotificationsPage.tsx",
+  "src/pages/admin/AdminRequestsPage.tsx",
+  "src/components/layout/Sidebar.tsx",
+  "src/components/layout/Navbar.tsx",
+  "src/components/layout/BottomNav.tsx",
+];
 
-// مجلدات مستبعدة افتراضياً لتقليل الحجم
-const EXCLUDE_DIRS = new Set([
-  "node_modules",
-  ".git",
-  ".next",
-  "dist",
-  "build",
-  "out",
-  "coverage",
-  ".cache",
-  ".vercel",
-  ".idea",
-  ".vscode",
-  ".turbo",
-  ".parcel-cache",
-]);
+// ── إعدادات CLI ──
+const args = process.argv.slice(2);
+const MINIFY = args.includes("--minify");
+const outIdx = args.indexOf("--out");
+const OUT = outIdx >= 0 && args[outIdx + 1] ? args[outIdx + 1] : "bundle.txt";
 
-// ملفات مستبعدة (أقفال + بيئة + المخرج نفسه)
-const EXCLUDE_FILES = new Set([
-  "bundle.js",
-  "package-lock.json",
-  "yarn.lock",
-  "pnpm-lock.yaml",
-  ".env",
-  ".env.local",
-  ".env.development",
-  ".env.production",
-  ".env.test",
-]);
+// ── تقليل الحجم: حذف التعليقات والمسافات الزائدة مع الحفاظ على صحة الكود ──
+function minify(code) {
+  // احفظ الـ strings والـ template literals مؤقتاً
+  const store = [];
+  const keep = (m) => {
+    store.push(m);
+    return `\u0000${store.length - 1}\u0000`;
+  };
 
-function isExcludedFile(name) {
-  if (EXCLUDE_FILES.has(name)) return true;
-  // أي ملف يبدأ بـ .env.
-  if (name.startsWith(".env.")) return true;
-  return false;
+  // double / single quotes و template literals
+  code = code.replace(/`(?:\\.|[^`\\])*`/g, keep);
+  code = code.replace(/"(?:\\.|[^"\\])*"/g, keep);
+  code = code.replace(/'(?:\\.|[^'\\])*'/g, keep);
+
+  // احذف التعليقات
+  code = code.replace(/\/\*[\s\S]*?\*\//g, "");
+  code = code.replace(/(^|[^:\/])\/\/.*$/gm, "$1");
+
+  // شيل الأسطر الفاضية والمسافات على الأطراف
+  code = code
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+$/g, ""))
+    .filter((l) => l.trim() !== "")
+    .join("\n");
+
+  // رجّع الـ strings
+  code = code.replace(/\u0000(\d+)\u0000/g, (_, i) => store[+i]);
+  return code;
 }
 
-function isBinary(filePath) {
-  try {
-    const buf = fs.readFileSync(filePath);
-    const len = Math.min(buf.length, 8000);
-    for (let i = 0; i < len; i++) {
-      if (buf[i] === 0) return true;
-    }
-    return false;
-  } catch {
-    return true;
-  }
-}
-
-function walk(dir, files = []) {
-  let entries;
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return files;
-  }
-
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-
-    if (entry.isDirectory()) {
-      if (EXCLUDE_DIRS.has(entry.name)) continue;
-      walk(full, files);
-    } else if (entry.isFile()) {
-      if (isExcludedFile(entry.name)) continue;
-      if (full === OUTPUT) continue;
-      files.push(full);
-    }
-  }
-  return files;
-}
-
+// ── التنفيذ ──
 function main() {
-  const allFiles = walk(ROOT);
-  const parts = [];
-  const skippedBinary = [];
+  if (!fs.existsSync(OUT) === false) {
+    // لا مشكلة، سيُستبدل
+  }
+  let total = 0;
+  let header =
+    `// ============================================================\n` +
+    `// PROJECT BUNDLE — generated ${new Date().toISOString()}\n` +
+    `// Files: ${FILES.length}\n` +
+    `// Mode: ${MINIFY ? "MINIFIED (comments stripped)" : "RAW"}\n` +
+    `// ============================================================\n`;
 
-  parts.push(
-    `/* ============================================================ */`
-  );
-  parts.push(`/* BUNDLE GENERATED AT: ${new Date().toISOString()} */`);
-  parts.push(`/* ROOT: ${ROOT} */`);
-  parts.push(`/* TOTAL FILES: ${allFiles.length} */`);
-  parts.push(
-    `/* ============================================================ */\n`
-  );
+  let body = "";
+  const missing = [];
 
-  for (const file of allFiles) {
-    const rel = path.relative(ROOT, file).replace(/\\/g, "/");
-
-    if (isBinary(file)) {
-      skippedBinary.push(rel);
+  for (const f of FILES) {
+    const abs = path.resolve(process.cwd(), f);
+    if (!fs.existsSync(abs)) {
+      missing.push(f);
+      body += `\n\n// ===== FILE: ${f} =====\n// ⚠️ MISSING — file not found\n`;
       continue;
     }
-
-    let content = "";
-    try {
-      content = fs.readFileSync(file, "utf8");
-    } catch (e) {
-      content = `/* ERROR READING FILE: ${e.message} */`;
-    }
-
-    parts.push(`\n/* ===== FILE: ${rel} ===== */\n`);
-    parts.push(content);
-    parts.push(`\n/* ===== END FILE: ${rel} ===== */\n`);
+    let content = fs.readFileSync(abs, "utf8");
+    if (MINIFY) content = minify(content);
+    total += content.length;
+    body += `\n\n// ===== FILE: ${f} =====\n${content}\n`;
   }
 
-  if (skippedBinary.length) {
-    parts.push(`\n/* ===== SKIPPED BINARY FILES ===== */\n`);
-    for (const f of skippedBinary) {
-      parts.push(`/* BINARY: ${f} */\n`);
-    }
-  }
+  fs.writeFileSync(OUT, header + body, "utf8");
 
-  const output = parts.join("");
-  fs.writeFileSync(OUTPUT, output, "utf8");
-
-  console.log(`✅ تم إنشاء: ${OUTPUT}`);
+  const bytes = fs.statSync(OUT).size;
+  console.log("✅ Bundle created:", OUT);
   console.log(
-    `📦 عدد الملفات النصية: ${allFiles.length - skippedBinary.length}`
+    "   Files bundled :",
+    FILES.length - missing.length,
+    "/",
+    FILES.length
   );
-  console.log(`⏭️ ملفات باينري تم تخطيها: ${skippedBinary.length}`);
-  if (skippedBinary.length) {
-    console.log("   " + skippedBinary.join("\n   "));
-  }
+  console.log("   Total size    :", (bytes / 1024).toFixed(2), "KB");
+  if (missing.length) console.warn("   ⚠️ Missing    :", missing.join(", "));
+  console.log("   Mode          :", MINIFY ? "MINIFIED" : "RAW");
 }
 
 main();

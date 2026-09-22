@@ -8,7 +8,6 @@ import { getMemberPoints, getMemberHours, getUserRanks } from '@/lib/rankings';
 import { safeArray } from '@/lib/safe';
 import { formatDate } from '@/lib/format';
 import { Stat, StatRow } from '@/components/ui/Stat';
-import { ChangePasswordCard } from '@/components/settings/ChangePasswordCard';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';

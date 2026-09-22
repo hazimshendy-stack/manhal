@@ -9,6 +9,5 @@ import { messages } from '@/data/conversations';
    { id: 'messages', name: 'Messages', nameAr: 'Messages', description: 'Narrative, content, media, documentation, communication.', color: '#A78BFA' },
    { id: 'masar', name: 'Masar', nameAr: 'Masar', description: 'Student guidance, career paths, mentoring programs.', color: '#F472B6' },
    { id: 'rstc', name: 'RSTC', nameAr: 'RSTC', description: 'Resala STEM Training Center — curriculum and quality.', color: '#22D3EE' },
-   { id: 'mb', name: 'MB', nameAr: 'MB', description: 'Sub-Branches — Head and Vice Head of Sub-Branches, plus Head of HR (Global).', color: '#0EA5E9' },
  ];
  

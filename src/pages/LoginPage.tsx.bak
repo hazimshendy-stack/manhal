@@ -1,4 +1,3 @@
-import { requestPasswordReset, translatePasswordError } from '@/lib/authExtras';
 import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login, translateAuthError } from '@/lib/auth';
@@ -11,10 +10,6 @@ import { useAuth } from '@/lib/useAuth';
      const [password, setPassword] = useState('');
      const [error, setError] = useState('');
      const [busy, setBusy] = useState(false);
-     const [resetMode, setResetMode] = useState(false);
-     const [resetEmail, setResetEmail] = useState('');
-     const [resetBusy, setResetBusy] = useState(false);
-     const [resetMsg, setResetMsg] = useState('');
 
      const onSubmit = async (e: FormEvent) => {
        e.preventDefault();
@@ -84,29 +79,6 @@ import { useAuth } from '@/lib/useAuth';
                {busy ? '...' : 'Sign In'}
              </button>
            </form>
-           <p className="login-back" style={{ marginTop: 10 }}>
-             <button type="button" className="btn btn--ghost btn--sm" onClick={() => { setResetMode((v) => !v); setResetMsg(''); }}>
-               {resetMode ? 'Back to Login' : 'Reset Password'}
-             </button>
-           </p>
-           {resetMode ? (
-             <form onSubmit={async (e) => {
-               e.preventDefault();
-               setResetBusy(true); setResetMsg('');
-               try { await requestPasswordReset(resetEmail.trim()); setResetMsg('Reset link sent. Check your inbox.'); }
-               catch (err) { setResetMsg(translatePasswordError(err)); }
-               finally { setResetBusy(false); }
-             }}>
-               <div className="login-field">
-                 <label className="login-label">Email</label>
-                 <input className="login-input" type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required dir="ltr" placeholder="name@resala-stem.org" />
-               </div>
-               {resetMsg ? <div className="login-error">{resetMsg}</div> : null}
-               <button type="submit" className="login-submit" disabled={resetBusy || !resetEmail}>
-                 {resetBusy ? '...' : 'Send Reset Link'}
-               </button>
-             </form>
-           ) : null}
 
            <p className="login-back" style={{ marginTop: 20, lineHeight: 1.7 }}>
              New here?{' '}

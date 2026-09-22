@@ -1,5 +1,4 @@
-import { purgeLegacyRequestsOnce } from '@/lib/migrations';
-import { useEffect, useState, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/useAuth';
 import { newId, today, createOne } from '@/lib/db';
@@ -18,20 +17,26 @@ import { approvals } from '@/data/approvals';
    };
 
    function buildChain(request: RequestRecord): Array<{ role: string; teamId: TeamId | null }> {
-     // Parallel approval: either the Team Head or the Team HR Head is enough.
-     // No sequence, no global chain.
+     const chain: Array<{ role: string; teamId: TeamId | null }> = [];
      const t = request.fromTeamId ?? request.toTeamId ?? null;
-     if (!t) return [{ role: 'HEAD', teamId: null }];
-     return [
-       { role: 'HEAD', teamId: t },
-       { role: 'HEAD_HR_TEAM', teamId: t },
-     ];
+     if (request.type === 'TRANSFER' && request.fromTeamId && request.toTeamId) {
+       chain.push({ role: 'PRESIDENT', teamId: request.fromTeamId });
+       chain.push({ role: 'PRESIDENT', teamId: request.toTeamId });
+       chain.push({ role: 'HEAD_HR_GLOBAL', teamId: null });
+       chain.push({ role: 'HEAD', teamId: null });
+     } else if (t) {
+       chain.push({ role: 'PRESIDENT', teamId: t });
+       chain.push({ role: 'HEAD_HR_TEAM', teamId: t });
+       chain.push({ role: 'HEAD', teamId: null });
+     } else {
+       chain.push({ role: 'HEAD', teamId: null });
+     }
+     return chain;
    }
 
    export function NewRequestPage() {
      const nav = useNavigate();
      const { user } = useAuth();
-     useEffect(() => { purgeLegacyRequestsOnce().catch(() => {}); }, []);
      const [type, setType] = useState<RequestType>('TRANSFER');
      const [title, setTitle] = useState('');
      const [description, setDescription] = useState('');
@@ -52,7 +57,6 @@ import { approvals } from '@/data/approvals';
            requesterName: user.displayName, subjectMemberId: user.memberId ?? undefined,
            title: title.trim(), description: description.trim(), status: 'PENDING',
            currentStepOrder: 1, priority, submittedAt: today(), updatedAt: today(), seasonId: 'S7',
-           parallelApproval: true,
            fromTeamId: fromTeamId || undefined, toTeamId: toTeamId || undefined,
          };
          await createOne('requests', newReq);

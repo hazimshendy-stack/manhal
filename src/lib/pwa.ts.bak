@@ -19,13 +19,6 @@ export interface BeforeInstallPromptEvent extends Event {
      if ('serviceWorker' in navigator && import.meta.env.PROD) {
        window.addEventListener('load', () => {
          navigator.serviceWorker.register('./sw.js').catch(() => {});
-        navigator.serviceWorker.addEventListener('message', (event) => {
-          const data = (event && event.data) || {};
-          if (data && data.type === 'notification-click' && data.route) {
-            try { window.location.href = data.route; } catch { /* ignore */ }
-          }
-        });
-        window.dispatchEvent(new CustomEvent('manhal:push-ready'));
        });
      }
    }

@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { useState } from 'react';
 import { useCollection, useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { createOne, updateOne, removeOne, now } from '@/lib/db';
@@ -14,7 +13,7 @@ import { Badge } from '@/components/ui/Badge';
 import { toast } from '@/components/ui/Toast';
 import type, { GovernanceDocument } from '@/types';
 
-   const EMPTY: Omit<GovernanceDocument, 'id'> = { title: '', category: 'Policies', description: '', content: '', version: '1.0', updatedAt: new Date().toISOString().slice(0, 10), files: [] };
+   const EMPTY: Omit<GovernanceDocument, 'id'> = { title: '', category: 'Policies', description: '', content: '', version: '1.0', updatedAt: new Date().toISOString().slice(0, 10) };
 
    export function AdminGovernancePage() {
      const { data, loading } = useCollection<GovernanceDocument>('governance');
@@ -23,41 +22,9 @@ import type, { GovernanceDocument } from '@/types';
      const [form, setForm] = useState<Omit<GovernanceDocument, 'id'>>(EMPTY);
      const [toDelete, setToDelete] = useState<GovernanceDocument | null>(null);
      const [busy, setBusy] = useState(false);
-     const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-     const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
-       const fr = new FileReader();
-       fr.onerror = () => reject(fr.error || new Error('Read failed'));
-       fr.onload = () => resolve(String(fr.result || ''));
-       fr.readAsDataURL(file);
-     });
-
-     const handleFileUpload = async (files: FileList | null) => {
-       if (!files || files.length === 0) return;
-       const incoming: GovernanceFile[] = [];
-       for (const f of Array.from(files)) {
-         const dataUrl = await readFileAsDataUrl(f);
-         incoming.push({ name: f.name, size: f.size, type: f.type || 'application/octet-stream', dataUrl, uploadedAt: new Date().toISOString() });
-       }
-       setForm((prev) => ({ ...prev, files: [...(prev.files || []), ...incoming] }));
-       toast.success('Attached ' + incoming.length + ' file(s)');
-     };
-
-     const removeFileAt = (idx: number) => {
-       setForm((prev) => ({ ...prev, files: (prev.files || []).filter((_, i) => i !== idx) }));
-     };
-
-     const downloadFile = (f: GovernanceFile) => {
-       const a = document.createElement('a');
-       a.href = f.dataUrl;
-       a.download = f.name;
-       document.body.appendChild(a);
-       a.click();
-       document.body.removeChild(a);
-     };
      const sorted = [...data].sort((a, b) => a.title.localeCompare(b.title));
      const openCreate = () => { setForm({ ...EMPTY, updatedAt: new Date().toISOString().slice(0, 10) }); setCreating(true); setEditing(null); };
-     const openEdit = (d: GovernanceDocument) => { setForm({ title: d.title, category: d.category, description: d.description || '', content: d.content, version: d.version || '1.0', updatedAt: d.updatedAt, files: d.files || [] }); setEditing(d); setCreating(false); };
+     const openEdit = (d: GovernanceDocument) => { setForm({ title: d.title, category: d.category, description: d.description || '', content: d.content, version: d.version || '1.0', updatedAt: d.updatedAt }); setEditing(d); setCreating(false); };
      const close = () => { setCreating(false); setEditing(null); };
      const save = async () => {
        if (!form.title.trim() || !form.content.trim()) { toast.error('Title & content required'); return; }
@@ -80,16 +47,6 @@ import type, { GovernanceDocument } from '@/types';
              <div key={d.id} className="card no-click">
                <div className="row row--between"><div style={{ flex: 1, minWidth: 0 }}><div className="card__title">{d.title}</div><div className="card__meta">{d.category} · v{d.version} · Updated {formatDate(d.updatedAt)}</div></div><Badge variant="info">{d.category}</Badge></div>
                {d.description ? <p className="small soft mt-2">{d.description}</p> : null}
-               {(d.files && d.files.length > 0) ? (
-                 <ul className="small mt-3">
-                   {d.files.map((f, i) => (
-                     <li key={f.name + i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                       <span>{f.name}</span>
-                       <button type="button" className="btn btn--ghost btn--xs" onClick={() => downloadFile(f)}>Download</button>
-                     </li>
-                   ))}
-                 </ul>
-               ) : null}
                <div className="row mt-3" style={{ gap: 6, justifyContent: 'flex-end' }}>
                  <button type="button" className="btn btn--ghost btn--xs" onClick={() => openEdit(d)}>Edit</button>
                  <button type="button" className="btn btn--danger btn--xs" onClick={() => setToDelete(d)}>Delete</button>
@@ -104,19 +61,6 @@ import type, { GovernanceDocument } from '@/types';
            <FormField label="Short description"><TextInput value={form.description || ''} onChange={(v) => setForm({ ...form, description: v })} /></FormField>
            <FormField label="Full content" required><TextArea value={form.content} onChange={(v) => setForm({ ...form, content: v })} rows={8} /></FormField>
            <FormField label="Version" required><TextInput value={form.version || '1.0'} onChange={(v) => setForm({ ...form, version: v })} /></FormField>
-           <FormField label="Attachments">
-             <input ref={fileInputRef} type="file" multiple style={{ display: 'none' }} onChange={(e) => { handleFileUpload(e.target.files); e.target.value = ''; }} />
-             <button type="button" className="btn btn--ghost btn--sm" onClick={() => fileInputRef.current && fileInputRef.current.click()}>Upload Files</button>
-             <ul className="small mt-2">
-               {(form.files || []).map((f, i) => (
-                 <li key={f.name + i} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                   <span>{f.name} <span className="muted tiny">({Math.round(f.size / 1024)} KB)</span></span>
-                   <button type="button" className="btn btn--ghost btn--xs" onClick={() => downloadFile(f)}>Download</button>
-                   <button type="button" className="btn btn--danger btn--xs" onClick={() => removeFileAt(i)}>Remove</button>
-                 </li>
-               ))}
-             </ul>
-           </FormField>
          </Modal>
          <ConfirmDialog open={toDelete !== null} title="Delete Document" message={'Delete "' + (toDelete?.title || '') + '"?'} confirmLabel="Delete" danger busy={busy} onConfirm={del} onCancel={() => setToDelete(null)} />
        </div>

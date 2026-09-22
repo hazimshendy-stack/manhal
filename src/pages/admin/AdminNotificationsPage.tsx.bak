@@ -1,6 +1,3 @@
-import type { Committee } from '@/types';
-import { teams } from '@/data/teams';
-import { notifyOne, notifyMany } from '@/lib/notify';
 import { useState } from 'react';
 import { useCollection, useRealtimeCollection } from '@/lib/useRealtimeCollection';
 import { useAuth } from '@/lib/useAuth';
@@ -20,35 +17,21 @@ import type, { AppUser, Notification } from '@/types';
      const { data: users } = useCollection<AppUser>('users');
      const { data: notifs, loading } = useCollection<Notification>('notifications');
      const [target, setTarget] = useState<string>('all');
-     const { data: committees } = useCollection<Committee>('committees');
      const [title, setTitle] = useState('');
      const [message, setMessage] = useState('');
      const [priority, setPriority] = useState<'low' | 'normal' | 'high'>('normal');
      const [busy, setBusy] = useState(false);
      const send = async () => {
        if (!title.trim() || !message.trim()) { toast.error('Title & message required'); return; }
-       if (target.startsWith('__sep_')) { toast.error('Choose a valid recipient.'); return; }
        setBusy(true);
        try {
-         const opts = { source: 'system', priority, senderName: me?.displayName, push: true };
-         if (target === 'all') {
-           await notifyMany(users, title.trim(), message.trim(), opts);
-         } else if (target === 'managers') {
+         if (target === 'all') await notifyUsers(users, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
+         else if (target === 'managers') {
            const managers = users.filter((u) => ['HEAD', 'VICE', 'HEAD_HR_GLOBAL', 'PRESIDENT', 'VICE_PRESIDENT', 'HEAD_HR_TEAM', 'HR', 'COMMITTEE_HR'].includes(u.role));
-           await notifyMany(managers, title.trim(), message.trim(), opts);
-         } else if (target.startsWith('team:')) {
-           const teamId = target.slice('team:'.length);
-           const recipients = users.filter((u) => u.teamId === teamId);
-           if (recipients.length === 0) { toast.error('No users in that team.'); setBusy(false); return; }
-           await notifyMany(recipients, title.trim(), message.trim(), opts);
-         } else if (target.startsWith('committee:')) {
-           const committeeId = target.slice('committee:'.length);
-           const recipients = users.filter((u) => (u as unknown as { committeeId?: string }).committeeId === committeeId);
-           if (recipients.length === 0) { toast.error('No users in that committee.'); setBusy(false); return; }
-           await notifyMany(recipients, title.trim(), message.trim(), opts);
+           await notifyUsers(managers, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
          } else {
            if (!users.find((u) => u.uid === target)) { toast.error('User not found'); setBusy(false); return; }
-           await notifyOne(target, title.trim(), message.trim(), opts);
+           await notifyUser(target, title.trim(), message.trim(), 'system', undefined, priority, me?.displayName);
          }
          setTitle(''); setMessage('');
          toast.success('Sent');
@@ -65,11 +48,6 @@ import type, { AppUser, Notification } from '@/types';
              <Select value={target} onChange={setTarget} options={[
                { value: 'all', label: 'Everyone (' + users.length + ')' },
                { value: 'managers', label: 'Managers only' },
-               { value: '__sep_teams', label: '— Teams —' },
-               ...teams.map((t) => ({ value: 'team:' + t.id, label: 'Team: ' + t.name })),
-               { value: '__sep_committees', label: '— Committees —' },
-               ...committees.map((c) => ({ value: 'committee:' + c.id, label: 'Committee: ' + (c.nameAr || c.name) })),
-               { value: '__sep_users', label: '— Users —' },
                ...users.map((u) => ({ value: u.uid, label: u.displayName + ' (' + u.email + ')' })),
              ]} />
            </FormField>
